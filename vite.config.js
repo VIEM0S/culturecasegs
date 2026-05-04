@@ -21,11 +21,17 @@ export default defineConfig({
         lang: "fr",
         categories: ["business", "productivity"],
         icons: [
-          { src: "icon.svg", sizes: "any", type: "image/svg+xml", purpose: "any maskable" }
+          // ✅ SVG pour les navigateurs modernes
+          { src: "icon.svg", sizes: "any", type: "image/svg+xml", purpose: "any maskable" },
+          // ✅ PNG 192 pour iOS Safari et Android legacy (à générer depuis icon.svg)
+          { src: "icon-192.png", sizes: "192x192", type: "image/png", purpose: "any" },
+          // ✅ PNG 512 pour splash screen et maskable Android
+          { src: "icon-512.png", sizes: "512x512", type: "image/png", purpose: "any" },
+          { src: "icon-512-maskable.png", sizes: "512x512", type: "image/png", purpose: "maskable" },
         ],
       },
       workbox: {
-        globPatterns: ["**/*.{js,css,html,svg,ico}"],
+        globPatterns: ["**/*.{js,css,html,svg,png,ico}"],
         runtimeCaching: [
           {
             urlPattern: /^https:\/\/images\.unsplash\.com\/.*/i,
@@ -41,4 +47,18 @@ export default defineConfig({
       },
     }),
   ],
+  build: {
+    rollupOptions: {
+      output: {
+        // ✅ FIX: sépare Firebase du bundle principal (~300 Ko économisés au 1er chargement)
+        manualChunks: {
+          "firebase": [
+            "firebase/app",
+            "firebase/firestore",
+            "firebase/auth",
+          ],
+        },
+      },
+    },
+  },
 });
