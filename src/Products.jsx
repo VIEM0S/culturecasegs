@@ -97,7 +97,13 @@ function Products({ data, onSave, onDelete, onSale }) {
       onSave(newProducts); // tableau → un seul persist
     } else {
       // Édition : un seul produit
-      const errs = validateProductForm(form);
+      // FIX: validateProductForm vérifie form.designs (tableau) mais le form d'édition
+      // utilise form.design (string) — validation inline corrigée
+      const errs = {};
+      if (!form.model) errs.model = "Modèle requis";
+      if (!form.design || !form.design.trim()) errs.design = "Design requis";
+      if (!form.price || isNaN(Number(form.price)) || Number(form.price) <= 0) errs.price = "Prix invalide";
+      if (form.stock === "" || form.stock < 0) errs.stock = "Stock invalide";
       if (Object.keys(errs).length > 0) { setErrors(errs); return; }
       onSave({
         id: form.id || uid(),
