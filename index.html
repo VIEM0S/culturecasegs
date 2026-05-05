@@ -10,11 +10,53 @@
     <link rel="icon" type="image/svg+xml" href="/culturecasegs/icon.svg" />
     <link rel="apple-touch-icon" href="/culturecasegs/icon.svg" />
     <title>Culturecase GS</title>
-    <script type="module" crossorigin src="/culturecasegs/assets/index-D2UnAzJ5.js"></script>
+    <script type="module" crossorigin src="/culturecasegs/assets/index-BF8px7tJ.js"></script>
     <link rel="modulepreload" crossorigin href="/culturecasegs/assets/firebase-nJ43bztw.js">
-    <link rel="stylesheet" crossorigin href="/culturecasegs/assets/index-ewRxmcGN.css">
+    <link rel="stylesheet" crossorigin href="/culturecasegs/assets/index-Ch56jRT2.css">
   <link rel="manifest" href="/culturecasegs/manifest.webmanifest"><script id="vite-plugin-pwa:register-sw" src="/culturecasegs/registerSW.js"></script></head>
   <body>
     <div id="root"></div>
+
+    <!-- Splash screen — visible pendant que React charge, caché ensuite -->
+    <div id="splash" style="
+      position: fixed; inset: 0; z-index: 99999;
+      background: #07070e;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center; gap: 20px;
+    ">
+      <svg width="90" height="90" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+        <rect width="512" height="512" rx="80" fill="#0f0f1a"/>
+        <circle cx="256" cy="220" r="148" fill="none" stroke="#a855f7" stroke-width="52"
+          stroke-dasharray="680" stroke-dashoffset="200" stroke-linecap="round"/>
+        <rect x="148" y="358" width="216" height="52" rx="10" fill="#7c3aed" opacity="0.6"/>
+        <text x="256" y="399" font-family="Arial Black,sans-serif" font-weight="900"
+          font-size="34" fill="#c4b5fd" text-anchor="middle">GS</text>
+      </svg>
+      <div style="color:#6b7280; font-size:13px; font-family:sans-serif; letter-spacing:1px;">
+        CULTURECASE
+      </div>
+      <div style="width:48px; height:3px; background:#1f1f2e; border-radius:2px; overflow:hidden; margin-top:4px;">
+        <div id="splash-bar" style="height:100%; width:0%; background:#a855f7; border-radius:2px; transition:width 0.8s ease;"></div>
+      </div>
+    </div>
+
+    <script>
+      // Animer la barre de chargement
+      setTimeout(() => { document.getElementById('splash-bar').style.width = '70%'; }, 100);
+      // Cacher le splash dès que React a monté le DOM
+      const _splashObserver = new MutationObserver(() => {
+        if (document.getElementById('root').children.length > 0) {
+          setTimeout(() => {
+            document.getElementById('splash-bar').style.width = '100%';
+            setTimeout(() => {
+              const s = document.getElementById('splash');
+              if (s) { s.style.opacity = '0'; s.style.transition = 'opacity 0.3s'; setTimeout(() => s.remove(), 300); }
+            }, 200);
+          }, 100);
+          _splashObserver.disconnect();
+        }
+      });
+      _splashObserver.observe(document.getElementById('root'), { childList: true });
+    </script>
   </body>
 </html>
