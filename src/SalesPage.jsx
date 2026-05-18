@@ -11,6 +11,7 @@ function TicketModal({ sales, productMap, onClose }) {
   const phone    = sales[0]?.phone  || "";
   const quartier = sales[0]?.quartier || "";
   const delivery = sales[0]?.delivery || false;
+  const remarque = sales[0]?.remarque || "";
 
   const grandTotal = sales.reduce((s, v) => s + (v.totalAfterDiscount ?? v.total), 0);
   const totalDiscount = sales.reduce((s, v) => s + (v.discountAmount || 0), 0);
@@ -27,7 +28,8 @@ function TicketModal({ sales, productMap, onClose }) {
         const p = productMap[s.productId];
         const nom = p ? `${p.model} — ${p.design}` : "—";
         const remise = s.discountPercent > 0 ? ` _(remise ${s.discountPercent}%)_` : "";
-        return `• ${nom} × ${s.qty} → *${fmtMoney(s.totalAfterDiscount ?? s.total)}*${remise}`;
+        const motif  = s.discountPercent > 0 && s.discountReason ? ` — _Motif : ${s.discountReason}_` : "";
+        return `• ${nom} × ${s.qty} → *${fmtMoney(s.totalAfterDiscount ?? s.total)}*${remise}${motif}`;
       }),
       ``,
       totalDiscount > 0 ? `💸 Remise totale : -${fmtMoney(totalDiscount)}` : null,
@@ -37,6 +39,7 @@ function TicketModal({ sales, productMap, onClose }) {
       phone    ? `📞 Tél : ${phone}`                      : null,
       quartier ? `📍 Quartier : ${quartier}`              : null,
       delivery ? `🚚 *Livraison à domicile*`              : null,
+      remarque ? `📝 Remarque : ${remarque}`              : null,
       ``,
       `_Merci pour votre achat ! 🙏_`,
     ].filter(l => l !== null).join("\n");
@@ -94,6 +97,7 @@ function TicketModal({ sales, productMap, onClose }) {
   ${phone    ? `<div class="row"><span class="label">Tél</span><span>${phone}</span></div>` : ""}
   ${quartier ? `<div class="row"><span class="label">Quartier</span><span>${quartier}</span></div>` : ""}
   ${delivery ? `<div class="row"><span class="label">Livraison</span><span class="badge">À domicile</span></div>` : ""}
+  ${remarque ? `<div class="row"><span class="label">Remarque</span><span style="font-style:italic;color:#555;">${remarque}</span></div>` : ""}
 
   <hr class="sep" />
 
@@ -103,6 +107,8 @@ function TicketModal({ sales, productMap, onClose }) {
     const nom = p ? `${p.model} — ${p.design}` : "—";
     const remise = s.discountPercent > 0
       ? `<div class="row small"><span>Remise ${s.discountPercent}%</span><span>-${fmtMoney(s.discountAmount || 0)}</span></div>` : "";
+    const motif = s.discountPercent > 0 && s.discountReason
+      ? `<div class="row small" style="font-style:italic;color:#888;"><span>Motif</span><span>${s.discountReason}</span></div>` : "";
     return `
       <div style="margin-bottom: 10px; padding-bottom: 8px; border-bottom: 1px dotted #ddd;">
         <div class="bold">${nom}</div>
@@ -111,6 +117,7 @@ function TicketModal({ sales, productMap, onClose }) {
           <span>${fmtMoney(s.total)}</span>
         </div>
         ${remise}
+        ${motif}
         <div class="row bold" style="margin-top: 2px;">
           <span>Sous-total</span>
           <span class="success">${fmtMoney(s.totalAfterDiscount ?? s.total)}</span>
@@ -182,6 +189,7 @@ function TicketModal({ sales, productMap, onClose }) {
           {phone    && <Row label="Tél"       value={phone} />}
           {quartier && <Row label="Quartier"  value={quartier} />}
           {delivery && <Row label="Livraison" value="🚚 À domicile" accent />}
+          {remarque && <Row label="Remarque"  value={remarque} italic />}
         </div>
 
         <hr style={{ border: "none", borderTop: "1px dashed var(--border2)", margin: "10px 0" }} />
@@ -198,6 +206,9 @@ function TicketModal({ sales, productMap, onClose }) {
               <Row label={`${s.qty} × ${fmtMoney(s.price)}`} value={fmtMoney(s.total)} small />
               {s.discountPercent > 0 && (
                 <Row label={`Remise ${s.discountPercent}%`} value={`-${fmtMoney(s.discountAmount || 0)}`} small warn />
+              )}
+              {s.discountPercent > 0 && s.discountReason && (
+                <Row label="Motif" value={s.discountReason} small italic />
               )}
               <Row label="Sous-total" value={fmtMoney(s.totalAfterDiscount ?? s.total)} bold success />
             </div>
@@ -223,13 +234,14 @@ function TicketModal({ sales, productMap, onClose }) {
 }
 
 // ── Ligne de ticket ──────────────────────────────────────────────────────────
-function Row({ label, value, bold, small, success, warn, accent, large }) {
+function Row({ label, value, bold, small, success, warn, accent, large, italic }) {
   return (
     <div style={{
       display: "flex", justifyContent: "space-between", alignItems: "center",
       fontSize: small ? 11 : large ? 14 : 13,
       color: success ? "var(--success)" : warn ? "var(--warn)" : accent ? "var(--accent2)" : "var(--text)",
       fontWeight: bold || large ? 700 : 400,
+      fontStyle: italic ? "italic" : "normal",
       marginBottom: 2,
     }}>
       <span style={{ color: bold || large ? "inherit" : "var(--text2)" }}>{label}</span>
@@ -246,7 +258,7 @@ function SalesPage({ data, onSale, toast }) {
 
   const [modal, setModal]         = useState(false);
   const [ticket, setTicket]       = useState(null); // sales[] à afficher dans le ticket
-  const [client, setClient]       = useState({ name: "", phone: "", quartier: "", delivery: false });
+  const [client, setClient]       = useState({ name: "", phone: "", quartier: "", delivery: false, remarque: "" });
 
   // ── Normalise le numéro de téléphone : ajoute +223 si aucun indicatif
   const normalizePhone = (raw) => {
@@ -334,6 +346,7 @@ function SalesPage({ data, onSale, toast }) {
         discountReason: line.discountReason,
         client: sanitize(client.name, 100), phone: sanitize(normalizePhone(client.phone), 20),
         quartier: sanitize(client.quartier, 100), delivery: client.delivery,
+        remarque: sanitize(client.remarque, 300),
       };
     });
 
@@ -344,7 +357,7 @@ function SalesPage({ data, onSale, toast }) {
     // ── Ouvre le ticket après la vente ──────────────────────────────────
     setTicket(newSales);
 
-    setClient({ name: "", phone: "", quartier: "", delivery: false });
+    setClient({ name: "", phone: "", quartier: "", delivery: false, remarque: "" });
     setCartLines([{ id: uid(), productId: "", qty: "1", discountType: "none", discountPercent: "0", discountReason: "", _model: "" }]);
     setErrors({});
     setTimeout(() => setSubmitting(false), 600);
@@ -366,7 +379,7 @@ function SalesPage({ data, onSale, toast }) {
   const openModal  = () => { setModal(true); setErrors({}); };
   const closeModal = () => {
     setModal(false); setErrors({});
-    setClient({ name: "", phone: "", quartier: "", delivery: false });
+    setClient({ name: "", phone: "", quartier: "", delivery: false, remarque: "" });
     setCartLines([{ id: uid(), productId: "", qty: "1", discountType: "none", discountPercent: "0", discountReason: "", _model: "" }]);
   };
 
@@ -553,6 +566,10 @@ function SalesPage({ data, onSale, toast }) {
           <div className="form-group">
             <label className="form-label">Quartier</label>
             <input className="input" value={client.quartier} onChange={e => setClient(c => ({ ...c, quartier: e.target.value }))} placeholder="Plateau, Médina..." />
+          </div>
+          <div className="form-group">
+            <label className="form-label">Remarque</label>
+            <input className="input" value={client.remarque} onChange={e => setClient(c => ({ ...c, remarque: e.target.value }))} placeholder="Livraison express, couleur spéciale..." />
           </div>
           <label className="checkbox-row">
             <input type="checkbox" checked={client.delivery} onChange={e => setClient(c => ({ ...c, delivery: e.target.checked }))} />
