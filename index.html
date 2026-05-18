@@ -27,9 +27,18 @@
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&display=swap" />
 
     <title>Culturecase GS</title>
-    <script type="module" crossorigin src="/culturecasegs/assets/index-DWVSPPXS.js"></script>
+    <!-- Initialisation du thème avant React pour éviter le flash blanc/noir -->
+    <script>
+      (function() {
+        var t = localStorage.getItem('cc-theme') || 'dark';
+        document.documentElement.setAttribute('data-theme', t);
+        document.querySelector('meta[name="theme-color"]') &&
+          document.querySelector('meta[name="theme-color"]').setAttribute('content', t === 'light' ? '#f4f4f8' : '#07070e');
+      })();
+    </script>
+    <script type="module" crossorigin src="/culturecasegs/assets/index-D6APeKw7.js"></script>
     <link rel="modulepreload" crossorigin href="/culturecasegs/assets/firebase-BPmH-gcG.js">
-    <link rel="stylesheet" crossorigin href="/culturecasegs/assets/index-Bsr8zO_k.css">
+    <link rel="stylesheet" crossorigin href="/culturecasegs/assets/index-DvwA98k3.css">
   <link rel="manifest" href="/culturecasegs/manifest.webmanifest"></head>
   <body>
     <div id="root"></div>
