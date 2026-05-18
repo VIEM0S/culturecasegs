@@ -211,6 +211,7 @@ function SettingsPage({ data, onSave, confirm }) {
             label="Image du design"
             value={editingDesign.image}
             onChange={img => setEditingDesign(d => ({ ...d, image: img }))}
+            storageKey={`img_design_${editingDesign.id}`}
           />
         </Modal>
       )}
@@ -335,6 +336,7 @@ function SettingsPage({ data, onSave, confirm }) {
               label="Image du design"
               value={newDesign.image}
               onChange={img => setNewDesign(d => ({ ...d, image: img }))}
+              storageKey={newDesign.id ? `img_design_${newDesign.id}` : undefined}
             />
             <button className="btn btn-primary btn-sm" style={{ marginTop: 14 }} onClick={addDesign} disabled={!newDesign.name.trim()}>
               <Icon name="plus" size={13} /> Ajouter ce design

@@ -1,89 +1,65 @@
-import { getDB, doc, getDoc, setDoc, onSnapshot, writeBatch as fbWriteBatch } from "./firebase.js";
-import { CHUNK_SIZE, IDB_NAME, IDB_VER } from "./constants.js";
+import { getDB, doc, getDoc, setDoc, onSnapshot, writeBatch as fbWriteBatch, uploadImageToStorage } from "./firebase.js";
+import { CHUNK_SIZE } from "./constants.js";
 import { today } from "./utils.js";
 
-// ── IndexedDB pour les images ────────────────────────────────────────────────
-let _idb = null;
-export function openImageDB() {
-  if (_idb) return Promise.resolve(_idb);
-  return new Promise((resolve, reject) => {
-    const req = indexedDB.open(IDB_NAME, IDB_VER);
-    req.onupgradeneeded = e => e.target.result.createObjectStore("images");
-    req.onsuccess = e => { _idb = e.target.result; resolve(_idb); };
-    req.onerror   = e => reject(e.target.error);
-  });
-}
-
-export async function saveImageToDB(key, dataUrl) {
-  const db = await openImageDB();
-  return new Promise((resolve, reject) => {
-    const tx = db.transaction("images", "readwrite");
-    tx.objectStore("images").put(dataUrl, key);
-    tx.oncomplete = resolve;
-    tx.onerror    = e => reject(e.target.error);
-  });
-}
-
-export async function getImageFromDB(key) {
-  const db = await openImageDB();
-  return new Promise((resolve, reject) => {
-    const tx = db.transaction("images", "readonly");
-    const req = tx.objectStore("images").get(key);
-    req.onsuccess = e => resolve(e.target.result || null);
-    req.onerror   = e => reject(e.target.error);
-  });
-}
+// ── Logique images ────────────────────────────────────────────────────────────
+// "https://..."  → URL Firebase Storage ou Unsplash → affiché partout ✅
+// "data:..."     → base64 brut → uploadé vers Firebase Storage à la sauvegarde
+// "idb:..."      → ancien format IndexedDB (rétrocompat : image vide, re-uploader)
+//
+// Résultat : toutes les images deviennent des URLs https:// accessibles sur
+// tous les appareils (PC, téléphone, tablette) sans localStorage ni IndexedDB.
 
 async function stripImages(data) {
   const slim = JSON.parse(JSON.stringify(data));
 
-  // ── Images des produits (déjà géré) ────────────────────────────────────
-  for (const p of slim.products || []) {
-    for (const d of p.designs || []) {
-      if (d.image && d.image.startsWith("data:")) {
-        await saveImageToDB(`img_${p.id}_${d.id}`, d.image);
-        d.image = `idb:img_${p.id}_${d.id}`;
-      }
-    }
-  }
-
-  // ── Images des designs dans settings (FIX : était oublié) ──────────────
-  // Sans ce bloc, chaque image base64 (~50 Ko) reste dans le doc Firestore
-  // → limite 1 Mo atteinte après ~15 designs → sauvegarde silencieusement rejetée
+  // ── Images des designs dans settings ──────────────────────────────────────
   for (const d of slim.settings?.designs || []) {
     if (d.image && d.image.startsWith("data:")) {
       const key = `img_design_${d.id}`;
-      await saveImageToDB(key, d.image);
-      d.image = `idb:${key}`;
+      try {
+        const url = await uploadImageToStorage(key, d.image);
+        d.image = url; // URL https:// publique → visible sur tous les appareils
+      } catch (e) {
+        console.error("Upload image design:", e);
+        d.image = ""; // Échec upload → vider pour ne pas bloquer Firestore
+      }
+    }
+    // Ancienne clé idb: → image perdue localement, l'utilisateur devra re-uploader
+    if (d.image && d.image.startsWith("idb:")) {
+      d.image = "";
+    }
+  }
+
+  // ── Images des produits ────────────────────────────────────────────────────
+  for (const p of slim.products || []) {
+    for (const d of p.designs || []) {
+      if (d.image && d.image.startsWith("data:")) {
+        const key = `img_${p.id}_${d.id}`;
+        try {
+          const url = await uploadImageToStorage(key, d.image);
+          d.image = url;
+        } catch (e) {
+          console.error("Upload image produit:", e);
+          d.image = "";
+        }
+      }
+      if (d.image && d.image.startsWith("idb:")) {
+        d.image = "";
+      }
     }
   }
 
   return slim;
 }
 
+// rehydrateImages : no-op désormais (les URLs sont directement des https://)
+// Conservé pour ne pas casser les imports existants
 export async function rehydrateImages(data) {
-  // ── Images des produits ─────────────────────────────────────────────────
-  for (const p of data.products || []) {
-    for (const d of p.designs || []) {
-      if (d.image && d.image.startsWith("idb:")) {
-        const key = d.image.replace("idb:", "");
-        d.image = (await getImageFromDB(key)) || "";
-      }
-    }
-  }
-
-  // ── Images des designs dans settings (FIX symétrique de stripImages) ───
-  for (const d of data.settings?.designs || []) {
-    if (d.image && d.image.startsWith("idb:")) {
-      const key = d.image.replace("idb:", "");
-      d.image = (await getImageFromDB(key)) || "";
-    }
-  }
-
   return data;
 }
 
-// ── Sauvegarde Firestore ─────────────────────────────────────────────────────
+// ── Sauvegarde Firestore ──────────────────────────────────────────────────────
 export async function saveData(data) {
   const slim = await stripImages(data);
   delete slim.auth;
@@ -116,10 +92,7 @@ export async function saveData(data) {
   }
 }
 
-// ── Souscription temps réel (optimisée : getDoc pour les chunks, onSnapshot uniquement sur "main") ──
-// Au démarrage et à chaque changement de "main", on récupère les chunks en une seule passe
-// avec Promise.all(getDoc) au lieu de N listeners onSnapshot parallèles.
-// Cela réduit considérablement le nombre de connexions réseau simultanées.
+// ── Souscription temps réel ───────────────────────────────────────────────────
 export function subscribeToData(onUpdate) {
   const db = getDB();
 
@@ -134,7 +107,6 @@ export function subscribeToData(onUpdate) {
       return;
     }
 
-    // Charger tous les chunks en parallèle avec getDoc (pas de listeners supplémentaires)
     try {
       const chunkRefs = Array.from({ length: chunkCount }, (_, i) => doc(db, "data", `products_${i}`));
       const chunkSnaps = await Promise.all(chunkRefs.map(ref => getDoc(ref)));
@@ -150,7 +122,7 @@ export function subscribeToData(onUpdate) {
   };
 }
 
-// ── Export JSON (CRITIQUE : revokeObjectURL pour éviter la fuite mémoire) ────
+// ── Export JSON ───────────────────────────────────────────────────────────────
 export function exportData(data) {
   const date = new Date().toISOString().slice(0, 10);
   const backup = JSON.parse(JSON.stringify(data));
@@ -164,11 +136,10 @@ export function exportData(data) {
   a.href = url;
   a.download = `culturecase_backup_${date}.json`;
   a.click();
-  // Libérer l'URL objet pour éviter la fuite mémoire
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
-// ── Import JSON (WARN : gestion erreur FileReader onerror ajoutée) ───────────
+// ── Import JSON ───────────────────────────────────────────────────────────────
 export function importData(file, setData, persist, onMsg) {
   onMsg("⏳ Import en cours...");
   const reader = new FileReader();
@@ -186,7 +157,6 @@ export function importData(file, setData, persist, onMsg) {
       onMsg("❌ Erreur de lecture du fichier.");
     }
   };
-  // WARN FIX : gérer l'erreur FileReader (permission refusée, fichier corrompu…)
   reader.onerror = () => onMsg("❌ Impossible de lire le fichier. Vérifie qu'il n'est pas corrompu.");
   reader.readAsText(file);
 }
