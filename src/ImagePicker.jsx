@@ -2,7 +2,7 @@ import { useState, useRef } from "react";
 import Icon from "./Icon.jsx";
 
 const CLOUDINARY_CLOUD = "dknfqd2xp";
-const CLOUDINARY_PRESET = "cultturecase_preset";
+const CLOUDINARY_PRESET = "culturecase_preset";
 
 // ── Upload vers Cloudinary (gratuit, sans Firebase Storage) ──────────────────
 async function uploadToCloudinary(dataUrl) {
