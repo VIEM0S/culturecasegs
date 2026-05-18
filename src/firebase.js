@@ -37,8 +37,9 @@ export async function signOut() {
   await fbSignOut(auth);
 }
 
-export function onAuthChange(callback) {
-  return onAuthStateChanged(auth, callback);
+// ── MODIFIÉ : accepte un second callback pour les erreurs Firebase Auth
+export function onAuthChange(callback, onError) {
+  return onAuthStateChanged(auth, callback, onError);
 }
 
 export { doc, getDoc, setDoc, onSnapshot, writeBatch };

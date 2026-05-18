@@ -23,8 +23,8 @@ function App() {
   const [showUpdate, setShowUpdate]   = useState(false);
   const [splashDone, setSplashDone]   = useState(false);
   const [loading, setLoading]         = useState(true);
-  // undefined = Firebase Auth en attente | null = déconnecté | objet = connecté
   const [authUser, setAuthUser]       = useState(undefined);
+  const [authError, setAuthError]     = useState(null); // ── NOUVEAU
   const [syncStatus, setSyncStatus]   = useState("syncing");
   const isFirstLoad  = useRef(true);
   const _localUpdate = useRef(false);
@@ -32,53 +32,59 @@ function App() {
   const { confirm, alert: dlgAlert, Dialog } = useDialog();
   const { toast, Toasts } = useToast();
 
-  // ── Écoute Firebase Auth ──────────────────────────────────────────────────
-  // WARN FIX : flag "mounted" pour ignorer les setState après démontage
-  // (notamment en React StrictMode qui monte/démonte deux fois en dev)
   useEffect(() => {
     let mounted = true;
 
-    const unsubAuth = onAuthChange((user) => {
-      if (!mounted) return;
-      setAuthUser(user);
-      // Reset du flag "trop long" à chaque nouvelle tentative d'auth
-      setLoadingTooLong(false);
+    const unsubAuth = onAuthChange(
+      // ── Callback succès
+      (user) => {
+        if (!mounted) return;
+        setAuthUser(user);
+        setAuthError(null);
+        setLoadingTooLong(false);
 
-      if (user) {
-        // Annuler l'éventuel listener précédent AVANT d'en créer un nouveau (fix fuite mémoire)
-        if (unsubData.current) {
-          unsubData.current();
-          unsubData.current = null;
-        }
-        isFirstLoad.current = true;
-        const unsub = subscribeToData((freshData) => {
-          if (!mounted) return;
-          if (isFirstLoad.current) {
-            isFirstLoad.current = false;
-            setLoading(false);
+        if (user) {
+          if (unsubData.current) {
+            unsubData.current();
+            unsubData.current = null;
+          }
+          isFirstLoad.current = true;
+          const unsub = subscribeToData((freshData) => {
+            if (!mounted) return;
+            if (isFirstLoad.current) {
+              isFirstLoad.current = false;
+              setLoading(false);
+              setData(freshData);
+              setSyncStatus("ok");
+              return;
+            }
+            if (_localUpdate.current) return;
             setData(freshData);
             setSyncStatus("ok");
-            return;
+          });
+          unsubData.current = unsub;
+        } else {
+          if (unsubData.current) {
+            unsubData.current();
+            unsubData.current = null;
           }
-          if (_localUpdate.current) return;
-          setData(freshData);
-          setSyncStatus("ok");
-        });
-        unsubData.current = unsub;
-      } else {
-        if (unsubData.current) {
-          unsubData.current();
-          unsubData.current = null;
+          setData(null);
+          setLoading(false);
         }
-        setData(null);
+      },
+      // ── Callback erreur — NOUVEAU
+      (error) => {
+        if (!mounted) return;
+        console.error("Firebase Auth error:", error);
+        setAuthUser(null);
         setLoading(false);
+        setAuthError(error.message);
       }
-    });
+    );
 
     const goOffline = () => { if (mounted) setSyncStatus("offline"); };
     const goOnline  = () => { if (mounted) setSyncStatus("ok"); };
     const goUpdate  = () => { if (mounted) setShowUpdate(true); };
-    // AMÉLIORATION : PWA prête hors ligne → toast discret
     const goOfflineReady = () => {
       if (mounted) toast("✅ Application prête à fonctionner hors ligne.", "info");
     };
@@ -107,7 +113,7 @@ function App() {
       saveData(newData)
         .then(() => setSyncStatus("ok"))
         .catch(() => {
-          _localUpdate.current = false; // Reset immédiat en cas d'erreur pour ne pas bloquer les snapshots
+          _localUpdate.current = false;
           setSyncStatus("offline");
           toast("❌ Erreur de synchronisation — données sauvegardées localement.", "error");
         })
@@ -118,7 +124,6 @@ function App() {
     [setSyncStatus, toast],
   );
 
-  // ── PWA Install prompt ──────────────────────────────────────────────────
   useEffect(() => {
     const handler = (e) => {
       e.preventDefault();
@@ -131,8 +136,6 @@ function App() {
     return () => window.removeEventListener("beforeinstallprompt", handler);
   }, []);
 
-  // ── Splash screen — disparaît quand l'état auth ET les données sont connus ──
-  // Plus de timer fixe : on attend l'état réel plutôt qu'un délai arbitraire.
   useEffect(() => {
     if (authUser !== undefined && !loading) {
       setSplashDone(true);
@@ -279,7 +282,6 @@ function App() {
     [data, persist, confirm],
   );
 
-  // ── Timeout chargement trop long ────────────────────────────────────────
   const [loadingTooLong, setLoadingTooLong] = useState(false);
   useEffect(() => {
     if (!loading) { setLoadingTooLong(false); return; }
@@ -289,7 +291,7 @@ function App() {
 
   // ── États de l'application ───────────────────────────────────────────────
 
-  // 1. Firebase Auth en attente OU données en cours de chargement → splash unifié
+  // 1. Firebase Auth en attente OU données en cours de chargement → splash
   if (authUser === undefined || (authUser && loading))
     return (
       <div
@@ -318,10 +320,28 @@ function App() {
       </div>
     );
 
-  // 2. Non authentifié → login
+  // 2. Erreur Firebase Auth → écran d'erreur clair — NOUVEAU
+  if (authError)
+    return (
+      <div className="splash" role="alert">
+        <div className="splash-logo">Culture<span>case</span> GS</div>
+        <div style={{ fontSize: 13, color: "var(--danger)", marginTop: 12, maxWidth: 300, textAlign: "center", lineHeight: 1.6 }}>
+          ⚠️ Erreur de connexion Firebase :<br />
+          <span style={{ color: "var(--text2)", fontSize: 12 }}>{authError}</span>
+        </div>
+        <button
+          onClick={() => { setAuthError(null); window.location.reload(); }}
+          style={{ marginTop: 16, padding: "10px 24px", background: "var(--accent2)", color: "#fff", border: "none", borderRadius: 8, fontWeight: 700, fontSize: 14, cursor: "pointer" }}
+        >
+          Réessayer
+        </button>
+      </div>
+    );
+
+  // 3. Non authentifié → login
   if (!authUser) return <LoginPage />;
 
-  // 3. Application principale (auth OK + données chargées)
+  // 4. Application principale (auth OK + données chargées)
   const navItems = [
     { id: "dashboard", label: "Tableau de bord",    icon: "dashboard" },
     { id: "products",  label: "Produits",           icon: "products"  },
@@ -343,7 +363,6 @@ function App() {
 
   return (
     <>
-      {/* ── SPLASH — affiché jusqu'à la fin de l'animation (fade-out) */}
       {!splashDone && (
         <div className="splash" aria-hidden="true">
           <div className="splash-logo">Culture<span>case</span> GS</div>
@@ -352,7 +371,6 @@ function App() {
         </div>
       )}
 
-      {/* ── UPDATE BANNER ── */}
       {showUpdate && (
         <div className="update-banner">
           <span style={{ flex: 1 }}>🔄 Nouvelle version disponible</span>
@@ -365,7 +383,6 @@ function App() {
         </div>
       )}
 
-      {/* ── INSTALL BANNER ── */}
       {showInstall && installPrompt && (
         <div className="install-banner">
           <div className="install-banner-icon">📦</div>
@@ -427,7 +444,6 @@ function App() {
             </button>
             <h2>{titles[page]}</h2>
 
-            {/* Indicateur sync — point coloré visible mobile */}
             <span
               className="sync-dot"
               title={
@@ -444,7 +460,6 @@ function App() {
               }}
             />
 
-            {/* Actions desktop */}
             <div style={{ display: "flex", alignItems: "center", gap: 8 }} className="topbar-desktop-actions">
               <span
                 title={
@@ -525,7 +540,6 @@ function App() {
             </Suspense>
           </div>
 
-          {/* ── BOTTOM NAV (mobile) ── */}
           <nav className="bottom-nav" aria-label="Navigation principale">
             <div className="bottom-nav-inner">
               {[

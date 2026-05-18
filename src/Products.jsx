@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useCallback, memo, useRef } from "react";
 import Icon from "./Icon.jsx";
-import { StockView, stockBadge } from "./Dashboard.jsx";
+import { StockView, stockBadge } from "./StockView.jsx";
 import { Modal, StatCard, FieldError, DesignThumb } from "./components.jsx";
 import { useDialog, useToast } from "./hooks.jsx";
 import { uid, sanitize, validateImageUrl, validateProductForm, validateSaleForm, validateMovementForm, getProductImageUrl, today, fmtMoney } from "./utils.js";
