@@ -1,50 +1,28 @@
-import { getDB, doc, getDoc, setDoc, onSnapshot, writeBatch as fbWriteBatch, uploadImageToStorage } from "./firebase.js";
+import { getDB, doc, getDoc, setDoc, onSnapshot, writeBatch as fbWriteBatch } from "./firebase.js";
 import { CHUNK_SIZE } from "./constants.js";
 import { today } from "./utils.js";
 
 // ── Logique images ────────────────────────────────────────────────────────────
-// "https://..."  → URL Firebase Storage ou Unsplash → affiché partout ✅
-// "data:..."     → base64 brut → uploadé vers Firebase Storage à la sauvegarde
-// "idb:..."      → ancien format IndexedDB (rétrocompat : image vide, re-uploader)
+// "https://res.cloudinary.com/..." → URL Cloudinary → visible partout ✅
+// "https://images.unsplash.com/..." → URL Unsplash → visible partout ✅
+// "data:..."  → base64 brut (ancien format) → on vide pour ne pas bloquer Firestore
+// "idb:..."   → ancien format IndexedDB → on vide
 //
-// Résultat : toutes les images deviennent des URLs https:// accessibles sur
-// tous les appareils (PC, téléphone, tablette) sans localStorage ni IndexedDB.
+// Les images sont uploadées vers Cloudinary dans ImagePicker AVANT la sauvegarde.
+// Firestore ne reçoit que des URLs https://, jamais de base64.
 
 async function stripImages(data) {
   const slim = JSON.parse(JSON.stringify(data));
 
-  // ── Images des designs dans settings ──────────────────────────────────────
+  // Nettoyer les anciens formats base64 et idb: qui bloqueraient Firestore
   for (const d of slim.settings?.designs || []) {
-    if (d.image && d.image.startsWith("data:")) {
-      const key = `img_design_${d.id}`;
-      try {
-        const url = await uploadImageToStorage(key, d.image);
-        d.image = url; // URL https:// publique → visible sur tous les appareils
-      } catch (e) {
-        console.error("Upload image design:", e);
-        d.image = ""; // Échec upload → vider pour ne pas bloquer Firestore
-      }
-    }
-    // Ancienne clé idb: → image perdue localement, l'utilisateur devra re-uploader
-    if (d.image && d.image.startsWith("idb:")) {
+    if (d.image && (d.image.startsWith("data:") || d.image.startsWith("idb:"))) {
       d.image = "";
     }
   }
-
-  // ── Images des produits ────────────────────────────────────────────────────
   for (const p of slim.products || []) {
     for (const d of p.designs || []) {
-      if (d.image && d.image.startsWith("data:")) {
-        const key = `img_${p.id}_${d.id}`;
-        try {
-          const url = await uploadImageToStorage(key, d.image);
-          d.image = url;
-        } catch (e) {
-          console.error("Upload image produit:", e);
-          d.image = "";
-        }
-      }
-      if (d.image && d.image.startsWith("idb:")) {
+      if (d.image && (d.image.startsWith("data:") || d.image.startsWith("idb:"))) {
         d.image = "";
       }
     }
@@ -53,8 +31,7 @@ async function stripImages(data) {
   return slim;
 }
 
-// rehydrateImages : no-op désormais (les URLs sont directement des https://)
-// Conservé pour ne pas casser les imports existants
+// rehydrateImages : no-op — les URLs Cloudinary sont déjà des https://
 export async function rehydrateImages(data) {
   return data;
 }
@@ -117,9 +94,7 @@ export function subscribeToData(onUpdate) {
     }
   });
 
-  return () => {
-    unsubMain();
-  };
+  return () => { unsubMain(); };
 }
 
 // ── Export JSON ───────────────────────────────────────────────────────────────

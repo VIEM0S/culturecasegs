@@ -1,13 +1,26 @@
 import { useState, useRef } from "react";
 import Icon from "./Icon.jsx";
-import { uploadImageToStorage } from "./firebase.js";
 
-// ── Génère une clé unique pour Firebase Storage ──────────────────────────────
-function makeKey() {
-  return `img_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+const CLOUDINARY_CLOUD = "dknfqd2xp";
+const CLOUDINARY_PRESET = "cultturecase_preset";
+
+// ── Upload vers Cloudinary (gratuit, sans Firebase Storage) ──────────────────
+async function uploadToCloudinary(dataUrl) {
+  const blob = await (await fetch(dataUrl)).blob();
+  const form = new FormData();
+  form.append("file", blob);
+  form.append("upload_preset", CLOUDINARY_PRESET);
+
+  const res = await fetch(
+    `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD}/image/upload`,
+    { method: "POST", body: form }
+  );
+  if (!res.ok) throw new Error("Cloudinary upload failed");
+  const json = await res.json();
+  return json.secure_url; // URL https:// publique, visible partout
 }
 
-// ── Compresse l'image côté client avant l'upload ─────────────────────────────
+// ── Compresse l'image avant upload ───────────────────────────────────────────
 function compressImage(file) {
   return new Promise((resolve, reject) => {
     if (!file || !file.type.startsWith("image/")) return reject(new Error("Fichier invalide"));
@@ -15,7 +28,7 @@ function compressImage(file) {
     reader.onload = (e) => {
       const img = new Image();
       img.onload = () => {
-        const MAX = 600; // px max
+        const MAX = 600;
         let w = img.width, h = img.height;
         if (w > h) { if (w > MAX) { h = Math.round(h * MAX / w); w = MAX; } }
         else        { if (h > MAX) { w = Math.round(w * MAX / h); h = MAX; } }
@@ -32,7 +45,7 @@ function compressImage(file) {
   });
 }
 
-function ImagePicker({ value, onChange, label = "Image du design", storageKey }) {
+function ImagePicker({ value, onChange, label = "Image du design" }) {
   const inputRef = useRef();
   const [dragOver, setDragOver] = useState(false);
   const [status, setStatus] = useState(null); // null | "compress" | "upload" | "error"
@@ -43,9 +56,7 @@ function ImagePicker({ value, onChange, label = "Image du design", storageKey })
     try {
       const dataUrl = await compressImage(file);
       setStatus("upload");
-      // Upload vers Firebase Storage → URL https:// accessible partout
-      const key = storageKey || makeKey();
-      const url = await uploadImageToStorage(key, dataUrl);
+      const url = await uploadToCloudinary(dataUrl);
       onChange(url);
       setStatus(null);
     } catch (e) {
@@ -87,7 +98,7 @@ function ImagePicker({ value, onChange, label = "Image du design", storageKey })
           <span style={{ fontSize: 12, color: status === "error" ? "var(--danger)" : "var(--text2)" }}>
             {statusLabel}
           </span>
-        ) : value && (value.startsWith("https://") || value.startsWith("data:")) ? (
+        ) : value && value.startsWith("https://") ? (
           <img
             src={value}
             alt="aperçu"
@@ -122,7 +133,7 @@ function ImagePicker({ value, onChange, label = "Image du design", storageKey })
       )}
 
       <p style={{ fontSize: 11, color: "var(--text2)", marginTop: 5 }}>
-        ☁️ Image synchronisée sur tous vos appareils via Firebase
+        ☁️ Image synchronisée sur tous vos appareils
       </p>
     </div>
   );
