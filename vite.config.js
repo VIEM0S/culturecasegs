@@ -2,6 +2,9 @@ import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import { VitePWA } from "vite-plugin-pwa";
 
+// ── Version horodatée pour forcer le renouvellement du cache PWA ─────────────
+const BUILD_VERSION = Date.now().toString();
+
 export default defineConfig({
   base: "/culturecasegs/",
   plugins: [
@@ -35,6 +38,10 @@ export default defineConfig({
         ],
       },
       workbox: {
+        // CRITIQUE : skipWaiting + clientsClaim = le nouveau SW prend effet
+        // immédiatement sans attendre que l'ancien soit "released"
+        skipWaiting: true,
+        clientsClaim: true,
         // WARN FIX : exclure png/svg/ico du glob pour éviter les doublons dans le précache.
         // Les icônes sont déclarées explicitement via additionalManifestEntries.
         globPatterns: ["**/*.{js,css,html}"],
