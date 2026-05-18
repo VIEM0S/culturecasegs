@@ -1,4 +1,4 @@
-import { memo, useMemo, useCallback } from "react";
+import { memo, useMemo, useCallback, useState } from "react";
 import {
   AreaChart, Area, BarChart, Bar,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer
@@ -25,23 +25,7 @@ function CustomTooltip({ active, payload, label, formatter }) {
 
 const Reports = memo(function Reports({ data }) {
   const { products, sales } = data;
-  const [tab, setTab] = useMemo(() => {
-    // useState n'est pas importé ici — on utilise le pattern local
-    let _tab = "stats";
-    const setter = (v) => { _tab = v; };
-    return [_tab, setter];
-  }, []);
-
-  // Re-implémenter avec vrai useState
-  const [activeTab, setActiveTab] = [
-    typeof window !== "undefined"
-      ? (window.__reportsTab ?? "stats")
-      : "stats",
-    (v) => {
-      window.__reportsTab = v;
-      // force re-render via un state local
-    }
-  ];
+  const [activeTab, setActiveTab] = useState("stats");
 
   const productMap = useMemo(() => {
     const m = {};

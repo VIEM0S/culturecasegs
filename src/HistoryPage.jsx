@@ -22,10 +22,15 @@ function HistoryPage({ data }) {
   const clientGroups = useMemo(() => {
     const groups = {};
     sales.forEach(s => {
-      const key = (s.client || "").trim() || "__anon__";
-      if (!groups[key]) groups[key] = { name: s.client || "", phone: s.phone || "", quartier: s.quartier || "", purchases: [] };
-      // update contact info if more recent
-      if (s.client) { groups[key].name = s.client; groups[key].phone = s.phone || groups[key].phone; groups[key].quartier = s.quartier || groups[key].quartier; }
+      // Clé unique : téléphone si dispo, sinon nom, sinon anonyme
+      const phone = (s.phone || "").trim();
+      const name  = (s.client || "").trim();
+      const key   = phone || name || "__anon__";
+      if (!groups[key]) groups[key] = { name, phone, quartier: s.quartier || "", purchases: [] };
+      // Mise à jour des infos de contact si plus récent
+      if (name) { groups[key].name = name; }
+      if (phone) { groups[key].phone = phone; }
+      if (s.quartier) groups[key].quartier = s.quartier;
       groups[key].purchases.push(s);
     });
     return Object.values(groups).map(g => ({

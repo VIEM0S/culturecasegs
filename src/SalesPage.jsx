@@ -43,7 +43,7 @@ function TicketModal({ sales, productMap, onClose }) {
 
     const encoded = encodeURIComponent(lines);
     const url = phone
-      ? `https://wa.me/${phone.replace(/\D/g, "")}?text=${encoded}`
+      ? `https://wa.me/${phone.replace(/[\s\-\(\)\.]/g, "").replace(/^\+/, "")}?text=${encoded}`
       : `https://wa.me/?text=${encoded}`;
     window.open(url, "_blank");
   };
@@ -247,6 +247,16 @@ function SalesPage({ data, onSale, toast }) {
   const [modal, setModal]         = useState(false);
   const [ticket, setTicket]       = useState(null); // sales[] à afficher dans le ticket
   const [client, setClient]       = useState({ name: "", phone: "", quartier: "", delivery: false });
+
+  // ── Normalise le numéro de téléphone : ajoute +223 si aucun indicatif
+  const normalizePhone = (raw) => {
+    if (!raw || !raw.trim()) return "";
+    const trimmed = raw.trim();
+    // Déjà un indicatif (commence par + ou 00)
+    if (trimmed.startsWith("+") || trimmed.startsWith("00")) return trimmed;
+    // Pas d'indicatif → on préfixe avec +223 (Mali)
+    return "+223" + trimmed.replace(/^0/, ""); // supprime le 0 initial si présent
+  };
   const [cartLines, setCartLines] = useState([{ id: uid(), productId: "", qty: "1", discountType: "none", discountPercent: "0", discountReason: "", _model: "" }]);
   const [search, setSearch]       = useState("");
   const [dateFrom, setDateFrom]   = useState("");
@@ -297,7 +307,7 @@ function SalesPage({ data, onSale, toast }) {
         if (isNaN(pct) || pct < 1 || pct > 100) errs[`${line.id}_discountPercent`] = "Entre 1 et 100%";
       }
     });
-    if (client.phone && !/^[\d\s\+\-\(\)\.]{6,20}$/.test(client.phone.trim())) errs.phone = "Numéro invalide";
+    if (client.phone && !/^[\d\s\+\-\(\)\.]{6,20}$/.test(normalizePhone(client.phone).trim())) errs.phone = "Numéro invalide";
     if (Object.keys(errs).length > 0) { setErrors(errs); return; }
 
     for (let i = 0; i < cartLines.length; i++) {
@@ -322,7 +332,7 @@ function SalesPage({ data, onSale, toast }) {
         discountAmount: calc.discountAmount,
         totalAfterDiscount: calc.total,
         discountReason: line.discountReason,
-        client: sanitize(client.name, 100), phone: sanitize(client.phone, 20),
+        client: sanitize(client.name, 100), phone: sanitize(normalizePhone(client.phone), 20),
         quartier: sanitize(client.quartier, 100), delivery: client.delivery,
       };
     });
@@ -523,12 +533,20 @@ function SalesPage({ data, onSale, toast }) {
             </div>
             <div className="form-group">
               <label className="form-label">Téléphone</label>
-              <input
-                className={`input${errors.phone ? " input-error" : ""}`}
-                value={client.phone}
-                onChange={e => { setClient(c => ({ ...c, phone: e.target.value })); setErrors(er => ({ ...er, phone: undefined })); }}
-                placeholder="77 XXX XX XX"
-              />
+              <div style={{ position: "relative" }}>
+                <input
+                  className={`input${errors.phone ? " input-error" : ""}`}
+                  value={client.phone}
+                  onChange={e => { setClient(c => ({ ...c, phone: e.target.value })); setErrors(er => ({ ...er, phone: undefined })); }}
+                  placeholder="76 XXX XX XX"
+                  style={{ paddingRight: 110 }}
+                />
+                {!client.phone.trim().startsWith("+") && !client.phone.trim().startsWith("00") && client.phone.trim() && (
+                  <span style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", fontSize: 11, color: "var(--text2)", pointerEvents: "none", background: "var(--bg2)", padding: "2px 6px", borderRadius: 4 }}>
+                    → +223 auto
+                  </span>
+                )}
+              </div>
               <FieldError msg={errors.phone} />
             </div>
           </div>

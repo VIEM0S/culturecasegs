@@ -36,6 +36,8 @@ export async function getImageFromDB(key) {
 
 async function stripImages(data) {
   const slim = JSON.parse(JSON.stringify(data));
+
+  // ── Images des produits (déjà géré) ────────────────────────────────────
   for (const p of slim.products || []) {
     for (const d of p.designs || []) {
       if (d.image && d.image.startsWith("data:")) {
@@ -44,10 +46,23 @@ async function stripImages(data) {
       }
     }
   }
+
+  // ── Images des designs dans settings (FIX : était oublié) ──────────────
+  // Sans ce bloc, chaque image base64 (~50 Ko) reste dans le doc Firestore
+  // → limite 1 Mo atteinte après ~15 designs → sauvegarde silencieusement rejetée
+  for (const d of slim.settings?.designs || []) {
+    if (d.image && d.image.startsWith("data:")) {
+      const key = `img_design_${d.id}`;
+      await saveImageToDB(key, d.image);
+      d.image = `idb:${key}`;
+    }
+  }
+
   return slim;
 }
 
 export async function rehydrateImages(data) {
+  // ── Images des produits ─────────────────────────────────────────────────
   for (const p of data.products || []) {
     for (const d of p.designs || []) {
       if (d.image && d.image.startsWith("idb:")) {
@@ -56,6 +71,15 @@ export async function rehydrateImages(data) {
       }
     }
   }
+
+  // ── Images des designs dans settings (FIX symétrique de stripImages) ───
+  for (const d of data.settings?.designs || []) {
+    if (d.image && d.image.startsWith("idb:")) {
+      const key = d.image.replace("idb:", "");
+      d.image = (await getImageFromDB(key)) || "";
+    }
+  }
+
   return data;
 }
 
