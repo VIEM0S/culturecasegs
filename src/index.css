@@ -34,6 +34,49 @@ body { font-family: 'Syne', sans-serif; }
   --error:    #ef4444;
 }
 
+/* ── LIGHT MODE ─────────────────────────────────────────────────────────────
+   Activé via data-theme="light" sur <html>
+   ─────────────────────────────────────────────────────────────────────────── */
+[data-theme="light"] {
+  --bg:       #f4f4f8;
+  --bg2:      #ffffff;
+  --bg3:      #eeeef5;
+  --border:   rgba(0,0,0,0.08);
+  --border2:  rgba(0,0,0,0.15);
+  --text:     #1a1a2e;
+  --text2:    #6b6b8a;
+  --accent:   #7c3aed;
+  --accent2:  #6d28d9;
+  --accent3:  #4c1d95;
+  --gold:     #d97706;
+  --gold2:    #78350f;
+  --success:  #059669;
+  --success2: #d1fae5;
+  --danger:   #dc2626;
+  --danger2:  #fee2e2;
+  --warn:     #d97706;
+  --warn2:    #fef3c7;
+  --info:     #2563eb;
+  --info2:    #dbeafe;
+  --error:    #dc2626;
+}
+
+[data-theme="light"] .sidebar              { background: #ffffff; box-shadow: 2px 0 12px rgba(0,0,0,0.06); }
+[data-theme="light"] .topbar               { background: #ffffff; box-shadow: 0 1px 8px rgba(0,0,0,0.06); }
+[data-theme="light"] .bottom-nav           { background: rgba(255,255,255,0.95); }
+[data-theme="light"] .app                  { background: var(--bg); }
+[data-theme="light"] .modal                { background: #ffffff; }
+[data-theme="light"] .splash               { background: var(--bg); background-image: radial-gradient(ellipse at 30% 40%, rgba(124,58,237,0.08) 0%, transparent 60%); }
+[data-theme="light"] .login-wrap           { background: var(--bg); }
+[data-theme="light"] .login-box            { background: #ffffff; }
+[data-theme="light"] .nav-item:hover       { background: var(--bg3); }
+[data-theme="light"] .nav-item.active      { background: rgba(124,58,237,0.1); }
+[data-theme="light"] tr:hover td           { background: rgba(124,58,237,0.03); }
+[data-theme="light"] .install-banner       { background: linear-gradient(135deg, #ffffff, rgba(124,58,237,0.05)); }
+[data-theme="light"] .update-banner        { background: #ffffff; }
+
+
+
 .app { display: flex; min-height: 100vh; background: var(--bg); color: var(--text); width: 100%; overflow-x: hidden; }
 
 /* ── SIDEBAR ── */

@@ -7,6 +7,43 @@ import { uid, sanitize, validateImageUrl, validateProductForm, validateSaleForm,
 import { DEFAULT_MODELS, DEFAULT_DESIGNS, DEFAULT_PRICE_SETTINGS, LOW_STOCK } from "./constants.js";
 import { exportData, importData } from "./data.js";
 
+
+// ─── THEME TOGGLE ──────────────────────────────────────────────────────────
+function ThemeToggle() {
+  const [theme, setTheme] = useState(() => localStorage.getItem("cc-theme") || "dark");
+
+  useEffect(() => {
+    document.documentElement.setAttribute("data-theme", theme);
+    localStorage.setItem("cc-theme", theme);
+  }, [theme]);
+
+  return (
+    <div style={{ display: "flex", gap: 12 }}>
+      {[
+        { id: "dark",  label: "🌙 Mode sombre", desc: "Interface sombre — idéal en intérieur" },
+        { id: "light", label: "☀️ Mode clair",  desc: "Interface claire — idéal en plein soleil" },
+      ].map(opt => (
+        <div
+          key={opt.id}
+          onClick={() => setTheme(opt.id)}
+          style={{
+            flex: 1, padding: "14px 16px", borderRadius: 10, cursor: "pointer",
+            border: `2px solid ${theme === opt.id ? "var(--accent2)" : "var(--border)"}`,
+            background: theme === opt.id ? "rgba(167,139,250,0.08)" : "var(--bg3)",
+            transition: "all 0.2s",
+          }}
+        >
+          <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 4 }}>{opt.label}</div>
+          <div style={{ fontSize: 12, color: "var(--text2)", lineHeight: 1.5 }}>{opt.desc}</div>
+          {theme === opt.id && (
+            <div style={{ marginTop: 8, fontSize: 11, fontWeight: 700, color: "var(--accent2)" }}>✓ Actif</div>
+          )}
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function SettingsPage({ data, onSave, confirm }) {
   const { settings } = data;
   const [tab, setTab] = useState("prices");
@@ -192,6 +229,7 @@ function SettingsPage({ data, onSave, confirm }) {
         <button className={`tab ${tab === "models" ? "active" : ""}`} onClick={() => setTab("models")}><Icon name="smartphone" size={13} /> Modèles</button>
         <button className={`tab ${tab === "designs" ? "active" : ""}`} onClick={() => setTab("designs")}><Icon name="palette" size={13} /> Designs</button>
         <button className={`tab ${tab === "backup" ? "active" : ""}`} onClick={() => setTab("backup")}><Icon name="download" size={13} /> Backup</button>
+        <button className={`tab ${tab === "apparence" ? "active" : ""}`} onClick={() => setTab("apparence")}><Icon name="settings" size={13} /> Apparence</button>
       </div>
 
       {tab === "prices" && (
@@ -366,6 +404,19 @@ function SettingsPage({ data, onSave, confirm }) {
               • Stocke le fichier sur Google Drive ou envoie-le à toi-même sur WhatsApp<br />
               • Le fichier contient des données sensibles — ne le partage pas
             </p>
+          </div>
+        </div>
+      )}
+
+
+      {tab === "apparence" && (
+        <div>
+          <div className="card">
+            <p className="section-label" style={{ marginBottom: 16 }}>Thème de l'application</p>
+            <p style={{ fontSize: 13, color: "var(--text2)", marginBottom: 20, lineHeight: 1.6 }}>
+              Choisis entre le mode sombre (défaut) et le mode clair. Le choix est sauvegardé sur cet appareil.
+            </p>
+            <ThemeToggle />
           </div>
         </div>
       )}
