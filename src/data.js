@@ -102,8 +102,27 @@ export function exportData(data) {
   const date = new Date().toISOString().slice(0, 10);
   const backup = JSON.parse(JSON.stringify(data));
   delete backup.auth;
+
+  // ── Collecter toutes les URLs Cloudinary pour info ───────────────────────
+  const imageUrls = [];
+  for (const d of backup.settings?.designs || []) {
+    if (d.image && d.image.startsWith("https://")) imageUrls.push({ type: "design", name: d.name, url: d.image });
+  }
+  for (const p of backup.products || []) {
+    for (const d of p.designs || []) {
+      if (d.image && d.image.startsWith("https://")) imageUrls.push({ type: "product", name: `${p.model} — ${d.name}`, url: d.image });
+    }
+  }
+
   const blob = new Blob(
-    [JSON.stringify({ version: 2, data: backup }, null, 2)],
+    [JSON.stringify({
+      version: 2,
+      exportDate: date,
+      imageCount: imageUrls.length,
+      imageNote: "Les images sont stockées sur Cloudinary. Les URLs ci-dessous permettent de les retrouver en cas de perte.",
+      images: imageUrls,
+      data: backup,
+    }, null, 2)],
     { type: "application/json" }
   );
   const url = URL.createObjectURL(blob);

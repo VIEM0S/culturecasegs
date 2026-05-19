@@ -275,6 +275,8 @@ function SalesPage({ data, onSale, toast }) {
   const [dateTo, setDateTo]       = useState("");
   const [errors, setErrors]       = useState({});
   const [submitting, setSubmitting] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const PAGE_SIZE = 50;
 
   const productMap = useMemo(() => {
     const m = {};
@@ -376,6 +378,12 @@ function SalesPage({ data, onSale, toast }) {
 
   const totalRev = useMemo(() => filtered.reduce((s, v) => s + (v.totalAfterDiscount ?? v.total), 0), [filtered]);
 
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const paginated  = filtered.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
+
+  // Reset page quand le filtre change
+  const resetPage = () => setCurrentPage(1);
+
   const openModal  = () => { setModal(true); setErrors({}); };
   const closeModal = () => {
     setModal(false); setErrors({});
@@ -393,11 +401,11 @@ function SalesPage({ data, onSale, toast }) {
       </div>
 
       <div className="filter-row">
-        <input className="input" placeholder="Rechercher..." value={search} onChange={e => setSearch(e.target.value)} style={{ flex: 2 }} />
-        <input className="input" type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)} style={{ flex: 1 }} />
-        <input className="input" type="date" value={dateTo}   onChange={e => setDateTo(e.target.value)}   style={{ flex: 1 }} />
+        <input className="input" placeholder="Rechercher..." value={search} onChange={e => { setSearch(e.target.value); resetPage(); }} style={{ flex: 2 }} />
+        <input className="input" type="date" value={dateFrom} onChange={e => { setDateFrom(e.target.value); resetPage(); }} style={{ flex: 1 }} />
+        <input className="input" type="date" value={dateTo}   onChange={e => { setDateTo(e.target.value);   resetPage(); }} style={{ flex: 1 }} />
         {(dateFrom || dateTo || search) && (
-          <button className="btn btn-ghost btn-sm" onClick={() => { setSearch(""); setDateFrom(""); setDateTo(""); }} title="Effacer les filtres">✕</button>
+          <button className="btn btn-ghost btn-sm" onClick={() => { setSearch(""); setDateFrom(""); setDateTo(""); resetPage(); }} title="Effacer les filtres">✕</button>
         )}
       </div>
 
@@ -424,7 +432,7 @@ function SalesPage({ data, onSale, toast }) {
             </thead>
             <tbody>
               {filtered.length === 0 && <tr><td colSpan={9} className="empty">Aucune vente</td></tr>}
-              {filtered.map(s => {
+              {paginated.map(s => {
                 const prod = productMap[s.productId];
                 return (
                   <tr key={s.id}>
@@ -457,7 +465,25 @@ function SalesPage({ data, onSale, toast }) {
         </div>
       </div>
 
-      {/* ── Modale nouvelle vente ── */}
+      {/* ── Pagination ── */}
+      {totalPages > 1 && (
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, marginTop: 14 }}>
+          <button
+            className="btn btn-outline btn-sm"
+            onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+            disabled={currentPage === 1}
+          >← Préc.</button>
+          <span style={{ fontSize: 13, color: "var(--text2)" }}>
+            Page <strong>{currentPage}</strong> / {totalPages}
+            <span style={{ marginLeft: 8, color: "var(--text2)" }}>({filtered.length} ventes)</span>
+          </span>
+          <button
+            className="btn btn-outline btn-sm"
+            onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+            disabled={currentPage === totalPages}
+          >Suiv. →</button>
+        </div>
+      )}
       {modal && (
         <Modal title="Enregistrer une vente" onClose={closeModal} wide footer={<>
           <button className="btn btn-outline" onClick={closeModal}>Annuler</button>

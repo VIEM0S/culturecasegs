@@ -285,7 +285,7 @@ function App() {
   const [loadingTooLong, setLoadingTooLong] = useState(false);
   useEffect(() => {
     if (!loading) { setLoadingTooLong(false); return; }
-    const t = setTimeout(() => setLoadingTooLong(true), 10000);
+    const t = setTimeout(() => setLoadingTooLong(true), 25000);
     return () => clearTimeout(t);
   }, [loading]);
 
