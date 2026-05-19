@@ -7,7 +7,7 @@ import { uid, sanitize, validateImageUrl, validateProductForm, validateSaleForm,
 import { DEFAULT_MODELS, DEFAULT_DESIGNS, DEFAULT_PRICE_SETTINGS, LOW_STOCK } from "./constants.js";
 import { exportData, importData } from "./data.js";
 
-function Products({ data, onSave, onDelete, onSale }) {
+function Products({ data, onSave, onDelete, onSale, isViewer = false }) {
   const { products, settings } = data;
   const { designs, models, priceSettings } = settings;
   const [modal, setModal] = useState(null);
@@ -160,7 +160,7 @@ function Products({ data, onSave, onDelete, onSale }) {
               ><Icon name={v.icon} size={14} /></button>
             ))}
           </div>
-          <button className="btn btn-primary btn-sm" onClick={openAdd}><Icon name="plus" size={14} /> Ajouter</button>
+          {!isViewer && <button className="btn btn-primary btn-sm" onClick={openAdd}><Icon name="plus" size={14} /> Ajouter</button>}
         </div>
       </div>
 
@@ -209,8 +209,8 @@ function Products({ data, onSave, onDelete, onSale }) {
                     {stockBadge(p.stock)}
                   </div>
                   <div style={{ display: "flex", gap: 6 }}>
-                    <button className="btn btn-outline btn-sm btn-icon" onClick={() => openEdit(p)}><Icon name="edit" size={13} /></button>
-                    <button className="btn btn-danger btn-sm btn-icon" onClick={() => onDelete(p.id)}><Icon name="trash" size={13} /></button>
+                    {!isViewer && <button className="btn btn-outline btn-sm btn-icon" onClick={() => openEdit(p)}><Icon name="edit" size={13} /></button>}
+                    {!isViewer && <button className="btn btn-danger btn-sm btn-icon" onClick={() => onDelete(p.id)}><Icon name="trash" size={13} /></button>}
                   </div>
                   <button className="btn btn-success btn-sm" style={{ width: "100%", marginTop: 6, justifyContent: "center" }} onClick={() => handleQuickSale(p)} disabled={p.stock === 0}>⚡ Vente rapide</button>
                 </div>
@@ -243,8 +243,8 @@ function Products({ data, onSave, onDelete, onSale }) {
                       <td>{stockBadge(p.stock)}</td>
                       <td>
                         <div style={{ display: "flex", gap: 6 }}>
-                          <button className="btn btn-outline btn-sm btn-icon" onClick={() => openEdit(p)}><Icon name="edit" size={13} /></button>
-                          <button className="btn btn-danger btn-sm btn-icon" onClick={() => onDelete(p.id)}><Icon name="trash" size={13} /></button>
+                          {!isViewer && <button className="btn btn-outline btn-sm btn-icon" onClick={() => openEdit(p)}><Icon name="edit" size={13} /></button>}
+                          {!isViewer && <button className="btn btn-danger btn-sm btn-icon" onClick={() => onDelete(p.id)}><Icon name="trash" size={13} /></button>}
                           <button className="btn btn-success btn-sm" onClick={() => handleQuickSale(p)} disabled={p.stock === 0}>⚡ Vente rapide</button>
                         </div>
                       </td>

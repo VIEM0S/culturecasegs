@@ -6,7 +6,7 @@ import { uid, sanitize, validateImageUrl, validateProductForm, validateSaleForm,
 import { DEFAULT_MODELS, DEFAULT_DESIGNS, DEFAULT_PRICE_SETTINGS, LOW_STOCK } from "./constants.js";
 import { exportData, importData } from "./data.js";
 
-function StockPage({ data, onMove }) {
+function StockPage({ data, onMove, isViewer = false }) {
   const { products, movements, settings } = data;
   const designs = settings?.designs || [];
   const [modal, setModal] = useState(false);
@@ -83,7 +83,7 @@ function StockPage({ data, onMove }) {
     <div>
       <div className="section-header">
         <span className="section-title">Mouvements de stock</span>
-        <button className="btn btn-primary btn-sm" onClick={() => { setModal(true); setErrors({}); }}><Icon name="plus" size={14} /> Nouveau mouvement</button>
+        {!isViewer && <button className="btn btn-primary btn-sm" onClick={() => { setModal(true); setErrors({}); }}><Icon name="plus" size={14} /> Nouveau mouvement</button>}
       </div>
       <div className="filter-row">
         <input className="input" placeholder="Rechercher produit..." value={search} onChange={e => setSearch(e.target.value)} style={{ flex: 2 }} />

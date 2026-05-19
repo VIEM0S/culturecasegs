@@ -584,11 +584,11 @@ function App() {
 
           <div className="content">
             <Suspense fallback={<div style={{ padding: 40, textAlign: "center", color: "var(--text2)", fontSize: 13 }}>Chargement…</div>}>
-              {page === "dashboard" && <Dashboard data={data} />}
+              {page === "dashboard" && <Dashboard data={data} isViewer={isViewer} />}
               {page === "products" && (
-                <Products data={data} onSave={saveProduct} onDelete={deleteProduct} onSale={addSale} />
+                <Products data={data} onSave={saveProduct} onDelete={deleteProduct} onSale={addSale} isViewer={isViewer} />
               )}
-              {page === "stock"   && <StockPage data={data} onMove={addMovement} />}
+              {page === "stock"   && <StockPage data={data} onMove={addMovement} isViewer={isViewer} />}
               {page === "sales"   && <SalesPage data={data} onSale={addSale} toast={toast} />}
               {page === "history" && <HistoryPage data={data} />}
               {page === "reports" && <Reports data={data} />}
