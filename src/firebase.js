@@ -6,7 +6,8 @@ import {
   getAuth,
   signInWithEmailAndPassword,
   signOut as fbSignOut,
-  onAuthStateChanged
+  onAuthStateChanged,
+  signInAnonymously,
 } from "firebase/auth";
 
 // ── Config Firebase via variables d'environnement Vite ──────────────────────
@@ -28,6 +29,10 @@ export function getCurrentUser() { return auth.currentUser; }
 
 export async function signIn(email, password) {
   await signInWithEmailAndPassword(auth, email, password);
+}
+
+export async function signInAsViewer() {
+  await signInAnonymously(auth);
 }
 
 export async function signOut() {

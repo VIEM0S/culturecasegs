@@ -1,6 +1,6 @@
 import { lazy, Suspense, useCallback, useEffect, useRef, useState } from "react";
 import { exportData, importData, saveData, subscribeToData } from "./data.js";
-import { onAuthChange, signOut } from "./firebase.js";
+import { onAuthChange, signOut, signInAsViewer } from "./firebase.js";
 import { useDialog, useToast } from "./hooks.jsx";
 import Icon from "./Icon.jsx";
 import LoginPage from "./LoginPage.jsx";
@@ -367,7 +367,11 @@ function App() {
   if (!authUser && !isViewer)
     return (
       <LoginPage
-        onViewerAccess={() => { setIsViewer(true); setLoading(true); }}
+        onViewerAccess={async () => {
+          setIsViewer(true);
+          setLoading(true);
+          await signInAsViewer();
+        }}
       />
     );
 
