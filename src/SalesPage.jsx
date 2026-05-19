@@ -335,10 +335,11 @@ function SalesPage({ data, onSale, toast }) {
     }
 
     const saleDate = today();
+    const groupId  = uid(); // identifiant commun à toutes les lignes de cet achat
     const newSales = cartLines.map((line, i) => {
       const calc = lineCalcs[i];
       return {
-        id: uid(), date: saleDate,
+        id: uid(), groupId, date: saleDate,
         productId: line.productId, qty: calc.qty,
         price: calc.basePrice, total: calc.baseTotal,
         discountType: line.discountType,
@@ -376,10 +377,21 @@ function SalesPage({ data, onSale, toast }) {
     [sales, productMap, search, dateFrom, dateTo]
   );
 
+  // ── Groupement par groupId (un achat multi-produits = une seule ligne) ──────
+  const groupedSales = useMemo(() => {
+    const groups = new Map();
+    filtered.forEach(s => {
+      const key = s.groupId || s.id; // rétrocompat : ventes sans groupId = leur propre groupe
+      if (!groups.has(key)) groups.set(key, []);
+      groups.get(key).push(s);
+    });
+    return Array.from(groups.values()).sort((a, b) => new Date(b[0].date) - new Date(a[0].date));
+  }, [filtered]);
+
   const totalRev = useMemo(() => filtered.reduce((s, v) => s + (v.totalAfterDiscount ?? v.total), 0), [filtered]);
 
-  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
-  const paginated  = filtered.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
+  const totalPages = Math.max(1, Math.ceil(groupedSales.length / PAGE_SIZE));
+  const paginated  = groupedSales.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
 
   // Reset page quand le filtre change
   const resetPage = () => setCurrentPage(1);
@@ -394,7 +406,7 @@ function SalesPage({ data, onSale, toast }) {
   return (
     <div>
       <div className="section-header">
-        <span className="section-title">Ventes ({filtered.length})</span>
+        <span className="section-title">Ventes ({groupedSales.length})</span>
         <button className="btn btn-primary btn-sm" onClick={openModal}>
           <Icon name="plus" size={14} /> Nouvelle vente
         </button>
@@ -431,18 +443,32 @@ function SalesPage({ data, onSale, toast }) {
               </tr>
             </thead>
             <tbody>
-              {filtered.length === 0 && <tr><td colSpan={9} className="empty">Aucune vente</td></tr>}
-              {paginated.map(s => {
-                const prod = productMap[s.productId];
+              {groupedSales.length === 0 && <tr><td colSpan={9} className="empty">Aucune vente</td></tr>}
+              {paginated.map(group => {
+                const s    = group[0]; // données communes (date, client…)
+                const isMulti = group.length > 1;
+                const groupTotal = group.reduce((sum, v) => sum + (v.totalAfterDiscount ?? v.total), 0);
+                const hasDiscount = group.some(v => v.discountPercent > 0);
+                const prodLabel = isMulti
+                  ? `${group.length} produits`
+                  : (() => { const p = productMap[s.productId]; return p ? `${p.model} — ${p.design}` : "—"; })();
+                const totalQty = group.reduce((sum, v) => sum + (v.qty || 0), 0);
                 return (
-                  <tr key={s.id}>
+                  <tr key={s.groupId || s.id}>
                     <td style={{ color: "var(--text2)", fontSize: 12 }}>{fmtDate(s.date)}</td>
-                    <td style={{ fontWeight: 500 }}>{prod ? `${prod.model} — ${prod.design}` : "—"}</td>
-                    <td>{s.qty}</td>
-                    <td style={{ fontWeight: 700, color: "var(--success)" }}>{fmtMoney(s.totalAfterDiscount ?? s.total)}</td>
+                    <td style={{ fontWeight: 500 }}>
+                      {prodLabel}
+                      {isMulti && (
+                        <div style={{ fontSize: 11, color: "var(--text2)", marginTop: 2 }}>
+                          {group.map(v => { const p = productMap[v.productId]; return p ? `${p.model} — ${p.design}` : "—"; }).join(", ")}
+                        </div>
+                      )}
+                    </td>
+                    <td>{totalQty}</td>
+                    <td style={{ fontWeight: 700, color: "var(--success)" }}>{fmtMoney(groupTotal)}</td>
                     <td>
-                      {s.discountPercent > 0
-                        ? <span className="badge badge-gold"><Icon name="percent" size={10} /> -{s.discountPercent}%</span>
+                      {hasDiscount
+                        ? <span className="badge badge-gold"><Icon name="percent" size={10} /> remise</span>
                         : <span style={{ color: "var(--text2)", fontSize: 12 }}>—</span>}
                     </td>
                     <td style={{ fontSize: 12 }}>{s.client || "—"}</td>
@@ -452,7 +478,7 @@ function SalesPage({ data, onSale, toast }) {
                       <button
                         className="btn btn-outline btn-sm btn-icon"
                         title="Voir le ticket"
-                        onClick={() => setTicket([s])}
+                        onClick={() => setTicket(group)}
                       >
                         🧾
                       </button>
@@ -475,7 +501,7 @@ function SalesPage({ data, onSale, toast }) {
           >← Préc.</button>
           <span style={{ fontSize: 13, color: "var(--text2)" }}>
             Page <strong>{currentPage}</strong> / {totalPages}
-            <span style={{ marginLeft: 8, color: "var(--text2)" }}>({filtered.length} ventes)</span>
+            <span style={{ marginLeft: 8, color: "var(--text2)" }}>({groupedSales.length} achats)</span>
           </span>
           <button
             className="btn btn-outline btn-sm"
