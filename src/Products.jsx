@@ -212,7 +212,7 @@ function Products({ data, onSave, onDelete, onSale, isViewer = false }) {
                     {!isViewer && <button className="btn btn-outline btn-sm btn-icon" onClick={() => openEdit(p)}><Icon name="edit" size={13} /></button>}
                     {!isViewer && <button className="btn btn-danger btn-sm btn-icon" onClick={() => onDelete(p.id)}><Icon name="trash" size={13} /></button>}
                   </div>
-                  <button className="btn btn-success btn-sm" style={{ width: "100%", marginTop: 6, justifyContent: "center" }} onClick={() => handleQuickSale(p)} disabled={p.stock === 0}>⚡ Vente rapide</button>
+                  {!isViewer && <button className="btn btn-success btn-sm" style={{ width: "100%", marginTop: 6, justifyContent: "center" }} onClick={() => handleQuickSale(p)} disabled={p.stock === 0}>⚡ Vente rapide</button>}
                 </div>
               </div>
             );
@@ -245,7 +245,7 @@ function Products({ data, onSave, onDelete, onSale, isViewer = false }) {
                         <div style={{ display: "flex", gap: 6 }}>
                           {!isViewer && <button className="btn btn-outline btn-sm btn-icon" onClick={() => openEdit(p)}><Icon name="edit" size={13} /></button>}
                           {!isViewer && <button className="btn btn-danger btn-sm btn-icon" onClick={() => onDelete(p.id)}><Icon name="trash" size={13} /></button>}
-                          <button className="btn btn-success btn-sm" onClick={() => handleQuickSale(p)} disabled={p.stock === 0}>⚡ Vente rapide</button>
+                          {!isViewer && <button className="btn btn-success btn-sm" onClick={() => handleQuickSale(p)} disabled={p.stock === 0}>⚡ Vente rapide</button>}
                         </div>
                       </td>
                     </tr>
