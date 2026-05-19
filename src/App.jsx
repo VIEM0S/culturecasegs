@@ -86,17 +86,6 @@ function App() {
       }
     );
 
-    return () => {
-      mounted = false;
-      unsubAuth();
-      if (unsubData.current) unsubData.current();
-      window.removeEventListener("sw-update-available", goUpdate);
-      window.removeEventListener("pwa-offline-ready",   goOfflineReady);
-      window.removeEventListener("offline", goOffline);
-      window.removeEventListener("online",  goOnline);
-    };
-  }, [toast, isViewer]);
-
     const goOffline = () => { if (mounted) setSyncStatus("offline"); };
     const goOnline  = () => { if (mounted) setSyncStatus("ok"); };
     const goUpdate  = () => { if (mounted) setShowUpdate(true); };
