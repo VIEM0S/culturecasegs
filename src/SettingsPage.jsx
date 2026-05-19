@@ -373,6 +373,36 @@ function SettingsPage({ data, onSave, confirm }) {
 
       {tab === "backup" && (
         <div>
+          {/* ── Accès partenaire (viewer) ── */}
+          <div className="card" style={{ marginBottom: 14 }}>
+            <p className="section-label" style={{ marginBottom: 8 }}>👁️ Accès Iya Choua (lecture seule)</p>
+            <p style={{ fontSize: 13, color: "var(--text2)", marginBottom: 14, lineHeight: 1.6 }}>
+              Iya Choua peut se connecter en mode <strong>lecture seule</strong> avec ce code.
+              Il verra les produits et stocks disponibles mais ne pourra pas faire de ventes ni de modifications.
+            </p>
+            <div style={{ display: "flex", gap: 8, alignItems: "flex-end" }}>
+              <div className="form-group" style={{ flex: 1, marginBottom: 0 }}>
+                <label className="form-label">Code d'accès Iya Choua</label>
+                <input
+                  className="input"
+                  type="text"
+                  value={localSettings.viewerCode || "Bkocase0223"}
+                  onChange={e => setLocalSettings(s => ({ ...s, viewerCode: e.target.value }))}
+                  placeholder="Bkocase0223"
+                  maxLength={30}
+                />
+              </div>
+              <button className="btn btn-primary" onClick={handleSave}>
+                Enregistrer
+              </button>
+            </div>
+            {localSettings.viewerCode && (
+              <p style={{ fontSize: 12, color: "var(--success)", marginTop: 8 }}>
+                ✅ Code actif — partage-le avec ton partenaire pour qu'il puisse accéder en lecture.
+              </p>
+            )}
+          </div>
+
           <div className="card" style={{ marginBottom: 14 }}>
             <p className="section-label" style={{ marginBottom: 8 }}>Exporter toutes les données</p>
             <p style={{ fontSize: 13, color: "var(--text2)", marginBottom: 16, lineHeight: 1.6 }}>

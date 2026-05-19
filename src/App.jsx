@@ -24,8 +24,9 @@ function App() {
   const [splashDone, setSplashDone]   = useState(false);
   const [loading, setLoading]         = useState(true);
   const [authUser, setAuthUser]       = useState(undefined);
-  const [authError, setAuthError]     = useState(null); // ── NOUVEAU
+  const [authError, setAuthError]     = useState(null);
   const [syncStatus, setSyncStatus]   = useState("syncing");
+  const [isViewer, setIsViewer]       = useState(false); // ── Mode viewer partenaire
   const isFirstLoad  = useRef(true);
   const _localUpdate = useRef(false);
   const unsubData    = useRef(null);
@@ -68,11 +69,14 @@ function App() {
             unsubData.current();
             unsubData.current = null;
           }
-          setData(null);
-          setLoading(false);
+          // Si mode viewer, on charge quand même les données
+          if (!isViewer) {
+            setData(null);
+            setLoading(false);
+          }
         }
       },
-      // ── Callback erreur — NOUVEAU
+      // ── Callback erreur
       (error) => {
         if (!mounted) return;
         console.error("Firebase Auth error:", error);
@@ -81,6 +85,17 @@ function App() {
         setAuthError(error.message);
       }
     );
+
+    return () => {
+      mounted = false;
+      unsubAuth();
+      if (unsubData.current) unsubData.current();
+      window.removeEventListener("sw-update-available", goUpdate);
+      window.removeEventListener("pwa-offline-ready",   goOfflineReady);
+      window.removeEventListener("offline", goOffline);
+      window.removeEventListener("online",  goOnline);
+    };
+  }, [toast, isViewer]);
 
     const goOffline = () => { if (mounted) setSyncStatus("offline"); };
     const goOnline  = () => { if (mounted) setSyncStatus("ok"); };
@@ -103,7 +118,7 @@ function App() {
       window.removeEventListener("offline", goOffline);
       window.removeEventListener("online",  goOnline);
     };
-  }, [toast]);
+  }, [toast, isViewer]);
 
   const persist = useCallback(
     (newData) => {
@@ -338,11 +353,21 @@ function App() {
       </div>
     );
 
-  // 3. Non authentifié → login
-  if (!authUser) return <LoginPage />;
+  // 3. Non authentifié → login (avec support viewer)
+  if (!authUser && !isViewer)
+    return (
+      <LoginPage
+        viewerCode={data?.settings?.viewerCode || ""}
+        onViewerAccess={() => setIsViewer(true)}
+      />
+    );
 
   // 4. Application principale (auth OK + données chargées)
-  const navItems = [
+  const navItems = isViewer ? [
+    { id: "dashboard", label: "Tableau de bord", icon: "dashboard" },
+    { id: "products",  label: "Produits",        icon: "products"  },
+    { id: "stock",     label: "Stock",           icon: "stock"     },
+  ] : [
     { id: "dashboard", label: "Tableau de bord",    icon: "dashboard" },
     { id: "products",  label: "Produits",           icon: "products"  },
     { id: "stock",     label: "Mouvements stock",   icon: "stock"     },
@@ -408,7 +433,7 @@ function App() {
         <aside className={`sidebar ${sidebarOpen ? "open" : ""}`} aria-label="Menu latéral">
           <div className="sidebar-logo">
             <h1>Culturecase <span>GS</span></h1>
-            <p>Gestion de stock</p>
+            <p>{isViewer ? "👁️ Iya Choua — lecture seule" : "Gestion de stock"}</p>
           </div>
           <nav className="sidebar-nav" aria-label="Navigation principale">
             {navItems.map((item) => (
@@ -422,14 +447,24 @@ function App() {
             ))}
           </nav>
           <div className="sidebar-footer">
-            <button
-              className="nav-item"
-              onClick={logout}
-              style={{ width: "100%" }}
-              aria-label="Déconnexion"
-            >
-              <Icon name="logout" size={15} /> Déconnexion
-            </button>
+            {isViewer ? (
+              <button
+                className="nav-item"
+                onClick={() => { setIsViewer(false); setPage("dashboard"); }}
+                style={{ width: "100%" }}
+              >
+                <Icon name="logout" size={15} /> Quitter le mode viewer
+              </button>
+            ) : (
+              <button
+                className="nav-item"
+                onClick={logout}
+                style={{ width: "100%" }}
+                aria-label="Déconnexion"
+              >
+                <Icon name="logout" size={15} /> Déconnexion
+              </button>
+            )}
           </div>
         </aside>
 
@@ -542,13 +577,17 @@ function App() {
 
           <nav className="bottom-nav" aria-label="Navigation principale">
             <div className="bottom-nav-inner">
-              {[
+              {(isViewer ? [
+                { id: "dashboard", label: "Accueil",  icon: "dashboard" },
+                { id: "products",  label: "Produits", icon: "products"  },
+                { id: "stock",     label: "Stock",    icon: "stock"     },
+              ] : [
                 { id: "dashboard", label: "Accueil",  icon: "dashboard" },
                 { id: "products",  label: "Produits", icon: "products"  },
                 { id: "sales",     label: "Ventes",   icon: "sales"     },
                 { id: "stock",     label: "Stock",    icon: "stock"     },
                 { id: "settings",  label: "Réglages", icon: "settings"  },
-              ].map((item) => (
+              ]).map((item) => (
                 <button
                   key={item.id}
                   className={`bottom-nav-item ${page === item.id ? "active" : ""}`}
