@@ -1,11 +1,10 @@
 import { useState } from "react";
 import { signIn } from "./firebase.js";
 
-// ── Mode viewer : code simple stocké dans settings Firestore ─────────────────
-// Le viewer ne crée pas de compte Firebase — il entre juste un code d'accès.
-// Ce code est défini par l'admin dans Paramètres → Accès partenaire.
+// ── Code viewer fixe — défini ici, pas dans Firestore ───────────────────────
+const VIEWER_CODE = "Bkocase0223";
 
-function LoginPage({ onViewerAccess, viewerCode }) {
+function LoginPage({ onViewerAccess }) {
   const [mode, setMode]       = useState("admin"); // "admin" | "viewer"
   const [email, setEmail]     = useState("");
   const [pass,  setPass]      = useState("");
@@ -33,8 +32,7 @@ function LoginPage({ onViewerAccess, viewerCode }) {
 
   const handleViewer = () => {
     if (!code.trim()) { setErr("Entre le code d'accès."); return; }
-    if (!viewerCode)  { setErr("Aucun code partenaire configuré. Contacte l'admin."); return; }
-    if (code.trim() !== viewerCode) { setErr("Code incorrect."); return; }
+    if (code.trim() !== VIEWER_CODE) { setErr("Code incorrect."); return; }
     onViewerAccess();
   };
 

@@ -109,7 +109,26 @@ function App() {
     };
   }, [toast, isViewer]);
 
-  const persist = useCallback(
+  // ── Chargement données pour le mode viewer ───────────────────────────────
+  useEffect(() => {
+    if (!isViewer) return;
+    let mounted = true;
+    isFirstLoad.current = true;
+    const unsub = subscribeToData((freshData) => {
+      if (!mounted) return;
+      if (isFirstLoad.current) {
+        isFirstLoad.current = false;
+        setLoading(false);
+        setData(freshData);
+        setSyncStatus("ok");
+        return;
+      }
+      setData(freshData);
+      setSyncStatus("ok");
+    });
+    unsubData.current = unsub;
+    return () => { mounted = false; if (unsubData.current) unsubData.current(); };
+  }, [isViewer]);
     (newData) => {
       _localUpdate.current = true;
       setData(newData);
@@ -296,7 +315,7 @@ function App() {
   // ── États de l'application ───────────────────────────────────────────────
 
   // 1. Firebase Auth en attente OU données en cours de chargement → splash
-  if (authUser === undefined || (authUser && loading))
+  if ((authUser === undefined || (authUser && loading)) && !isViewer)
     return (
       <div
         className={`splash ${splashDone ? "fade-out" : ""}`}
@@ -346,7 +365,6 @@ function App() {
   if (!authUser && !isViewer)
     return (
       <LoginPage
-        viewerCode={data?.settings?.viewerCode || ""}
         onViewerAccess={() => setIsViewer(true)}
       />
     );
