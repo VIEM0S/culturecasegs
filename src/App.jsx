@@ -129,6 +129,8 @@ function App() {
     unsubData.current = unsub;
     return () => { mounted = false; if (unsubData.current) unsubData.current(); };
   }, [isViewer]);
+
+  const persist = useCallback(
     (newData) => {
       _localUpdate.current = true;
       setData(newData);
