@@ -1,7 +1,7 @@
 import { useState, useMemo, useCallback, memo } from "react";
 import Icon from "./Icon.jsx";
 import { Modal, StatCard, FieldError, DesignThumb } from "./components.jsx";
-import { uid, sanitize, getProductImageUrl, today, fmtMoney, fmtDate } from "./utils.js";
+import { uid, sanitize, getProductImageUrl, today, toDateStr, fmtMoney, fmtDate, fmtDateTime } from "./utils.js";
 import { LOW_STOCK } from "./constants.js";
 
 // ─── TICKET DE CAISSE ───────────────────────────────────────────────────────
@@ -251,7 +251,7 @@ function Row({ label, value, bold, small, success, warn, accent, large, italic }
 }
 
 // ─── SALES PAGE ─────────────────────────────────────────────────────────────
-function SalesPage({ data, onSale, toast }) {
+function SalesPage({ data, onSale, onCancel, toast }) {
   const { products, sales, settings } = data;
   const { priceSettings } = settings;
   const designs = settings?.designs || [];
@@ -276,6 +276,10 @@ function SalesPage({ data, onSale, toast }) {
   const [errors, setErrors]       = useState({});
   const [submitting, setSubmitting] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
+  const [filterDelivery, setFilterDelivery] = useState("");
+  const [filterAmountMin, setFilterAmountMin] = useState("");
+  const [filterAmountMax, setFilterAmountMax] = useState("");
+  const [cancelTarget, setCancelTarget] = useState(null); // group[] à annuler
   const PAGE_SIZE = 50;
 
   const productMap = useMemo(() => {
@@ -370,11 +374,18 @@ function SalesPage({ data, onSale, toast }) {
     sales.filter(s => {
       const prod = productMap[s.productId];
       const q    = search.toLowerCase();
-      return (!q || (prod && (`${prod.model} ${prod.design}`).toLowerCase().includes(q)) || (s.client || "").toLowerCase().includes(q))
-        && (!dateFrom || s.date >= dateFrom)
-        && (!dateTo   || s.date <= dateTo);
+      const sDate = toDateStr(s.date);
+      const matchText = !q
+        || (prod && (`${prod.model} ${prod.design}`).toLowerCase().includes(q))
+        || (s.client || "").toLowerCase().includes(q)
+        || (s.quartier || "").toLowerCase().includes(q);
+      const matchDate = (!dateFrom || sDate >= dateFrom) && (!dateTo || sDate <= dateTo);
+      const matchDelivery = filterDelivery === "" ? true : filterDelivery === "yes" ? s.delivery : !s.delivery;
+      const matchMin = !filterAmountMin || (s.totalAfterDiscount ?? s.total) >= Number(filterAmountMin);
+      const matchMax = !filterAmountMax || (s.totalAfterDiscount ?? s.total) <= Number(filterAmountMax);
+      return matchText && matchDate && matchDelivery && matchMin && matchMax;
     }).sort((a, b) => new Date(b.date) - new Date(a.date)),
-    [sales, productMap, search, dateFrom, dateTo]
+    [sales, productMap, search, dateFrom, dateTo, filterDelivery, filterAmountMin, filterAmountMax]
   );
 
   // ── Groupement par groupId (un achat multi-produits = une seule ligne) ──────
@@ -413,11 +424,20 @@ function SalesPage({ data, onSale, toast }) {
       </div>
 
       <div className="filter-row">
-        <input className="input" placeholder="Rechercher..." value={search} onChange={e => { setSearch(e.target.value); resetPage(); }} style={{ flex: 2 }} />
+        <input className="input" placeholder="Rechercher produit, client, quartier..." value={search} onChange={e => { setSearch(e.target.value); resetPage(); }} style={{ flex: 2 }} />
         <input className="input" type="date" value={dateFrom} onChange={e => { setDateFrom(e.target.value); resetPage(); }} style={{ flex: 1 }} />
         <input className="input" type="date" value={dateTo}   onChange={e => { setDateTo(e.target.value);   resetPage(); }} style={{ flex: 1 }} />
-        {(dateFrom || dateTo || search) && (
-          <button className="btn btn-ghost btn-sm" onClick={() => { setSearch(""); setDateFrom(""); setDateTo(""); resetPage(); }} title="Effacer les filtres">✕</button>
+      </div>
+      <div className="filter-row" style={{ marginTop: 6 }}>
+        <select className="input" value={filterDelivery} onChange={e => { setFilterDelivery(e.target.value); resetPage(); }} style={{ flex: 1 }}>
+          <option value="">Livraison : tous</option>
+          <option value="yes">Livraison : oui</option>
+          <option value="no">Livraison : non</option>
+        </select>
+        <input className="input" type="number" min="0" placeholder="Montant min (FCFA)" value={filterAmountMin} onChange={e => { setFilterAmountMin(e.target.value); resetPage(); }} style={{ flex: 1 }} />
+        <input className="input" type="number" min="0" placeholder="Montant max (FCFA)" value={filterAmountMax} onChange={e => { setFilterAmountMax(e.target.value); resetPage(); }} style={{ flex: 1 }} />
+        {(dateFrom || dateTo || search || filterDelivery || filterAmountMin || filterAmountMax) && (
+          <button className="btn btn-ghost btn-sm" onClick={() => { setSearch(""); setDateFrom(""); setDateTo(""); setFilterDelivery(""); setFilterAmountMin(""); setFilterAmountMax(""); resetPage(); }} title="Effacer tous les filtres">✕ Effacer</button>
         )}
       </div>
 
@@ -440,10 +460,11 @@ function SalesPage({ data, onSale, toast }) {
                 <th scope="col">Quartier</th>
                 <th scope="col">Livraison</th>
                 <th scope="col">Ticket</th>
+                <th scope="col">Annuler</th>
               </tr>
             </thead>
             <tbody>
-              {groupedSales.length === 0 && <tr><td colSpan={9} className="empty">Aucune vente</td></tr>}
+              {groupedSales.length === 0 && <tr><td colSpan={10} className="empty">Aucune vente</td></tr>}
               {paginated.map(group => {
                 const s    = group[0]; // données communes (date, client…)
                 const isMulti = group.length > 1;
@@ -455,7 +476,14 @@ function SalesPage({ data, onSale, toast }) {
                 const totalQty = group.reduce((sum, v) => sum + (v.qty || 0), 0);
                 return (
                   <tr key={s.groupId || s.id}>
-                    <td style={{ color: "var(--text2)", fontSize: 12 }}>{fmtDate(s.date)}</td>
+                    <td style={{ color: "var(--text2)", fontSize: 12 }}>
+                      <div>{fmtDate(s.date)}</div>
+                      {s.date && s.date.length > 10 && (
+                        <div style={{ fontSize: 10, color: "var(--text2)", marginTop: 1 }}>
+                          {new Date(s.date).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}
+                        </div>
+                      )}
+                    </td>
                     <td style={{ fontWeight: 500 }}>
                       {prodLabel}
                       {isMulti && (
@@ -481,6 +509,15 @@ function SalesPage({ data, onSale, toast }) {
                         onClick={() => setTicket(group)}
                       >
                         🧾
+                      </button>
+                    </td>
+                    <td>
+                      <button
+                        className="btn btn-danger btn-sm btn-icon"
+                        title="Annuler cette vente"
+                        onClick={() => setCancelTarget(group)}
+                      >
+                        <Icon name="trash" size={13} />
                       </button>
                     </td>
                   </tr>
@@ -637,6 +674,51 @@ function SalesPage({ data, onSale, toast }) {
           productMap={productMap}
           onClose={() => setTicket(null)}
         />
+      )}
+
+      {/* ── Modale annulation de vente ── */}
+      {cancelTarget && (
+        <Modal
+          title="❌ Annuler cette vente ?"
+          onClose={() => setCancelTarget(null)}
+          footer={<>
+            <button className="btn btn-outline" onClick={() => setCancelTarget(null)}>Garder</button>
+            <button
+              className="btn btn-danger"
+              onClick={() => {
+                if (onCancel) onCancel(cancelTarget);
+                setCancelTarget(null);
+              }}
+            >
+              Confirmer l'annulation
+            </button>
+          </>}
+        >
+          <div style={{ fontSize: 13, color: "var(--text)", lineHeight: 1.7 }}>
+            <p style={{ marginBottom: 12 }}>
+              Tu es sur le point d'annuler l'achat du <strong>{fmtDate(cancelTarget[0].date)}</strong>
+              {cancelTarget[0].client ? <> pour <strong>{cancelTarget[0].client}</strong></> : ""}.
+            </p>
+            <div style={{ background: "var(--bg3)", borderRadius: 8, padding: "10px 14px", marginBottom: 12 }}>
+              {cancelTarget.map(s => {
+                const p = productMap[s.productId];
+                return (
+                  <div key={s.id} style={{ display: "flex", justifyContent: "space-between", marginBottom: 4, fontSize: 12 }}>
+                    <span>{p ? `${p.model} — ${p.design}` : "—"} × {s.qty}</span>
+                    <span style={{ fontWeight: 700, color: "var(--success)" }}>{fmtMoney(s.totalAfterDiscount ?? s.total)}</span>
+                  </div>
+                );
+              })}
+              <div style={{ display: "flex", justifyContent: "space-between", borderTop: "1px dashed var(--border)", paddingTop: 6, marginTop: 4, fontWeight: 700 }}>
+                <span>Total</span>
+                <span style={{ color: "var(--success)" }}>{fmtMoney(cancelTarget.reduce((s, v) => s + (v.totalAfterDiscount ?? v.total), 0))}</span>
+              </div>
+            </div>
+            <p style={{ color: "var(--warn)", fontSize: 12 }}>
+              ⚠️ Le stock sera remis à jour automatiquement. Cette action est irréversible.
+            </p>
+          </div>
+        </Modal>
       )}
     </div>
   );

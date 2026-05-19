@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo, useCallback, memo, useRef } from "react";
 import Icon from "./Icon.jsx";
 import { Modal, StatCard, FieldError, DesignThumb } from "./components.jsx";
 import { useDialog, useToast } from "./hooks.jsx";
-import { uid, sanitize, validateImageUrl, validateProductForm, validateSaleForm, validateMovementForm, getProductImageUrl, fmtMoney, fmtDate } from "./utils.js";
+import { uid, sanitize, validateImageUrl, validateProductForm, validateSaleForm, validateMovementForm, getProductImageUrl, toDateStr, fmtMoney, fmtDate, fmtDateTime } from "./utils.js";
 import { DEFAULT_MODELS, DEFAULT_DESIGNS, DEFAULT_PRICE_SETTINGS, LOW_STOCK } from "./constants.js";
 import { exportData, importData } from "./data.js";
 
@@ -18,26 +18,35 @@ function HistoryPage({ data }) {
     return m;
   }, [products]);
 
-  // Group sales by client name (or "Anonyme" if none)
+  // Group sales by client, then sub-group by groupId (multi-produits = 1 achat)
   const clientGroups = useMemo(() => {
     const groups = {};
     sales.forEach(s => {
-      // Clé unique : téléphone si dispo, sinon nom, sinon anonyme
       const phone = (s.phone || "").trim();
       const name  = (s.client || "").trim();
       const key   = phone || name || "__anon__";
-      if (!groups[key]) groups[key] = { name, phone, quartier: s.quartier || "", purchases: [] };
-      // Mise à jour des infos de contact si plus récent
+      if (!groups[key]) groups[key] = { name, phone, quartier: s.quartier || "", salesRaw: [] };
       if (name) { groups[key].name = name; }
       if (phone) { groups[key].phone = phone; }
       if (s.quartier) groups[key].quartier = s.quartier;
-      groups[key].purchases.push(s);
+      groups[key].salesRaw.push(s);
     });
-    return Object.values(groups).map(g => ({
-      ...g,
-      totalSpent: g.purchases.reduce((s, p) => s + (p.totalAfterDiscount ?? p.total), 0),
-      lastDate: g.purchases.map(p => p.date).sort().reverse()[0],
-    })).sort((a, b) => new Date(b.lastDate) - new Date(a.lastDate));
+    return Object.values(groups).map(g => {
+      // Regrouper les ventes par groupId → chaque "achat" peut contenir plusieurs lignes
+      const purchaseMap = new Map();
+      g.salesRaw.forEach(s => {
+        const gid = s.groupId || s.id;
+        if (!purchaseMap.has(gid)) purchaseMap.set(gid, []);
+        purchaseMap.get(gid).push(s);
+      });
+      const purchases = Array.from(purchaseMap.values()).sort((a, b) => new Date(b[0].date) - new Date(a[0].date));
+      return {
+        ...g,
+        purchases,
+        totalSpent: g.salesRaw.reduce((s, p) => s + (p.totalAfterDiscount ?? p.total), 0),
+        lastDate: g.salesRaw.map(p => p.date).sort().reverse()[0],
+      };
+    }).sort((a, b) => new Date(b.lastDate) - new Date(a.lastDate));
   }, [sales]);
 
   const filtered = useMemo(() => {
@@ -94,7 +103,7 @@ function HistoryPage({ data }) {
                     {g.quartier && <span className="badge badge-purple" style={{ fontSize: 10 }}>{g.quartier}</span>}
                   </div>
                   <div style={{ display: "flex", gap: 12, marginTop: 4, flexWrap: "wrap" }}>
-                    <span style={{ fontSize: 12, color: "var(--text2)" }}>{g.purchases.length} achat{g.purchases.length > 1 ? "s" : ""}</span>
+                    <span style={{ fontSize: 12, color: "var(--text2)" }}>{g.purchases.length} achat{g.purchases.length > 1 ? "s" : ""} · {g.salesRaw.length} article{g.salesRaw.length > 1 ? "s" : ""}</span>
                     <span style={{ fontSize: 12, color: "var(--success)", fontWeight: 700 }}>{fmtMoney(g.totalSpent)}</span>
                     <span style={{ fontSize: 12, color: "var(--text2)" }}>Dernier : {fmtDate(g.lastDate)}</span>
                   </div>
@@ -120,21 +129,42 @@ function HistoryPage({ data }) {
                       </tr>
                     </thead>
                     <tbody>
-                      {g.purchases.sort((a, b) => new Date(b.date) - new Date(a.date)).map(p => {
-                        const prod = productMap[p.productId];
+                      {g.purchases.map(pGroup => {
+                        const s = pGroup[0];
+                        const isMulti = pGroup.length > 1;
+                        const groupTotal = pGroup.reduce((sum, v) => sum + (v.totalAfterDiscount ?? v.total), 0);
+                        const totalQty   = pGroup.reduce((sum, v) => sum + v.qty, 0);
+                        const hasDiscount = pGroup.some(v => v.discountPercent > 0);
+                        const prodLabel = isMulti
+                          ? `${pGroup.length} produits`
+                          : (() => { const p = productMap[s.productId]; return p ? `${p.model} — ${p.design}` : "—"; })();
                         return (
-                          <tr key={p.id} style={{ borderBottom: "1px solid var(--border)" }}>
-                            <td style={{ padding: "10px 18px", color: "var(--text2)", fontSize: 12 }}>{fmtDate(p.date)}</td>
-                            <td style={{ padding: "10px 14px", fontWeight: 500 }}>{prod ? `${prod.model} — ${prod.design}` : "—"}</td>
-                            <td style={{ padding: "10px 14px" }}>{p.qty}</td>
-                            <td style={{ padding: "10px 14px", fontWeight: 700, color: "var(--success)" }}>{fmtMoney(p.totalAfterDiscount ?? p.total)}</td>
+                          <tr key={s.groupId || s.id} style={{ borderBottom: "1px solid var(--border)" }}>
+                            <td style={{ padding: "10px 18px", color: "var(--text2)", fontSize: 12 }}>
+                              <div>{fmtDate(s.date)}</div>
+                              {s.date && s.date.length > 10 && (
+                                <div style={{ fontSize: 10, marginTop: 1 }}>
+                                  {new Date(s.date).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}
+                                </div>
+                              )}
+                            </td>
+                            <td style={{ padding: "10px 14px", fontWeight: 500 }}>
+                              {prodLabel}
+                              {isMulti && (
+                                <div style={{ fontSize: 11, color: "var(--text2)", marginTop: 2 }}>
+                                  {pGroup.map(v => { const p = productMap[v.productId]; return p ? `${p.model} — ${p.design}` : "—"; }).join(", ")}
+                                </div>
+                              )}
+                            </td>
+                            <td style={{ padding: "10px 14px" }}>{totalQty}</td>
+                            <td style={{ padding: "10px 14px", fontWeight: 700, color: "var(--success)" }}>{fmtMoney(groupTotal)}</td>
                             <td style={{ padding: "10px 14px" }}>
-                              {p.discountPercent > 0
-                                ? <span className="badge badge-gold">-{p.discountPercent}%</span>
+                              {hasDiscount
+                                ? <span className="badge badge-gold">remise</span>
                                 : <span style={{ color: "var(--text2)", fontSize: 12 }}>—</span>}
                             </td>
                             <td style={{ padding: "10px 14px" }}>
-                              {p.delivery ? <span className="badge badge-info">Oui</span> : <span style={{ color: "var(--text2)", fontSize: 12 }}>Non</span>}
+                              {s.delivery ? <span className="badge badge-info">Oui</span> : <span style={{ color: "var(--text2)", fontSize: 12 }}>Non</span>}
                             </td>
                           </tr>
                         );

@@ -57,9 +57,15 @@ export function getProductImageUrl(p, designs) {
   return p.designImage || "";
 }
 
-/** Date ISO YYYY-MM-DD — pour stocker et comparer les dates en base */
+/** Date ISO complète avec heure — pour stocker et trier les ventes intra-journalières */
 export function today() {
-  return new Date().toISOString().slice(0, 10);
+  return new Date().toISOString(); // "2025-05-19T14:32:00.000Z"
+}
+
+/** Extrait uniquement la date YYYY-MM-DD d'un ISO string ou d'une date courte */
+export function toDateStr(iso) {
+  if (!iso) return "";
+  return iso.slice(0, 10);
 }
 
 /** Date formatée pour l'affichage dans la topbar */
@@ -79,6 +85,18 @@ export function fmtDate(d) {
   return new Date(d).toLocaleDateString("fr-FR", {
     day: "numeric", month: "short", year: "numeric",
   });
+}
+
+export function fmtDateTime(d) {
+  if (!d) return "—";
+  const date = new Date(d);
+  const datePart = date.toLocaleDateString("fr-FR", { day: "numeric", month: "short", year: "numeric" });
+  // Affiche l'heure seulement si la date contient une heure (ISO complet)
+  if (d.length > 10) {
+    const timePart = date.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
+    return `${datePart} ${timePart}`;
+  }
+  return datePart;
 }
 
 // ── Export JSON (CRITIQUE : revokeObjectURL pour éviter la fuite mémoire) ────

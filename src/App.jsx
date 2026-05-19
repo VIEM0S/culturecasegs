@@ -256,6 +256,39 @@ function App() {
     [data, persist],
   );
 
+  const cancelSale = useCallback(
+    (saleGroup) => {
+      const list = Array.isArray(saleGroup) ? saleGroup : [saleGroup];
+      const cancelledIds = new Set(list.map(s => s.id));
+      let products = [...data.products];
+      const newMovements = [];
+      for (const sale of list) {
+        // Remettre le stock
+        products = products.map(p =>
+          p.id === sale.productId
+            ? { ...p, stock: p.stock + sale.qty }
+            : p
+        );
+        newMovements.push({
+          id: uid(),
+          productId: sale.productId,
+          type: "in",
+          qty: sale.qty,
+          reason: "Annulation vente",
+          date: new Date().toISOString(),
+          note: sale.client ? `Remboursement ${sale.client}` : "Vente annulée",
+        });
+      }
+      persist({
+        ...data,
+        products,
+        sales: data.sales.filter(s => !cancelledIds.has(s.id)),
+        movements: [...data.movements, ...newMovements],
+      });
+    },
+    [data, persist],
+  );
+
   const saveSettings = useCallback(
     async (newSettings) => {
       const oldSettings = data.settings;
@@ -589,7 +622,7 @@ function App() {
                 <Products data={data} onSave={saveProduct} onDelete={deleteProduct} onSale={addSale} isViewer={isViewer} />
               )}
               {page === "stock"   && <StockPage data={data} onMove={addMovement} isViewer={isViewer} />}
-              {page === "sales"   && <SalesPage data={data} onSale={addSale} toast={toast} />}
+              {page === "sales"   && <SalesPage data={data} onSale={addSale} onCancel={cancelSale} toast={toast} />}
               {page === "history" && <HistoryPage data={data} />}
               {page === "reports" && <Reports data={data} />}
               {page === "settings" && (
