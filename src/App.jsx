@@ -367,8 +367,18 @@ function App() {
   if (!authUser && !isViewer)
     return (
       <LoginPage
-        onViewerAccess={() => setIsViewer(true)}
+        onViewerAccess={() => { setIsViewer(true); setLoading(true); }}
       />
+    );
+
+  // 3b. Viewer en cours de chargement des données
+  if (isViewer && (!data || loading))
+    return (
+      <div className="splash" role="status" aria-live="polite">
+        <div className="splash-logo">Culture<span>case</span> GS</div>
+        <div className="splash-sub">👁️ Iya Choua — chargement…</div>
+        <div className="splash-loader"><div className="splash-loader-bar" /></div>
+      </div>
     );
 
   // 4. Application principale (auth OK + données chargées)
