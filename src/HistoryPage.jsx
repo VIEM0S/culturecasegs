@@ -99,6 +99,14 @@ function HistoryPage({ data }) {
     });
   }, [clientGroups, search, dateFrom, dateTo, segmentFilter]);
 
+  // ── Pagination des clients ─────────────────────────────────────────────────
+  const PAGE_SIZE = 20;
+  const [clientPage, setClientPage] = useState(1);
+  const totalClientPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const paginatedClients = filtered.slice((clientPage - 1) * PAGE_SIZE, clientPage * PAGE_SIZE);
+  // Reset page quand les filtres changent
+  useEffect(() => { setClientPage(1); }, [search, dateFrom, dateTo, segmentFilter]);
+
   return (
     <div>
       <div className="section-header">
