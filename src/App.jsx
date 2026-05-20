@@ -178,8 +178,6 @@ function App() {
   };
 
   const logout = useCallback(async () => {
-    setIsViewer(false);
-    setData(null);
     await signOut();
   }, []);
 
@@ -291,6 +289,59 @@ function App() {
     [data, persist],
   );
 
+  // ── Migration one-shot : groupId sur les anciennes ventes ──────────────────
+  // Se déclenche une seule fois quand les données sont chargées.
+  // Regroupe les ventes sans groupId par (téléphone || nom) + même jour.
+  useEffect(() => {
+    if (!data || !data.sales) return;
+    const needsMigration = data.sales.some(s => !s.groupId);
+    if (!needsMigration) return;
+
+    // Importer uid depuis utils si pas déjà disponible dans ce scope
+    const genId = () => Math.random().toString(36).slice(2, 10) + Date.now().toString(36);
+
+    const migratedSales = [...data.sales];
+
+    // Grouper par clé (téléphone || nom || id) + date YYYY-MM-DD
+    const groups = new Map();
+    migratedSales.forEach((s, idx) => {
+      if (s.groupId) return; // déjà migré, skip
+      const phone = (s.phone || "").trim();
+      const name  = (s.client || "").trim();
+      const clientKey = phone || name; // si ni téléphone ni nom → pas de regroupement possible
+      if (!clientKey) return; // vente anonyme → garde son propre id comme groupId
+      const dateKey = (s.date || "").slice(0, 10);
+      const key = `${clientKey}__${dateKey}`;
+      if (!groups.has(key)) groups.set(key, { groupId: genId(), indices: [] });
+      groups.get(key).indices.push(idx);
+    });
+
+    // Appliquer les groupIds
+    let changed = false;
+    groups.forEach(({ groupId, indices }) => {
+      // Ne regroupe que si 2+ ventes correspondent (sinon chaque vente garde son propre id)
+      const gid = indices.length >= 2 ? groupId : migratedSales[indices[0]].id;
+      indices.forEach(idx => {
+        migratedSales[idx] = { ...migratedSales[idx], groupId: gid };
+        changed = true;
+      });
+    });
+
+    // Ventes anonymes sans groupId → leur propre id comme groupId
+    migratedSales.forEach((s, idx) => {
+      if (!s.groupId) {
+        migratedSales[idx] = { ...s, groupId: s.id };
+        changed = true;
+      }
+    });
+
+    if (changed) {
+      console.log("[Migration] groupId ajouté sur les anciennes ventes.");
+      persist({ ...data, sales: migratedSales });
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [data?.sales?.length, !!data]);
+
   const saveSettings = useCallback(
     async (newSettings) => {
       const oldSettings = data.settings;
@@ -352,7 +403,7 @@ function App() {
   // ── États de l'application ───────────────────────────────────────────────
 
   // 1. Firebase Auth en attente OU données en cours de chargement → splash
-  if ((authUser === undefined || (authUser && !authUser.isAnonymous && loading)) && !isViewer)
+  if ((authUser === undefined || (authUser && loading)) && !isViewer)
     return (
       <div
         className={`splash ${splashDone ? "fade-out" : ""}`}
@@ -399,7 +450,7 @@ function App() {
     );
 
   // 3. Non authentifié → login (avec support viewer)
-  if ((!authUser || authUser?.isAnonymous) && !isViewer)
+  if (!authUser && !isViewer)
     return (
       <LoginPage
         onViewerAccess={async () => {
@@ -508,7 +559,7 @@ function App() {
             {isViewer ? (
               <button
                 className="nav-item"
-                onClick={() => { logout(); setPage("dashboard"); }}
+                onClick={() => { setIsViewer(false); setPage("dashboard"); }}
                 style={{ width: "100%" }}
               >
                 <Icon name="logout" size={15} /> Quitter le mode viewer

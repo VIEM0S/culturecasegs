@@ -67,18 +67,6 @@ function HistoryPage({ data }) {
     }).sort((a, b) => new Date(b.lastDate) - new Date(a.lastDate));
   }, [sales]);
 
-  const filtered = useMemo(() => {
-    const q = search.toLowerCase();
-    return clientGroups.filter(g => {
-      const nameMatch = !q || g.name.toLowerCase().includes(q) || g.phone.includes(q) || g.quartier.toLowerCase().includes(q);
-      const dateMatch = g.purchases.some(p =>
-        (!dateFrom || toDateStr(p[0]?.date || p.date) >= dateFrom) && (!dateTo || toDateStr(p[0]?.date || p.date) <= dateTo)
-      );
-      const segmentMatch = segmentFilter === "tous" || g.segment === segmentFilter;
-      return nameMatch && ((!dateFrom && !dateTo) || dateMatch) && segmentMatch;
-    });
-  }, [clientGroups, search, dateFrom, dateTo, segmentFilter]);
-
   const [segmentFilter, setSegmentFilter] = useState("tous");
   const [expanded, setExpanded] = useState({});
   const toggleExpand = (key) => setExpanded(e => ({ ...e, [key]: !e[key] }));
@@ -98,6 +86,18 @@ function HistoryPage({ data }) {
     { key: "nouveau",  label: "🆕 Nouveau",color: "#185FA5",         bg: "#E6F1FB" },
     { key: "inactif",  label: "😴 Inactif",color: "#A32D2D",         bg: "#FCEBEB" },
   ];
+
+  const filtered = useMemo(() => {
+    const q = search.toLowerCase();
+    return clientGroups.filter(g => {
+      const nameMatch = !q || g.name.toLowerCase().includes(q) || g.phone.includes(q) || g.quartier.toLowerCase().includes(q);
+      const dateMatch = g.purchases.some(p =>
+        (!dateFrom || toDateStr(p[0]?.date || p.date) >= dateFrom) && (!dateTo || toDateStr(p[0]?.date || p.date) <= dateTo)
+      );
+      const segmentMatch = segmentFilter === "tous" || g.segment === segmentFilter;
+      return nameMatch && ((!dateFrom && !dateTo) || dateMatch) && segmentMatch;
+    });
+  }, [clientGroups, search, dateFrom, dateTo, segmentFilter]);
 
   return (
     <div>
