@@ -40,12 +40,30 @@ function HistoryPage({ data }) {
         purchaseMap.get(gid).push(s);
       });
       const purchases = Array.from(purchaseMap.values()).sort((a, b) => new Date(b[0].date) - new Date(a[0].date));
-      return {
-        ...g,
-        purchases,
-        totalSpent: g.salesRaw.reduce((s, p) => s + (p.totalAfterDiscount ?? p.total), 0),
-        lastDate: g.salesRaw.map(p => p.date).sort().reverse()[0],
-      };
+      const totalSpent = g.salesRaw.reduce((s, p) => s + (p.totalAfterDiscount ?? p.total), 0);
+      const lastDate   = g.salesRaw.map(p => p.date).sort().reverse()[0];
+      const daysSince  = lastDate ? Math.floor((Date.now() - new Date(lastDate)) / 86400000) : 999;
+      const nbPurchases = purchases.length;
+
+      // ── Segmentation — 2 gammes : 3 500 FCFA (≤ iPhone 13 PM) et 5 000 FCFA (14→17 PM) ──
+      // VIP       : ≥5 achats OU ≥25 000 FCFA (5 coques à 5 000 ou 6 à 3 500)
+      // Fidèle    : ≥3 achats, actif dans les 45 derniers jours
+      // Inactif   : absent depuis >45 jours avec 2+ achats
+      // Nouveau   : 1 seul achat
+      let segment;
+      if (nbPurchases >= 5 || totalSpent >= 25000) {
+        segment = "vip";
+      } else if (nbPurchases >= 3 && daysSince <= 45) {
+        segment = "fidele";
+      } else if (daysSince > 45 && nbPurchases >= 2) {
+        segment = "inactif";
+      } else if (nbPurchases === 1) {
+        segment = "nouveau";
+      } else {
+        segment = "regulier";
+      }
+
+      return { ...g, purchases, totalSpent, lastDate, daysSince, segment };
     }).sort((a, b) => new Date(b.lastDate) - new Date(a.lastDate));
   }, [sales]);
 
@@ -54,14 +72,32 @@ function HistoryPage({ data }) {
     return clientGroups.filter(g => {
       const nameMatch = !q || g.name.toLowerCase().includes(q) || g.phone.includes(q) || g.quartier.toLowerCase().includes(q);
       const dateMatch = g.purchases.some(p =>
-        (!dateFrom || p.date >= dateFrom) && (!dateTo || p.date <= dateTo)
+        (!dateFrom || toDateStr(p[0]?.date || p.date) >= dateFrom) && (!dateTo || toDateStr(p[0]?.date || p.date) <= dateTo)
       );
-      return nameMatch && ((!dateFrom && !dateTo) || dateMatch);
+      const segmentMatch = segmentFilter === "tous" || g.segment === segmentFilter;
+      return nameMatch && ((!dateFrom && !dateTo) || dateMatch) && segmentMatch;
     });
-  }, [clientGroups, search, dateFrom, dateTo]);
+  }, [clientGroups, search, dateFrom, dateTo, segmentFilter]);
 
+  const [segmentFilter, setSegmentFilter] = useState("tous");
   const [expanded, setExpanded] = useState({});
   const toggleExpand = (key) => setExpanded(e => ({ ...e, [key]: !e[key] }));
+
+  // Compteurs par segment pour les boutons
+  const segmentCounts = useMemo(() => {
+    const counts = { tous: clientGroups.length, vip: 0, fidele: 0, nouveau: 0, inactif: 0, regulier: 0 };
+    clientGroups.forEach(g => { if (counts[g.segment] !== undefined) counts[g.segment]++; });
+    return counts;
+  }, [clientGroups]);
+
+  // Config des segments
+  const SEGMENTS = [
+    { key: "tous",     label: "Tous",     color: "var(--text2)",    bg: "var(--bg2)" },
+    { key: "vip",      label: "⭐ VIP",    color: "#854F0B",         bg: "#FAEEDA" },
+    { key: "fidele",   label: "💚 Fidèle", color: "#3B6D11",         bg: "#EAF3DE" },
+    { key: "nouveau",  label: "🆕 Nouveau",color: "#185FA5",         bg: "#E6F1FB" },
+    { key: "inactif",  label: "😴 Inactif",color: "#A32D2D",         bg: "#FCEBEB" },
+  ];
 
   return (
     <div>
@@ -75,6 +111,29 @@ function HistoryPage({ data }) {
         </div>
         <input className="input" type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)} style={{ flex: 1 }} placeholder="Du" />
         <input className="input" type="date" value={dateTo} onChange={e => setDateTo(e.target.value)} style={{ flex: 1 }} placeholder="Au" />
+      </div>
+
+      {/* ── Filtres par segment ── */}
+      <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 12 }}>
+        {SEGMENTS.map(seg => (
+          <button
+            key={seg.key}
+            onClick={() => setSegmentFilter(seg.key)}
+            style={{
+              padding: "5px 12px", borderRadius: 20, border: "1.5px solid",
+              borderColor: segmentFilter === seg.key ? seg.color : "var(--border)",
+              background: segmentFilter === seg.key ? seg.bg : "transparent",
+              color: segmentFilter === seg.key ? seg.color : "var(--text2)",
+              fontSize: 12, fontWeight: segmentFilter === seg.key ? 700 : 400,
+              cursor: "pointer", transition: "all 0.15s",
+            }}
+          >
+            {seg.label}
+            {segmentCounts[seg.key] > 0 && (
+              <span style={{ marginLeft: 5, fontSize: 11, opacity: 0.8 }}>({segmentCounts[seg.key]})</span>
+            )}
+          </button>
+        ))}
       </div>
 
       {filtered.length === 0 && <div className="empty">Aucun client trouvé</div>}
@@ -101,11 +160,18 @@ function HistoryPage({ data }) {
                     <span style={{ fontWeight: 700, fontSize: 14 }}>{isAnon ? "Client anonyme" : g.name}</span>
                     {g.phone && <span style={{ fontSize: 12, color: "var(--text2)", display: "flex", alignItems: "center", gap: 3 }}><Icon name="phone" size={11} />{g.phone}</span>}
                     {g.quartier && <span className="badge badge-purple" style={{ fontSize: 10 }}>{g.quartier}</span>}
+                    {g.segment === "vip"     && <span style={{ fontSize: 11, padding: "2px 8px", borderRadius: 20, background: "#FAEEDA", color: "#854F0B", fontWeight: 700 }}>⭐ VIP</span>}
+                    {g.segment === "fidele"  && <span style={{ fontSize: 11, padding: "2px 8px", borderRadius: 20, background: "#EAF3DE", color: "#3B6D11", fontWeight: 700 }}>💚 Fidèle</span>}
+                    {g.segment === "nouveau" && <span style={{ fontSize: 11, padding: "2px 8px", borderRadius: 20, background: "#E6F1FB", color: "#185FA5", fontWeight: 700 }}>🆕 Nouveau</span>}
+                    {g.segment === "inactif" && <span style={{ fontSize: 11, padding: "2px 8px", borderRadius: 20, background: "#FCEBEB", color: "#A32D2D", fontWeight: 700 }}>😴 Inactif</span>}
                   </div>
                   <div style={{ display: "flex", gap: 12, marginTop: 4, flexWrap: "wrap" }}>
                     <span style={{ fontSize: 12, color: "var(--text2)" }}>{g.purchases.length} achat{g.purchases.length > 1 ? "s" : ""} · {g.salesRaw.length} article{g.salesRaw.length > 1 ? "s" : ""}</span>
                     <span style={{ fontSize: 12, color: "var(--success)", fontWeight: 700 }}>{fmtMoney(g.totalSpent)}</span>
                     <span style={{ fontSize: 12, color: "var(--text2)" }}>Dernier : {fmtDate(g.lastDate)}</span>
+                    {g.segment === "inactif" && (
+                      <span style={{ fontSize: 11, color: "#A32D2D" }}>· absent depuis {g.daysSince} j</span>
+                    )}
                   </div>
                 </div>
                 <div style={{ color: "var(--text2)", transition: "transform 0.2s", transform: isOpen ? "rotate(90deg)" : "rotate(0deg)" }}>
