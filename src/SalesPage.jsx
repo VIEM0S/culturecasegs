@@ -484,8 +484,15 @@ function SalesPage({ data, onSale, onCancel, toast }) {
                     <td style={{ fontWeight: 500 }}>
                       {prodLabel}
                       {isMulti && (
-                        <div style={{ fontSize: 11, color: "var(--text2)", marginTop: 2 }}>
-                          {group.map(v => { const p = productMap[v.productId]; return p ? `${p.model} — ${p.design}` : "—"; }).join(", ")}
+                        <div style={{ fontSize: 11, color: "var(--text2)", marginTop: 4, display: "flex", flexDirection: "column", gap: 2 }}>
+                          {group.map((v, i) => {
+                            const p = productMap[v.productId];
+                            return (
+                              <span key={v.id} style={{ display: "block" }}>
+                                {i + 1}. {p ? `${p.model} — ${p.design}` : "—"} ×{v.qty}
+                              </span>
+                            );
+                          })}
                         </div>
                       )}
                     </td>
