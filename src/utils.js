@@ -8,11 +8,15 @@ export function sanitize(str, maxLen = 200) {
   return str.trim().slice(0, maxLen);
 }
 
+// ── Seules les URLs https:// sont valides (les formats data: et idb: sont dépréciés) ──
 export function validateImageUrl(url) {
   if (!url) return true;
-  if (url.startsWith("data:image/")) return true;
-  if (url.startsWith("idb:")) return true;
-  try { new URL(url); return true; } catch { return false; }
+  try {
+    const parsed = new URL(url);
+    return parsed.protocol === "https:";
+  } catch {
+    return false;
+  }
 }
 
 export function validateProductForm(form) {
@@ -99,25 +103,5 @@ export function fmtDateTime(d) {
   return datePart;
 }
 
-// ── Export JSON (CRITIQUE : revokeObjectURL pour éviter la fuite mémoire) ────
-export async function exportBackup(data) {
-  try {
-    const date = today();
-    const backup = JSON.parse(JSON.stringify(data));
-    delete backup.auth;
-    const blob = new Blob(
-      [JSON.stringify({ version: 2, data: backup }, null, 2)],
-      { type: "application/json" }
-    );
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `culturecase_backup_${date}.json`;
-    a.click();
-    // Libérer l'URL objet après le téléchargement (fix fuite mémoire)
-    setTimeout(() => URL.revokeObjectURL(url), 1000);
-    return true;
-  } catch {
-    return false;
-  }
-}
+// ── exportBackup est défini dans data.js — ne pas dupliquer ici ──────────────
+// Importer depuis data.js : import { exportData } from "./data.js";

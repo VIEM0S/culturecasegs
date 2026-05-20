@@ -396,7 +396,7 @@ function App() {
   const [loadingTooLong, setLoadingTooLong] = useState(false);
   useEffect(() => {
     if (!loading) { setLoadingTooLong(false); return; }
-    const t = setTimeout(() => setLoadingTooLong(true), 25000);
+    const t = setTimeout(() => setLoadingTooLong(true), 8000); // 8s — assez pour une bonne connexion, assez court pour détecter un pb Firebase
     return () => clearTimeout(t);
   }, [loading]);
 

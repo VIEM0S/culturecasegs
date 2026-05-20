@@ -3,7 +3,7 @@ import Icon from "./Icon.jsx";
 import ImagePicker from "./ImagePicker.jsx";
 import { Modal, StatCard, FieldError, DesignThumb } from "./components.jsx";
 import { useDialog, useToast } from "./hooks.jsx";
-import { uid, sanitize, validateImageUrl, validateProductForm, validateSaleForm, validateMovementForm, getProductImageUrl, exportBackup } from "./utils.js";
+import { uid, sanitize, validateImageUrl, validateProductForm, validateSaleForm, validateMovementForm, getProductImageUrl } from "./utils.js";
 import { DEFAULT_MODELS, DEFAULT_DESIGNS, DEFAULT_PRICE_SETTINGS, LOW_STOCK } from "./constants.js";
 import { exportData, importData } from "./data.js";
 
@@ -50,13 +50,18 @@ function SettingsPage({ data, onSave, confirm }) {
   const [backupLoading, setBackupLoading] = useState(false);
   const [backupDone, setBackupDone]       = useState(false);
 
-  const handleExportBackup = async () => {
+  const handleExportBackup = () => {
     setBackupLoading(true);
     setBackupDone(false);
-    const ok = await exportBackup(data);
-    setBackupLoading(false);
-    if (ok) setBackupDone(true);
-    setTimeout(() => setBackupDone(false), 4000);
+    try {
+      exportData(data);
+      setBackupDone(true);
+    } catch {
+      // erreur silencieuse
+    } finally {
+      setBackupLoading(false);
+      setTimeout(() => setBackupDone(false), 4000);
+    }
   };
   const [localSettings, setLocalSettings] = useState(() => JSON.parse(JSON.stringify(settings)));
   const [saved, setSaved] = useState(false);

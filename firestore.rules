@@ -12,23 +12,32 @@ service cloud.firestore {
 
     // Utilisateur email = admin (pas anonyme)
     function isAdmin() {
-      return request.auth != null && request.auth.token.firebase.sign_in_provider == "password";
+      return request.auth != null
+        && request.auth.token.firebase.sign_in_provider == "password";
     }
 
     // Viewer = auth anonyme
     function isViewer() {
-      return request.auth != null && request.auth.token.firebase.sign_in_provider == "anonymous";
+      return request.auth != null
+        && request.auth.token.firebase.sign_in_provider == "anonymous";
+    }
+
+    // ── Validation du nom de document ─────────────────────────────────────
+    // Seuls "main" et "products_0".."products_N" sont autorisés.
+    // Cela empêche un attaquant authentifié d'écrire des documents arbitraires.
+    function isValidDocId(docId) {
+      return docId == "main"
+        || docId.matches("products_[0-9]+");
     }
 
     // ── Collection "data" ──────────────────────────────────────────────────
-    // Documents : "main", "products_0", "products_1", ...
     match /data/{docId} {
 
-      // Lecture : admin ET viewer peuvent lire
-      allow read: if isAuthenticated();
+      // Lecture : admin ET viewer peuvent lire, uniquement les docs légitimes
+      allow read: if isAuthenticated() && isValidDocId(docId);
 
-      // Écriture (create, update, delete) : admin uniquement
-      allow write: if isAdmin();
+      // Écriture (create, update, delete) : admin uniquement, docs légitimes
+      allow write: if isAdmin() && isValidDocId(docId);
     }
 
     // ── Tout le reste est refusé ───────────────────────────────────────────

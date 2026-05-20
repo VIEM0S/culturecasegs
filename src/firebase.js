@@ -9,6 +9,11 @@ import {
   onAuthStateChanged,
   signInAnonymously,
 } from "firebase/auth";
+import {
+  getRemoteConfig,
+  fetchAndActivate,
+  getValue,
+} from "firebase/remote-config";
 
 // ── Config Firebase via variables d'environnement Vite ──────────────────────
 const FIREBASE_CONFIG = {
@@ -23,6 +28,15 @@ const FIREBASE_CONFIG = {
 const app  = getApps().length ? getApps()[0] : initializeApp(FIREBASE_CONFIG);
 const auth = getAuth(app);
 const _db  = getFirestore(app);
+
+// ── Remote Config (code viewer stocké côté Firebase, jamais dans le bundle) ─
+const _rc = getRemoteConfig(app);
+// En dev, on réduit le cache à 0 pour voir les changements immédiatement.
+// En prod, 3600s (1h) est raisonnable.
+_rc.settings.minimumFetchIntervalMillis =
+  import.meta.env.DEV ? 0 : 3_600_000;
+// Valeur par défaut vide — si Remote Config est inaccessible, le viewer est bloqué.
+_rc.defaultConfig = { viewer_code: "" };
 
 export function getDB()          { return _db; }
 export function getCurrentUser() { return auth.currentUser; }
@@ -41,6 +55,20 @@ export async function signOut() {
 
 export function onAuthChange(callback, onError) {
   return onAuthStateChanged(auth, callback, onError);
+}
+
+// ── Récupère le code viewer depuis Firebase Remote Config ──────────────────
+// Le code n'est JAMAIS écrit dans le code source — il vit dans la console Firebase.
+// Console Firebase → Remote Config → Ajouter le paramètre "viewer_code".
+export async function getViewerCode() {
+  try {
+    await fetchAndActivate(_rc);
+    const val = getValue(_rc, "viewer_code").asString();
+    return val || null;
+  } catch (err) {
+    console.error("Remote Config fetch error:", err);
+    return null;
+  }
 }
 
 export { doc, getDoc, setDoc, onSnapshot, writeBatch };

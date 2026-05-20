@@ -4,10 +4,11 @@ node_modules/
 # Build
 dist/
 
-# Variables d'environnement — NE JAMAIS committer !
+# ⚠️ Variables d'environnement — NE JAMAIS committer !
 .env
 .env.local
 .env.*.local
+.env.production
 
 # Éditeurs
 .DS_Store

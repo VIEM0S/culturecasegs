@@ -1,8 +1,5 @@
 import { useState } from "react";
-import { signIn } from "./firebase.js";
-
-// ── Code viewer fixe — défini ici, pas dans Firestore ───────────────────────
-const VIEWER_CODE = "Bkocase0223";
+import { signIn, getViewerCode } from "./firebase.js";
 
 function LoginPage({ onViewerAccess }) {
   const [mode, setMode]       = useState("admin"); // "admin" | "viewer"
@@ -30,10 +27,24 @@ function LoginPage({ onViewerAccess }) {
     } finally { setLoading(false); }
   };
 
-  const handleViewer = () => {
+  const handleViewer = async () => {
     if (!code.trim()) { setErr("Entre le code d'accès."); return; }
-    if (code.trim() !== VIEWER_CODE) { setErr("Code incorrect."); return; }
-    onViewerAccess();
+    setLoading(true); setErr("");
+    try {
+      // ── Le code est récupéré depuis Firebase Remote Config — jamais dans le JS ──
+      const expected = await getViewerCode();
+      if (!expected) {
+        setErr("Service temporairement indisponible. Réessaie dans un instant.");
+        return;
+      }
+      if (code.trim() !== expected) {
+        setErr("Code incorrect.");
+        return;
+      }
+      onViewerAccess();
+    } catch {
+      setErr("Impossible de vérifier le code. Vérifie ta connexion.");
+    } finally { setLoading(false); }
   };
 
   return (
@@ -119,10 +130,12 @@ function LoginPage({ onViewerAccess }) {
               </div>
               <button
                 className="btn btn-primary"
-                style={{ width: "100%", justifyContent: "center", background: "var(--accent)" }}
+                style={{ width: "100%", justifyContent: "center", background: "var(--accent)", opacity: loading ? 0.7 : 1 }}
                 onClick={handleViewer}
+                disabled={loading}
+                aria-busy={loading}
               >
-                Accéder en lecture
+                {loading ? "Vérification…" : "Accéder en lecture"}
               </button>
             </div>
           )}
