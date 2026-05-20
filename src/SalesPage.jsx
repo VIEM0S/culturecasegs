@@ -456,15 +456,12 @@ function SalesPage({ data, onSale, onCancel, toast }) {
                 <th scope="col">Qté</th>
                 <th scope="col">Total</th>
                 <th scope="col">Remise</th>
-                <th scope="col">Client</th>
-                <th scope="col">Quartier</th>
-                <th scope="col">Livraison</th>
-                <th scope="col">Ticket</th>
-                <th scope="col">Annuler</th>
+                <th scope="col">Client / Quartier</th>
+                <th scope="col">Actions</th>
               </tr>
             </thead>
             <tbody>
-              {groupedSales.length === 0 && <tr><td colSpan={10} className="empty">Aucune vente</td></tr>}
+              {groupedSales.length === 0 && <tr><td colSpan={7} className="empty">Aucune vente</td></tr>}
               {paginated.map(group => {
                 const s    = group[0]; // données communes (date, client…)
                 const isMulti = group.length > 1;
@@ -499,26 +496,30 @@ function SalesPage({ data, onSale, onCancel, toast }) {
                         ? <span className="badge badge-gold"><Icon name="percent" size={10} /> remise</span>
                         : <span style={{ color: "var(--text2)", fontSize: 12 }}>—</span>}
                     </td>
-                    <td style={{ fontSize: 12 }}>{s.client || "—"}</td>
-                    <td style={{ fontSize: 12, color: "var(--text2)" }}>{s.quartier || "—"}</td>
-                    <td>{s.delivery ? <span className="badge badge-info">Livraison</span> : <span style={{ color: "var(--text2)", fontSize: 12 }}>Non</span>}</td>
-                    <td>
-                      <button
-                        className="btn btn-outline btn-sm btn-icon"
-                        title="Voir le ticket"
-                        onClick={() => setTicket(group)}
-                      >
-                        🧾
-                      </button>
+                    <td style={{ fontSize: 12 }}>
+                      <div style={{ fontWeight: 500 }}>{s.client || "—"}</div>
+                      <div style={{ color: "var(--text2)", fontSize: 11, marginTop: 2, display: "flex", alignItems: "center", gap: 6 }}>
+                        {s.quartier && <span>{s.quartier}</span>}
+                        {s.delivery && <span className="badge badge-info" style={{ fontSize: 10 }}>🚚</span>}
+                      </div>
                     </td>
                     <td>
-                      <button
-                        className="btn btn-danger btn-sm btn-icon"
-                        title="Annuler cette vente"
-                        onClick={() => setCancelTarget(group)}
-                      >
-                        <Icon name="trash" size={13} />
-                      </button>
+                      <div style={{ display: "flex", gap: 4 }}>
+                        <button
+                          className="btn btn-outline btn-sm btn-icon"
+                          title="Voir le ticket"
+                          onClick={() => setTicket(group)}
+                        >
+                          🧾
+                        </button>
+                        <button
+                          className="btn btn-danger btn-sm btn-icon"
+                          title="Annuler cette vente"
+                          onClick={() => setCancelTarget(group)}
+                        >
+                          <Icon name="trash" size={13} />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 );
