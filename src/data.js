@@ -134,6 +134,50 @@ export function exportData(data) {
 }
 
 // ── Import JSON ───────────────────────────────────────────────────────────────
+// ── Validation stricte d'un backup Culturecase ───────────────────────────────
+function validateBackup(parsed) {
+  const errors = [];
+
+  // Champs obligatoires de premier niveau
+  if (!parsed || typeof parsed !== "object") return ["Le fichier n'est pas un objet JSON valide."];
+  if (!Array.isArray(parsed.products))  errors.push("Champ 'products' manquant ou invalide.");
+  if (!Array.isArray(parsed.sales))     errors.push("Champ 'sales' manquant ou invalide.");
+  if (!Array.isArray(parsed.movements)) errors.push("Champ 'movements' manquant (sera vide).");
+  if (typeof parsed.settings !== "object" || parsed.settings === null) errors.push("Champ 'settings' manquant ou invalide.");
+  if (errors.length) return errors;
+
+  // Validation des produits
+  parsed.products.forEach((p, i) => {
+    if (!p.id)    errors.push(`Produit #${i+1} : champ 'id' manquant.`);
+    if (!p.model) errors.push(`Produit #${i+1} : champ 'model' manquant.`);
+    if (typeof p.stock !== "number" || p.stock < 0) errors.push(`Produit #${i+1} : stock invalide (${p.stock}).`);
+  });
+
+  // Validation des ventes
+  parsed.sales.forEach((s, i) => {
+    if (!s.id)        errors.push(`Vente #${i+1} : champ 'id' manquant.`);
+    if (!s.productId) errors.push(`Vente #${i+1} : champ 'productId' manquant.`);
+    if (!s.date)      errors.push(`Vente #${i+1} : champ 'date' manquant.`);
+    if (typeof s.qty !== "number" || s.qty < 1) errors.push(`Vente #${i+1} : quantité invalide (${s.qty}).`);
+  });
+
+  // Validation des mouvements
+  parsed.movements.forEach((m, i) => {
+    if (!m.id)        errors.push(`Mouvement #${i+1} : champ 'id' manquant.`);
+    if (!m.productId) errors.push(`Mouvement #${i+1} : champ 'productId' manquant.`);
+    if (!["in", "out"].includes(m.type)) errors.push(`Mouvement #${i+1} : type invalide (${m.type}).`);
+  });
+
+  // Cohérence : chaque vente doit référencer un produit existant
+  const productIds = new Set(parsed.products.map(p => p.id));
+  const orphanSales = parsed.sales.filter(s => !productIds.has(s.productId));
+  if (orphanSales.length > 0) {
+    errors.push(`${orphanSales.length} vente(s) référencent des produits inexistants. Le fichier est peut-être incomplet.`);
+  }
+
+  return errors.slice(0, 5); // max 5 erreurs affichées
+}
+
 export function importData(file, setData, persist, onMsg) {
   onMsg("⏳ Import en cours...");
   const reader = new FileReader();
@@ -141,14 +185,29 @@ export function importData(file, setData, persist, onMsg) {
     try {
       const raw = JSON.parse(e.target.result);
       const parsed = raw.version === 2 ? raw.data : raw;
-      if (!parsed.products || !parsed.sales) {
-        onMsg("❌ Fichier invalide — ce n'est pas un backup Culturecase.");
+
+      // Validation stricte
+      const errors = validateBackup(parsed);
+      if (errors.length > 0) {
+        onMsg("❌ Fichier invalide : " + errors[0] + (errors.length > 1 ? ` (+ ${errors.length - 1} autre(s) erreur(s))` : ""));
+        console.error("Erreurs d'import :", errors);
         return;
       }
-      persist(parsed);
-      onMsg("✅ Données importées avec succès !");
-    } catch {
-      onMsg("❌ Erreur de lecture du fichier.");
+
+      // Sanitize : s'assurer que les champs optionnels existent
+      const sanitized = {
+        products:  parsed.products  || [],
+        sales:     parsed.sales     || [],
+        movements: parsed.movements || [],
+        settings:  parsed.settings  || {},
+        _chunkCount: parsed._chunkCount ?? 0,
+      };
+
+      persist(sanitized);
+      onMsg(`✅ Import réussi — ${sanitized.products.length} produits, ${sanitized.sales.length} ventes, ${sanitized.movements.length} mouvements.`);
+    } catch (err) {
+      console.error("Import error:", err);
+      onMsg("❌ Erreur de lecture du fichier — vérifie qu'il s'agit d'un JSON valide.");
     }
   };
   reader.onerror = () => onMsg("❌ Impossible de lire le fichier. Vérifie qu'il n'est pas corrompu.");

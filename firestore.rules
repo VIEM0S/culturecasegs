@@ -1,0 +1,39 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ── Helpers ────────────────────────────────────────────────────────────
+
+    // Utilisateur authentifié (email ou anonyme)
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    // Utilisateur email = admin (pas anonyme)
+    function isAdmin() {
+      return request.auth != null && request.auth.token.firebase.sign_in_provider == "password";
+    }
+
+    // Viewer = auth anonyme
+    function isViewer() {
+      return request.auth != null && request.auth.token.firebase.sign_in_provider == "anonymous";
+    }
+
+    // ── Collection "data" ──────────────────────────────────────────────────
+    // Documents : "main", "products_0", "products_1", ...
+    match /data/{docId} {
+
+      // Lecture : admin ET viewer peuvent lire
+      allow read: if isAuthenticated();
+
+      // Écriture (create, update, delete) : admin uniquement
+      allow write: if isAdmin();
+    }
+
+    // ── Tout le reste est refusé ───────────────────────────────────────────
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
