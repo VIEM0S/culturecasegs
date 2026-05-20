@@ -178,6 +178,8 @@ function App() {
   };
 
   const logout = useCallback(async () => {
+    setIsViewer(false);
+    setData(null);
     await signOut();
   }, []);
 
@@ -350,7 +352,7 @@ function App() {
   // ── États de l'application ───────────────────────────────────────────────
 
   // 1. Firebase Auth en attente OU données en cours de chargement → splash
-  if ((authUser === undefined || (authUser && loading)) && !isViewer)
+  if ((authUser === undefined || (authUser && !authUser.isAnonymous && loading)) && !isViewer)
     return (
       <div
         className={`splash ${splashDone ? "fade-out" : ""}`}
@@ -397,7 +399,7 @@ function App() {
     );
 
   // 3. Non authentifié → login (avec support viewer)
-  if (!authUser && !isViewer)
+  if ((!authUser || authUser?.isAnonymous) && !isViewer)
     return (
       <LoginPage
         onViewerAccess={async () => {
@@ -506,7 +508,7 @@ function App() {
             {isViewer ? (
               <button
                 className="nav-item"
-                onClick={() => { setIsViewer(false); setPage("dashboard"); }}
+                onClick={() => { logout(); setPage("dashboard"); }}
                 style={{ width: "100%" }}
               >
                 <Icon name="logout" size={15} /> Quitter le mode viewer
