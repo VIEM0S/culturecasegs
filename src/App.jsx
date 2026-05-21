@@ -559,7 +559,11 @@ function App() {
             {isViewer ? (
               <button
                 className="nav-item"
-                onClick={() => { setIsViewer(false); setPage("dashboard"); }}
+                onClick={async () => {
+                  setIsViewer(false);
+                  setPage("dashboard");
+                  await signOut(); // déconnecte la session anonyme Firebase
+                }}
                 style={{ width: "100%" }}
               >
                 <Icon name="logout" size={15} /> Quitter le mode viewer
