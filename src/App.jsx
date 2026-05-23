@@ -26,8 +26,8 @@ function App() {
   const [authUser, setAuthUser]       = useState(undefined);
   const [authError, setAuthError]     = useState(null);
   const [syncStatus, setSyncStatus]   = useState("syncing");
-  // ── Restaurer le mode viewer depuis sessionStorage (survit à la fermeture de l'app)
-  const [isViewer, setIsViewer] = useState(() => sessionStorage.getItem("cc_mode") === "viewer");
+  // ── Restaurer le mode viewer depuis localStorage (survit à la fermeture de PWA iOS)
+  const [isViewer, setIsViewer] = useState(() => localStorage.getItem("cc_mode") === "viewer");
   const isFirstLoad  = useRef(true);
   const _localUpdate = useRef(false);
   const unsubData    = useRef(null);
@@ -179,7 +179,7 @@ function App() {
   };
 
   const logout = useCallback(async () => {
-    sessionStorage.removeItem("cc_mode"); // ── Nettoyage par sécurité
+    localStorage.removeItem("cc_mode"); // ── Nettoyage par sécurité
     await signOut();
   }, []);
 
@@ -456,7 +456,7 @@ function App() {
     return (
       <LoginPage
         onViewerAccess={async () => {
-          sessionStorage.setItem("cc_mode", "viewer"); // ── Persister le mode viewer
+          localStorage.setItem("cc_mode", "viewer"); // ── Persister le mode viewer (localStorage survit à la fermeture PWA iOS)
           setIsViewer(true);
           setLoading(true);
           await signInAsViewer();
@@ -563,7 +563,7 @@ function App() {
               <button
                 className="nav-item"
                 onClick={async () => {
-                  sessionStorage.removeItem("cc_mode"); // ── Effacer le mode viewer
+                  localStorage.removeItem("cc_mode"); // ── Effacer le mode viewer
                   setIsViewer(false);
                   setPage("dashboard");
                   await signOut(); // déconnecte la session anonyme Firebase
