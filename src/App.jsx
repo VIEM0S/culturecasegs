@@ -26,7 +26,8 @@ function App() {
   const [authUser, setAuthUser]       = useState(undefined);
   const [authError, setAuthError]     = useState(null);
   const [syncStatus, setSyncStatus]   = useState("syncing");
-  const [isViewer, setIsViewer]       = useState(false); // ── Mode viewer partenaire
+  // ── Restaurer le mode viewer depuis sessionStorage (survit à la fermeture de l'app)
+  const [isViewer, setIsViewer] = useState(() => sessionStorage.getItem("cc_mode") === "viewer");
   const isFirstLoad  = useRef(true);
   const _localUpdate = useRef(false);
   const unsubData    = useRef(null);
@@ -178,6 +179,7 @@ function App() {
   };
 
   const logout = useCallback(async () => {
+    sessionStorage.removeItem("cc_mode"); // ── Nettoyage par sécurité
     await signOut();
   }, []);
 
@@ -454,6 +456,7 @@ function App() {
     return (
       <LoginPage
         onViewerAccess={async () => {
+          sessionStorage.setItem("cc_mode", "viewer"); // ── Persister le mode viewer
           setIsViewer(true);
           setLoading(true);
           await signInAsViewer();
@@ -560,6 +563,7 @@ function App() {
               <button
                 className="nav-item"
                 onClick={async () => {
+                  sessionStorage.removeItem("cc_mode"); // ── Effacer le mode viewer
                   setIsViewer(false);
                   setPage("dashboard");
                   await signOut(); // déconnecte la session anonyme Firebase
