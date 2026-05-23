@@ -19,6 +19,7 @@ export function StockView({
   openEdit,
   onDelete,
   handleQuickSale,
+  isViewer = false,
 }) {
   const [expanded, setExpanded] = useState({});
 
@@ -135,7 +136,7 @@ export function StockView({
                     <table>
                       <thead>
                         <tr>
-                          <th>Design</th><th>Prix</th><th>Stock</th><th>Actions</th>
+                          <th>Design</th><th>Prix</th><th>Stock</th>{!isViewer && <th>Actions</th>}
                         </tr>
                       </thead>
                       <tbody>
@@ -147,19 +148,21 @@ export function StockView({
                             </td>
                             <td style={{ color: "var(--gold)", fontWeight: 700 }}>{fmtMoney(p.price)}</td>
                             <td>{stockBadge(p.stock)}</td>
-                            <td>
-                              <div style={{ display: "flex", gap: 6 }}>
-                                <button className="btn btn-outline btn-sm btn-icon" onClick={() => openEdit(p)} aria-label={`Modifier ${p.model} — ${p.design}`}>
-                                  <Icon name="edit" size={12} />
-                                </button>
-                                <button className="btn btn-danger btn-sm btn-icon" onClick={() => onDelete(p.id)} aria-label={`Supprimer ${p.model} — ${p.design}`}>
-                                  <Icon name="trash" size={12} />
-                                </button>
-                                <button className="btn btn-success btn-sm" style={{ fontSize: 11 }} onClick={() => handleQuickSale(p)} aria-label={`Vente rapide ${p.model} — ${p.design}`} disabled={p.stock === 0} title={p.stock === 0 ? "Rupture de stock" : "Enregistrer une vente rapide"}>
-                                  ⚡ Vente
-                                </button>
-                              </div>
-                            </td>
+                            {!isViewer && (
+                              <td>
+                                <div style={{ display: "flex", gap: 6 }}>
+                                  <button className="btn btn-outline btn-sm btn-icon" onClick={() => openEdit(p)} aria-label={`Modifier ${p.model} — ${p.design}`}>
+                                    <Icon name="edit" size={12} />
+                                  </button>
+                                  <button className="btn btn-danger btn-sm btn-icon" onClick={() => onDelete(p.id)} aria-label={`Supprimer ${p.model} — ${p.design}`}>
+                                    <Icon name="trash" size={12} />
+                                  </button>
+                                  <button className="btn btn-success btn-sm" style={{ fontSize: 11 }} onClick={() => handleQuickSale(p)} aria-label={`Vente rapide ${p.model} — ${p.design}`} disabled={p.stock === 0} title={p.stock === 0 ? "Rupture de stock" : "Enregistrer une vente rapide"}>
+                                    ⚡ Vente
+                                  </button>
+                                </div>
+                              </td>
+                            )}
                           </tr>
                         ))}
                       </tbody>

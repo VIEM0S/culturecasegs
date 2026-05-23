@@ -3,7 +3,7 @@ import { StatCard } from "./components.jsx";
 import { LOW_STOCK } from "./constants.js";
 import { fmtDate, fmtMoney, today, toDateStr } from "./utils.js";
 
-const Dashboard = memo(function Dashboard({ data }) {
+const Dashboard = memo(function Dashboard({ data, isViewer = false }) {
   const { products, sales, movements } = data;
   const todayStr = toDateStr(today());
   const monthStr = todayStr.slice(0, 7);
@@ -60,19 +60,21 @@ const Dashboard = memo(function Dashboard({ data }) {
         <StatCard label="Stock total"  value={stats.totalStock}            sub="unités en stock"              color="purple" />
         <StatCard label="Rupture"      value={stats.outOfStock}            sub="produits épuisés"             color="red"    />
         <StatCard label="Stock faible" value={stats.lowStock}              sub={`≤ ${LOW_STOCK} unités`}      color="amber"  />
-        <StatCard label="CA du jour"   value={fmtMoney(stats.revenueToday)} sub={`${stats.salesToday.length} vente(s)`} color="green" />
+        {!isViewer && <StatCard label="CA du jour"   value={fmtMoney(stats.revenueToday)} sub={`${stats.salesToday.length} vente(s)`} color="green" />}
       </div>
 
       <div className="grid-2" style={{ marginBottom: 18 }}>
-        <div className="card">
-          <p className="section-label">CA du mois</p>
-          <p style={{ fontSize: 24, fontWeight: 800, color: "var(--success)" }}>
-            {fmtMoney(stats.revenueMonth)}
-          </p>
-          <p style={{ fontSize: 12, color: "var(--text2)", marginTop: 4 }}>
-            {stats.salesMonth.length} vente(s) en {monthStr}
-          </p>
-        </div>
+        {!isViewer && (
+          <div className="card">
+            <p className="section-label">CA du mois</p>
+            <p style={{ fontSize: 24, fontWeight: 800, color: "var(--success)" }}>
+              {fmtMoney(stats.revenueMonth)}
+            </p>
+            <p style={{ fontSize: 12, color: "var(--text2)", marginTop: 4 }}>
+              {stats.salesMonth.length} vente(s) en {monthStr}
+            </p>
+          </div>
+        )}
         <div className="card">
           <p className="section-label">Alertes Stock</p>
           {stats.outOfStock === 0 && stats.lowStock === 0 && (

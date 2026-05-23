@@ -186,6 +186,7 @@ function Products({ data, onSave, onDelete, onSale, isViewer = false }) {
           openEdit={openEdit}
           onDelete={onDelete}
           handleQuickSale={handleQuickSale}
+          isViewer={isViewer}
         />
       )}
 
