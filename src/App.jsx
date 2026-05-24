@@ -1,10 +1,11 @@
-import { lazy, Suspense, useCallback, useEffect, useRef, useState } from "react";
-import { exportData, importData, saveData, subscribeToData } from "./data.js";
-import { onAuthChange, signOut, signInAsViewer } from "./firebase.js";
+import { lazy, Suspense, useCallback, useEffect, useState } from "react";
+import { exportData, importData, saveData } from "./data.js";
 import { useDialog, useToast } from "./hooks.jsx";
+import { useAuth } from "./useAuth.js";
+import { useStockActions } from "./useStockActions.js";
 import Icon from "./Icon.jsx";
 import LoginPage from "./LoginPage.jsx";
-import { uid, todayDisplay } from "./utils.js";
+import { todayDisplay } from "./utils.js";
 
 const Dashboard    = lazy(() => import("./Dashboard.jsx"));
 const Products     = lazy(() => import("./Products.jsx"));
@@ -15,141 +16,51 @@ const Reports      = lazy(() => import("./Reports.jsx"));
 const SettingsPage = lazy(() => import("./SettingsPage.jsx"));
 
 function App() {
-  const [data, setData]               = useState(null);
-  const [page, setPage]               = useState("dashboard");
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+  // ── UI state ────────────────────────────────────────────────────────────
+  const [data,          setData]          = useState(null);
+  const [page,          setPage]          = useState("dashboard");
+  const [sidebarOpen,   setSidebarOpen]   = useState(false);
   const [installPrompt, setInstallPrompt] = useState(null);
-  const [showInstall, setShowInstall] = useState(false);
-  const [showUpdate, setShowUpdate]   = useState(false);
-  const [splashDone, setSplashDone]   = useState(false);
-  const [loading, setLoading]         = useState(true);
-  const [authUser, setAuthUser]       = useState(undefined);
-  const [authError, setAuthError]     = useState(null);
-  const [syncStatus, setSyncStatus]   = useState("syncing");
-  // ── Restaurer le mode viewer depuis localStorage (survit à la fermeture de PWA iOS)
-  const [isViewer, setIsViewer] = useState(() => localStorage.getItem("cc_mode") === "viewer");
-  const isFirstLoad  = useRef(true);
-  const _localUpdate = useRef(false);
-  const unsubData    = useRef(null);
-  const { confirm, alert: dlgAlert, Dialog } = useDialog();
-  const { toast, Toasts } = useToast();
+  const [showInstall,   setShowInstall]   = useState(false);
+  const [showUpdate,    setShowUpdate]    = useState(false);
+  const [splashDone,    setSplashDone]    = useState(false);
+  const [loading,       setLoading]       = useState(true);
+  const [syncStatus,    setSyncStatus]    = useState("syncing");
 
-  useEffect(() => {
-    let mounted = true;
+  const { confirm, Dialog } = useDialog();
+  const { toast, Toasts }   = useToast();
 
-    const unsubAuth = onAuthChange(
-      // ── Callback succès
-      (user) => {
-        if (!mounted) return;
-        setAuthUser(user);
-        setAuthError(null);
-        setLoadingTooLong(false);
+  // ── Auth & données ───────────────────────────────────────────────────────
+  const {
+    authUser, authError,
+    isViewer,
+    logout, loginAsViewer, logoutViewer,
+    _localUpdate,
+  } = useAuth({ toast, setSyncStatus, setData, setLoading });
 
-        if (user) {
-          if (unsubData.current) {
-            unsubData.current();
-            unsubData.current = null;
-          }
-          isFirstLoad.current = true;
-          const unsub = subscribeToData((freshData) => {
-            if (!mounted) return;
-            if (isFirstLoad.current) {
-              isFirstLoad.current = false;
-              setLoading(false);
-              setData(freshData);
-              setSyncStatus("ok");
-              return;
-            }
-            if (_localUpdate.current) return;
-            setData(freshData);
-            setSyncStatus("ok");
-          });
-          unsubData.current = unsub;
-        } else {
-          if (unsubData.current) {
-            unsubData.current();
-            unsubData.current = null;
-          }
-          // Si mode viewer, on charge quand même les données
-          if (!isViewer) {
-            setData(null);
-            setLoading(false);
-          }
-        }
-      },
-      // ── Callback erreur
-      (error) => {
-        if (!mounted) return;
-        console.error("Firebase Auth error:", error);
-        setAuthUser(null);
-        setLoading(false);
-        setAuthError(error.message);
-      }
-    );
+  // ── Persist : sauvegarde optimiste + sync Firestore ──────────────────────
+  const persist = useCallback((newData) => {
+    _localUpdate.current = true;
+    setData(newData);
+    setSyncStatus("syncing");
+    saveData(newData)
+      .then(() => setSyncStatus("ok"))
+      .catch(() => {
+        _localUpdate.current = false;
+        setSyncStatus("offline");
+        toast("❌ Erreur de synchronisation — données sauvegardées localement.", "error");
+      })
+      .finally(() => { setTimeout(() => { _localUpdate.current = false; }, 2000); });
+  }, [setSyncStatus, toast, _localUpdate]);
 
-    const goOffline = () => { if (mounted) setSyncStatus("offline"); };
-    const goOnline  = () => { if (mounted) setSyncStatus("ok"); };
-    const goUpdate  = () => { if (mounted) setShowUpdate(true); };
-    const goOfflineReady = () => {
-      if (mounted) toast("✅ Application prête à fonctionner hors ligne.", "info");
-    };
+  // ── Actions métier ───────────────────────────────────────────────────────
+  const {
+    saveProduct, deleteProduct,
+    addMovement, addSale, cancelSale,
+    saveSettings,
+  } = useStockActions({ data, persist, confirm });
 
-    window.addEventListener("sw-update-available", goUpdate);
-    window.addEventListener("pwa-offline-ready",   goOfflineReady);
-    window.addEventListener("offline", goOffline);
-    window.addEventListener("online",  goOnline);
-
-    return () => {
-      mounted = false;
-      unsubAuth();
-      if (unsubData.current) unsubData.current();
-      window.removeEventListener("sw-update-available", goUpdate);
-      window.removeEventListener("pwa-offline-ready",   goOfflineReady);
-      window.removeEventListener("offline", goOffline);
-      window.removeEventListener("online",  goOnline);
-    };
-  }, [toast, isViewer]);
-
-  // ── Chargement données pour le mode viewer ───────────────────────────────
-  useEffect(() => {
-    if (!isViewer) return;
-    let mounted = true;
-    isFirstLoad.current = true;
-    const unsub = subscribeToData((freshData) => {
-      if (!mounted) return;
-      if (isFirstLoad.current) {
-        isFirstLoad.current = false;
-        setLoading(false);
-        setData(freshData);
-        setSyncStatus("ok");
-        return;
-      }
-      setData(freshData);
-      setSyncStatus("ok");
-    });
-    unsubData.current = unsub;
-    return () => { mounted = false; if (unsubData.current) unsubData.current(); };
-  }, [isViewer]);
-
-  const persist = useCallback(
-    (newData) => {
-      _localUpdate.current = true;
-      setData(newData);
-      setSyncStatus("syncing");
-      saveData(newData)
-        .then(() => setSyncStatus("ok"))
-        .catch(() => {
-          _localUpdate.current = false;
-          setSyncStatus("offline");
-          toast("❌ Erreur de synchronisation — données sauvegardées localement.", "error");
-        })
-        .finally(() => {
-          setTimeout(() => { _localUpdate.current = false; }, 2000);
-        });
-    },
-    [setSyncStatus, toast],
-  );
-
+  // ── PWA : install prompt ─────────────────────────────────────────────────
   useEffect(() => {
     const handler = (e) => {
       e.preventDefault();
@@ -162,256 +73,41 @@ function App() {
     return () => window.removeEventListener("beforeinstallprompt", handler);
   }, []);
 
+  // ── PWA : update banner ──────────────────────────────────────────────────
   useEffect(() => {
-    if (authUser !== undefined && !loading) {
-      setSplashDone(true);
-    }
+    const handler = () => setShowUpdate(true);
+    window.addEventListener("sw-update-available", handler);
+    return () => window.removeEventListener("sw-update-available", handler);
+  }, []);
+
+  // ── Splash done ──────────────────────────────────────────────────────────
+  useEffect(() => {
+    if (authUser !== undefined && !loading) setSplashDone(true);
   }, [authUser, loading]);
 
   const handleInstall = async () => {
     if (!installPrompt) return;
     installPrompt.prompt();
     const { outcome } = await installPrompt.userChoice;
-    if (outcome === "accepted") {
-      setShowInstall(false);
-      setInstallPrompt(null);
-    }
+    if (outcome === "accepted") { setShowInstall(false); setInstallPrompt(null); }
   };
 
-  const logout = useCallback(async () => {
-    localStorage.removeItem("cc_mode"); // ── Nettoyage par sécurité
-    await signOut();
-  }, []);
-
-  const saveProduct = useCallback(
-    (product) => {
-      const list = Array.isArray(product) ? product : [product];
-      let products = [...data.products];
-      list.forEach((p) => {
-        const exists = products.find((x) => x.id === p.id);
-        if (exists) products = products.map((x) => (x.id === p.id ? p : x));
-        else products = [...products, p];
-      });
-      persist({ ...data, products });
-    },
-    [data, persist],
-  );
-
-  const deleteProduct = useCallback(
-    async (id) => {
-      const ok = await confirm("Supprimer ce produit ?");
-      if (!ok) return;
-      persist({ ...data, products: data.products.filter((p) => p.id !== id) });
-    },
-    [data, persist, confirm],
-  );
-
-  const addMovement = useCallback(
-    (movs) => {
-      const list = Array.isArray(movs) ? movs : [movs];
-      let products = [...data.products];
-      for (const mov of list) {
-        products = products.map((p) => {
-          if (p.id !== mov.productId) return p;
-          return {
-            ...p,
-            stock:
-              mov.type === "in"
-                ? p.stock + mov.qty
-                : Math.max(0, p.stock - mov.qty),
-          };
-        });
-      }
-      persist({ ...data, products, movements: [...data.movements, ...list] });
-    },
-    [data, persist],
-  );
-
-  const addSale = useCallback(
-    (sales) => {
-      const list = Array.isArray(sales) ? sales : [sales];
-      let products = [...data.products];
-      const newMovements = [];
-      for (const sale of list) {
-        products = products.map((p) =>
-          p.id === sale.productId
-            ? { ...p, stock: Math.max(0, p.stock - sale.qty) }
-            : p,
-        );
-        newMovements.push({
-          id: uid(),
-          productId: sale.productId,
-          type: "out",
-          qty: sale.qty,
-          reason: "Vente",
-          date: sale.date,
-          note: sale.client || "",
-        });
-      }
-      persist({
-        ...data,
-        products,
-        sales: [...data.sales, ...list],
-        movements: [...data.movements, ...newMovements],
-      });
-    },
-    [data, persist],
-  );
-
-  const cancelSale = useCallback(
-    (saleGroup) => {
-      const list = Array.isArray(saleGroup) ? saleGroup : [saleGroup];
-      const cancelledIds = new Set(list.map(s => s.id));
-      let products = [...data.products];
-      const newMovements = [];
-      for (const sale of list) {
-        // Remettre le stock
-        products = products.map(p =>
-          p.id === sale.productId
-            ? { ...p, stock: p.stock + sale.qty }
-            : p
-        );
-        newMovements.push({
-          id: uid(),
-          productId: sale.productId,
-          type: "in",
-          qty: sale.qty,
-          reason: "Annulation vente",
-          date: new Date().toISOString(),
-          note: sale.client ? `Remboursement ${sale.client}` : "Vente annulée",
-        });
-      }
-      persist({
-        ...data,
-        products,
-        sales: data.sales.filter(s => !cancelledIds.has(s.id)),
-        movements: [...data.movements, ...newMovements],
-      });
-    },
-    [data, persist],
-  );
-
-  // ── Migration one-shot : groupId sur les anciennes ventes ──────────────────
-  // Se déclenche une seule fois quand les données sont chargées.
-  // Regroupe les ventes sans groupId par (téléphone || nom) + même jour.
-  useEffect(() => {
-    if (!data || !data.sales) return;
-    const needsMigration = data.sales.some(s => !s.groupId);
-    if (!needsMigration) return;
-
-    // Importer uid depuis utils si pas déjà disponible dans ce scope
-    const genId = () => Math.random().toString(36).slice(2, 10) + Date.now().toString(36);
-
-    const migratedSales = [...data.sales];
-
-    // Grouper par clé (téléphone || nom || id) + date YYYY-MM-DD
-    const groups = new Map();
-    migratedSales.forEach((s, idx) => {
-      if (s.groupId) return; // déjà migré, skip
-      const phone = (s.phone || "").trim();
-      const name  = (s.client || "").trim();
-      const clientKey = phone || name; // si ni téléphone ni nom → pas de regroupement possible
-      if (!clientKey) return; // vente anonyme → garde son propre id comme groupId
-      const dateKey = (s.date || "").slice(0, 10);
-      const key = `${clientKey}__${dateKey}`;
-      if (!groups.has(key)) groups.set(key, { groupId: genId(), indices: [] });
-      groups.get(key).indices.push(idx);
-    });
-
-    // Appliquer les groupIds
-    let changed = false;
-    groups.forEach(({ groupId, indices }) => {
-      // Ne regroupe que si 2+ ventes correspondent (sinon chaque vente garde son propre id)
-      const gid = indices.length >= 2 ? groupId : migratedSales[indices[0]].id;
-      indices.forEach(idx => {
-        migratedSales[idx] = { ...migratedSales[idx], groupId: gid };
-        changed = true;
-      });
-    });
-
-    // Ventes anonymes sans groupId → leur propre id comme groupId
-    migratedSales.forEach((s, idx) => {
-      if (!s.groupId) {
-        migratedSales[idx] = { ...s, groupId: s.id };
-        changed = true;
-      }
-    });
-
-    if (changed) {
-      console.log("[Migration] groupId ajouté sur les anciennes ventes.");
-      persist({ ...data, sales: migratedSales });
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [data?.sales?.length, !!data]);
-
-  const saveSettings = useCallback(
-    async (newSettings) => {
-      const oldSettings = data.settings;
-      let products = [...data.products];
-
-      const oldModels = oldSettings.models || [];
-      const newModels = newSettings.models || [];
-      oldModels.forEach((oldName, i) => {
-        const newName = newModels[i];
-        if (newName && newName !== oldName) {
-          products = products.map((p) =>
-            p.model === oldName ? { ...p, model: newName } : p,
-          );
-        }
-      });
-      const deletedModels = oldModels.filter((m) => !newModels.includes(m));
-      if (deletedModels.length > 0) {
-        const nb = products.filter((p) => deletedModels.includes(p.model)).length;
-        const ok = await confirm(
-          `Supprimer aussi les ${nb} produit${nb > 1 ? "s" : ""} liés aux modèles supprimés ?`,
-        );
-        if (ok) products = products.filter((p) => !deletedModels.includes(p.model));
-      }
-
-      const oldDesigns = oldSettings.designs || [];
-      const newDesigns = newSettings.designs || [];
-      oldDesigns.forEach((oldD) => {
-        const newD = newDesigns.find((d) => d.id === oldD.id);
-        if (newD && newD.name !== oldD.name) {
-          products = products.map((p) =>
-            p.design === oldD.name ? { ...p, design: newD.name } : p,
-          );
-        }
-      });
-      const deletedDesignNames = oldDesigns
-        .filter((d) => !newDesigns.find((nd) => nd.id === d.id))
-        .map((d) => d.name);
-      if (deletedDesignNames.length > 0) {
-        const nb = products.filter((p) => deletedDesignNames.includes(p.design)).length;
-        const ok = await confirm(
-          `Supprimer aussi les ${nb} produit${nb > 1 ? "s" : ""} liés aux designs supprimés ?`,
-        );
-        if (ok)
-          products = products.filter((p) => !deletedDesignNames.includes(p.design));
-      }
-
-      persist({ ...data, settings: newSettings, products });
-    },
-    [data, persist, confirm],
-  );
-
+  // ── Timeout chargement ───────────────────────────────────────────────────
   const [loadingTooLong, setLoadingTooLong] = useState(false);
   useEffect(() => {
     if (!loading) { setLoadingTooLong(false); return; }
-    const t = setTimeout(() => setLoadingTooLong(true), 8000); // 8s — assez pour une bonne connexion, assez court pour détecter un pb Firebase
+    const t = setTimeout(() => setLoadingTooLong(true), 8000);
     return () => clearTimeout(t);
   }, [loading]);
 
-  // ── États de l'application ───────────────────────────────────────────────
+  // ────────────────────────────────────────────────────────────────────────
+  // ÉTATS DE L'APPLICATION
+  // ────────────────────────────────────────────────────────────────────────
 
-  // 1. Firebase Auth en attente OU données en cours de chargement → splash
+  // 1. Splash / chargement
   if ((authUser === undefined || (authUser && loading)) && !isViewer)
     return (
-      <div
-        className={`splash ${splashDone ? "fade-out" : ""}`}
-        role="status"
-        aria-live="polite"
-      >
+      <div className={`splash ${splashDone ? "fade-out" : ""}`} role="status" aria-live="polite">
         <div className="splash-logo">Culture<span>case</span> GS</div>
         <div className="splash-sub">
           {loadingTooLong ? "⚠️ La connexion prend trop longtemps…" : "Gestion de stock"}
@@ -433,7 +129,7 @@ function App() {
       </div>
     );
 
-  // 2. Erreur Firebase Auth → écran d'erreur clair — NOUVEAU
+  // 2. Erreur Firebase Auth
   if (authError)
     return (
       <div className="splash" role="alert">
@@ -443,7 +139,7 @@ function App() {
           <span style={{ color: "var(--text2)", fontSize: 12 }}>{authError}</span>
         </div>
         <button
-          onClick={() => { setAuthError(null); window.location.reload(); }}
+          onClick={() => window.location.reload()}
           style={{ marginTop: 16, padding: "10px 24px", background: "var(--accent2)", color: "#fff", border: "none", borderRadius: 8, fontWeight: 700, fontSize: 14, cursor: "pointer" }}
         >
           Réessayer
@@ -451,20 +147,11 @@ function App() {
       </div>
     );
 
-  // 3. Non authentifié → login (avec support viewer)
+  // 3. Non authentifié → page de login
   if (!authUser && !isViewer)
-    return (
-      <LoginPage
-        onViewerAccess={async () => {
-          localStorage.setItem("cc_mode", "viewer"); // ── Persister le mode viewer (localStorage survit à la fermeture PWA iOS)
-          setIsViewer(true);
-          setLoading(true);
-          await signInAsViewer();
-        }}
-      />
-    );
+    return <LoginPage onViewerAccess={loginAsViewer} />;
 
-  // 3b. Viewer en cours de chargement des données
+  // 3b. Viewer en chargement
   if (isViewer && (!data || loading))
     return (
       <div className="splash" role="status" aria-live="polite">
@@ -474,7 +161,7 @@ function App() {
       </div>
     );
 
-  // 4. Application principale (auth OK + données chargées)
+  // 4. App principale
   const navItems = isViewer ? [
     { id: "dashboard", label: "Tableau de bord", icon: "dashboard" },
     { id: "products",  label: "Produits",        icon: "products"  },
@@ -488,6 +175,7 @@ function App() {
     { id: "reports",   label: "Rapports",           icon: "reports"   },
     { id: "settings",  label: "Paramètres",         icon: "settings"  },
   ];
+
   const titles = {
     dashboard: "Tableau de bord",
     products:  "Produits",
@@ -511,12 +199,8 @@ function App() {
       {showUpdate && (
         <div className="update-banner">
           <span style={{ flex: 1 }}>🔄 Nouvelle version disponible</span>
-          <button className="btn btn-primary btn-sm" onClick={() => window.location.reload()}>
-            Actualiser
-          </button>
-          <button className="btn btn-outline btn-sm" onClick={() => setShowUpdate(false)}>
-            Ignorer
-          </button>
+          <button className="btn btn-primary btn-sm" onClick={() => window.location.reload()}>Actualiser</button>
+          <button className="btn btn-outline btn-sm" onClick={() => setShowUpdate(false)}>Ignorer</button>
         </div>
       )}
 
@@ -538,10 +222,8 @@ function App() {
       <Toasts />
 
       <div className="app">
-        <div
-          className={`sidebar-overlay ${sidebarOpen ? "open" : ""}`}
-          onClick={() => setSidebarOpen(false)}
-        />
+        <div className={`sidebar-overlay ${sidebarOpen ? "open" : ""}`} onClick={() => setSidebarOpen(false)} />
+
         <aside className={`sidebar ${sidebarOpen ? "open" : ""}`} aria-label="Menu latéral">
           <div className="sidebar-logo">
             <h1>Culturecase <span>GS</span></h1>
@@ -562,23 +244,13 @@ function App() {
             {isViewer ? (
               <button
                 className="nav-item"
-                onClick={async () => {
-                  localStorage.removeItem("cc_mode"); // ── Effacer le mode viewer
-                  setIsViewer(false);
-                  setPage("dashboard");
-                  await signOut(); // déconnecte la session anonyme Firebase
-                }}
+                onClick={async () => { setPage("dashboard"); await logoutViewer(); }}
                 style={{ width: "100%" }}
               >
                 <Icon name="logout" size={15} /> Quitter le mode viewer
               </button>
             ) : (
-              <button
-                className="nav-item"
-                onClick={logout}
-                style={{ width: "100%" }}
-                aria-label="Déconnexion"
-              >
+              <button className="nav-item" onClick={logout} style={{ width: "100%" }} aria-label="Déconnexion">
                 <Icon name="logout" size={15} /> Déconnexion
               </button>
             )}
@@ -587,57 +259,27 @@ function App() {
 
         <main className="main" role="main">
           <div className="topbar">
-            <button
-              className="hamburger"
-              onClick={() => setSidebarOpen(true)}
-              aria-label="Ouvrir le menu"
-            >
+            <button className="hamburger" onClick={() => setSidebarOpen(true)} aria-label="Ouvrir le menu">
               <Icon name="menu" size={20} />
             </button>
             <h2>{titles[page]}</h2>
 
             <span
               className="sync-dot"
-              title={
-                syncStatus === "ok"      ? "Synchronisé"
-                : syncStatus === "offline" ? "Hors ligne"
-                : "Sync..."
-              }
               style={{
                 width: 8, height: 8, borderRadius: "50%", flexShrink: 0,
-                background:
-                  syncStatus === "ok"      ? "var(--success)"
-                  : syncStatus === "offline" ? "var(--warn)"
-                  : "var(--text2)",
+                background: syncStatus === "ok" ? "var(--success)" : syncStatus === "offline" ? "var(--warn)" : "var(--text2)",
               }}
             />
 
             <div style={{ display: "flex", alignItems: "center", gap: 8 }} className="topbar-desktop-actions">
               <span
-                title={
-                  syncStatus === "ok"
-                    ? "Synchronisé"
-                    : syncStatus === "offline"
-                      ? "Hors ligne — données sauvegardées localement"
-                      : "Synchronisation..."
-                }
                 aria-live="polite"
-                aria-label={
-                  syncStatus === "ok"      ? "Synchronisé"
-                  : syncStatus === "offline" ? "Hors ligne"
-                  : "Synchronisation en cours"
-                }
                 style={{
                   display: "flex", alignItems: "center", gap: 4,
                   fontSize: 11, fontWeight: 600,
-                  color:
-                    syncStatus === "ok"      ? "var(--success)"
-                    : syncStatus === "offline" ? "var(--warn)"
-                    : "var(--text2)",
-                  background:
-                    syncStatus === "ok"      ? "rgba(34,197,94,0.1)"
-                    : syncStatus === "offline" ? "rgba(245,158,11,0.1)"
-                    : "rgba(255,255,255,0.05)",
+                  color: syncStatus === "ok" ? "var(--success)" : syncStatus === "offline" ? "var(--warn)" : "var(--text2)",
+                  background: syncStatus === "ok" ? "rgba(34,197,94,0.1)" : syncStatus === "offline" ? "rgba(245,158,11,0.1)" : "rgba(255,255,255,0.05)",
                   padding: "3px 8px", borderRadius: 20,
                 }}
               >
@@ -647,25 +289,14 @@ function App() {
 
               <span style={{ fontSize: 11.5, color: "var(--text2)" }}>{todayDisplay()}</span>
 
-              <button
-                className="btn btn-outline btn-sm"
-                onClick={() => exportData(data)}
-                title="Exporter les données (JSON daté)"
-                aria-label="Exporter les données"
-              >
+              <button className="btn btn-outline btn-sm" onClick={() => exportData(data)} aria-label="Exporter les données">
                 <Icon name="download" size={13} /> Exporter
               </button>
 
-              <label
-                className="btn btn-outline btn-sm"
-                title="Restaurer depuis un backup JSON"
-                style={{ cursor: "pointer", display: "flex", alignItems: "center", gap: 5 }}
-              >
+              <label className="btn btn-outline btn-sm" style={{ cursor: "pointer", display: "flex", alignItems: "center", gap: 5 }}>
                 <Icon name="arrow_up" size={13} /> Importer
                 <input
-                  type="file"
-                  accept=".json"
-                  style={{ display: "none" }}
+                  type="file" accept=".json" style={{ display: "none" }}
                   onChange={async (e) => {
                     const ok = await confirm("⚠️ L'import remplacera TOUTES les données actuelles. Continuer ?");
                     if (ok) importData(e.target.files[0], setData, persist, toast);
@@ -679,16 +310,12 @@ function App() {
           <div className="content">
             <Suspense fallback={<div style={{ padding: 40, textAlign: "center", color: "var(--text2)", fontSize: 13 }}>Chargement…</div>}>
               {page === "dashboard" && <Dashboard data={data} isViewer={isViewer} />}
-              {page === "products" && (
-                <Products data={data} onSave={saveProduct} onDelete={deleteProduct} onSale={addSale} isViewer={isViewer} />
-              )}
-              {page === "stock"   && <StockPage data={data} onMove={addMovement} isViewer={isViewer} />}
-              {page === "sales"   && <SalesPage data={data} onSale={addSale} onCancel={cancelSale} toast={toast} />}
-              {page === "history" && <HistoryPage data={data} />}
-              {page === "reports" && <Reports data={data} />}
-              {page === "settings" && (
-                <SettingsPage data={data} onSave={saveSettings} confirm={confirm} />
-              )}
+              {page === "products"  && <Products data={data} onSave={saveProduct} onDelete={deleteProduct} onSale={addSale} isViewer={isViewer} />}
+              {page === "stock"     && <StockPage data={data} onMove={addMovement} isViewer={isViewer} />}
+              {page === "sales"     && <SalesPage data={data} onSale={addSale} onCancel={cancelSale} toast={toast} />}
+              {page === "history"   && <HistoryPage data={data} />}
+              {page === "reports"   && <Reports data={data} />}
+              {page === "settings"  && <SettingsPage data={data} onSave={saveSettings} confirm={confirm} />}
             </Suspense>
           </div>
 
