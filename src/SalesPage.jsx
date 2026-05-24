@@ -6,6 +6,7 @@ import { LOW_STOCK } from "./constants.js";
 
 // ─── TICKET DE CAISSE ───────────────────────────────────────────────────────
 function TicketModal({ sales, productMap, onClose }) {
+  const [imgLoading, setImgLoading] = useState(false);
   const date     = sales[0]?.date   || today();
   const client   = sales[0]?.client || "";
   const phone    = sales[0]?.phone  || "";
@@ -146,6 +147,142 @@ function TicketModal({ sales, productMap, onClose }) {
     setTimeout(() => { printWin.print(); printWin.close(); }, 400);
   };
 
+
+  // ── Partage image WhatsApp ──────────────────────────────────────────────
+  // On génère dynamiquement un canvas HTML du ticket puis on l'ouvre
+  // dans un nouvel onglet → l'utilisateur fait "Enregistrer" et envoie sur WA.
+  const shareAsImage = async () => {
+    setImgLoading(true);
+    try {
+      // Charger html2canvas depuis CDN (pas de dépendance npm nécessaire)
+      if (!window.html2canvas) {
+        await new Promise((resolve, reject) => {
+          const s = document.createElement("script");
+          s.src = "https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js";
+          s.onload = resolve;
+          s.onerror = reject;
+          document.head.appendChild(s);
+        });
+      }
+
+      // Générer le HTML du ticket dans un div temporaire hors écran
+      const wrap = document.createElement("div");
+      wrap.style.cssText = [
+        "position:fixed", "left:-9999px", "top:0",
+        "width:360px", "background:#fff",
+        "font-family:'Courier New',monospace",
+        "font-size:13px", "color:#111",
+        "padding:24px 20px", "line-height:1.6",
+      ].join(";");
+
+      const rows = (label, val) => val
+        ? `<div style="display:flex;justify-content:space-between;margin-bottom:4px">
+             <span style="color:#666">${label}</span><span>${val}</span>
+           </div>` : "";
+
+      const sep = `<hr style="border:none;border-top:1px dashed #aaa;margin:12px 0"/>`;
+
+      wrap.innerHTML = `
+        <div style="text-align:center;margin-bottom:14px">
+          <div style="font-size:22px;font-weight:900;letter-spacing:-0.5px">
+            Culture<span style="color:#7c3aed">case</span> GS
+          </div>
+          <div style="font-size:11px;color:#888;margin-top:2px">Ticket de caisse</div>
+        </div>
+        ${sep}
+        ${rows("Date", fmtDate(date))}
+        ${rows("Client", client)}
+        ${rows("Tél", phone)}
+        ${rows("Quartier", quartier)}
+        ${delivery ? rows("Livraison", "🚚 À domicile") : ""}
+        ${remarque ? rows("Remarque", `<em>${remarque}</em>`) : ""}
+        ${sep}
+        <div style="font-weight:700;margin-bottom:8px">Produit(s)</div>
+        ${sales.map(s => {
+          const p = productMap[s.productId];
+          const nom = p ? `${p.model} — ${p.design}` : "—";
+          const remise = s.discountPercent > 0
+            ? `<div style="display:flex;justify-content:space-between;font-size:11px;color:#888">
+                 <span>Remise ${s.discountPercent}%</span>
+                 <span>-${fmtMoney(s.discountAmount || 0)}</span>
+               </div>` : "";
+          const motif = s.discountPercent > 0 && s.discountReason
+            ? `<div style="font-size:11px;color:#aaa;font-style:italic">Motif : ${s.discountReason}</div>` : "";
+          return `
+            <div style="margin-bottom:10px;padding-bottom:8px;border-bottom:1px dotted #eee">
+              <div style="font-weight:700">${nom}</div>
+              <div style="display:flex;justify-content:space-between;font-size:12px;color:#555;margin-top:3px">
+                <span>${s.qty} × ${fmtMoney(s.price)}</span>
+                <span>${fmtMoney(s.total)}</span>
+              </div>
+              ${remise}${motif}
+              <div style="display:flex;justify-content:space-between;font-weight:700;margin-top:3px">
+                <span>Sous-total</span>
+                <span style="color:#059669">${fmtMoney(s.totalAfterDiscount ?? s.total)}</span>
+              </div>
+            </div>`;
+        }).join("")}
+        ${sep}
+        ${totalDiscount > 0
+          ? `<div style="display:flex;justify-content:space-between;margin-bottom:6px">
+               <span style="color:#666">Remise totale</span>
+               <span>-${fmtMoney(totalDiscount)}</span>
+             </div>` : ""}
+        <div style="display:flex;justify-content:space-between;font-size:17px;font-weight:900">
+          <span>TOTAL PAYÉ</span>
+          <span style="color:#059669">${fmtMoney(grandTotal)}</span>
+        </div>
+        ${sep}
+        <div style="text-align:center;font-size:12px;color:#888;margin-top:8px;line-height:1.8">
+          Merci pour votre achat ! 🙏<br/>
+          <span style="color:#7c3aed;font-weight:700">Culturecase GS</span>
+        </div>
+      `;
+
+      document.body.appendChild(wrap);
+
+      const canvas = await window.html2canvas(wrap, {
+        scale: 2, // haute résolution pour mobile
+        useCORS: true,
+        backgroundColor: "#ffffff",
+      });
+
+      document.body.removeChild(wrap);
+
+      // Ouvrir l'image dans un nouvel onglet → l'utilisateur enregistre et partage
+      const imgUrl = canvas.toDataURL("image/png");
+      const win = window.open("", "_blank");
+      if (win) {
+        win.document.write(`
+          <!DOCTYPE html>
+          <html>
+          <head>
+            <meta charset="UTF-8"/>
+            <meta name="viewport" content="width=device-width,initial-scale=1"/>
+            <title>Ticket Culturecase GS</title>
+            <style>
+              body { margin:0; background:#1a1a2e; display:flex; flex-direction:column;
+                     align-items:center; justify-content:center; min-height:100vh; gap:16px; }
+              img  { max-width:100%; border-radius:12px; box-shadow:0 4px 24px rgba(0,0,0,0.5); }
+              p    { color:#aaa; font-family:sans-serif; font-size:13px; text-align:center; padding:0 20px; }
+            </style>
+          </head>
+          <body>
+            <img src="${imgUrl}" alt="Ticket de caisse"/>
+            <p>📥 Appuyez longuement sur l'image pour l'enregistrer, puis envoyez-la sur WhatsApp</p>
+          </body>
+          </html>
+        `);
+        win.document.close();
+      }
+    } catch (err) {
+      console.error("Erreur génération image ticket:", err);
+      alert("Impossible de générer l'image. Utilise le bouton WhatsApp texte à la place.");
+    } finally {
+      setImgLoading(false);
+    }
+  };
+
   return (
     <Modal
       title="🧾 Ticket de caisse"
@@ -158,7 +295,15 @@ function TicketModal({ sales, productMap, onClose }) {
             onClick={whatsappText}
             style={{ gap: 6 }}
           >
-            <span style={{ fontSize: 15 }}>📲</span> WhatsApp
+            <span style={{ fontSize: 15 }}>📲</span> Texte
+          </button>
+          <button
+            className="btn btn-success"
+            onClick={shareAsImage}
+            disabled={imgLoading}
+            style={{ gap: 6, background: "var(--success)", opacity: imgLoading ? 0.7 : 1 }}
+          >
+            <span style={{ fontSize: 15 }}>🖼️</span> {imgLoading ? "Génération…" : "Image WA"}
           </button>
           <button className="btn btn-primary" onClick={printTicket}>
             <Icon name="download" size={13} /> Imprimer
