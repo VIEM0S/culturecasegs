@@ -249,31 +249,29 @@ function TicketModal({ sales, productMap, onClose }) {
 
       document.body.removeChild(wrap);
 
-      // Ouvrir l'image dans un nouvel onglet → l'utilisateur enregistre et partage
+      // ── Partage natif iOS/Android (Web Share API) ──────────────────────────
+      // Sur iPhone/Android : ouvre le menu de partage natif avec WhatsApp dedans
+      // Sur desktop : télécharge l'image directement
       const imgUrl = canvas.toDataURL("image/png");
-      const win = window.open("", "_blank");
-      if (win) {
-        win.document.write(`
-          <!DOCTYPE html>
-          <html>
-          <head>
-            <meta charset="UTF-8"/>
-            <meta name="viewport" content="width=device-width,initial-scale=1"/>
-            <title>Ticket Culturecase GS</title>
-            <style>
-              body { margin:0; background:#1a1a2e; display:flex; flex-direction:column;
-                     align-items:center; justify-content:center; min-height:100vh; gap:16px; }
-              img  { max-width:100%; border-radius:12px; box-shadow:0 4px 24px rgba(0,0,0,0.5); }
-              p    { color:#aaa; font-family:sans-serif; font-size:13px; text-align:center; padding:0 20px; }
-            </style>
-          </head>
-          <body>
-            <img src="${imgUrl}" alt="Ticket de caisse"/>
-            <p>📥 Appuyez longuement sur l'image pour l'enregistrer, puis envoyez-la sur WhatsApp</p>
-          </body>
-          </html>
-        `);
-        win.document.close();
+
+      // Convertir le dataURL en Blob pour navigator.share
+      const res  = await fetch(imgUrl);
+      const blob = await res.blob();
+      const file = new File([blob], `ticket-culturecase-${date?.slice(0,10) || "gs"}.png`, { type: "image/png" });
+
+      if (navigator.canShare && navigator.canShare({ files: [file] })) {
+        // ✅ Web Share API disponible (iPhone Safari, Android Chrome)
+        await navigator.share({
+          files: [file],
+          title: "Ticket Culturecase GS",
+          text: `Ticket du ${fmtDate(date)}${client ? " — " + client : ""}`,
+        });
+      } else {
+        // 🖥️ Fallback desktop : téléchargement direct
+        const a = document.createElement("a");
+        a.href = imgUrl;
+        a.download = `ticket-culturecase-${date?.slice(0,10) || "gs"}.png`;
+        a.click();
       }
     } catch (err) {
       console.error("Erreur génération image ticket:", err);
