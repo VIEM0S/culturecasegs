@@ -21,14 +21,29 @@ function HistoryPage({ data }) {
   // Group sales by client, then sub-group by groupId (multi-produits = 1 achat)
   const clientGroups = useMemo(() => {
     const groups = {};
+    let anonCount = 0;
     sales.forEach(s => {
-      const phone = (s.phone || "").trim();
-      const name  = (s.client || "").trim();
-      const key   = phone || name || "__anon__";
+      const phone    = (s.phone || "").trim();
+      const name     = (s.client || "").trim();
+      const quartier = (s.quartier || "").trim().toLowerCase();
+
+      // Clé de regroupement :
+      // - téléphone dispo → clé unique par numéro
+      // - pas de téléphone, mais nom → nom + quartier (deux homonymes même quartier sans numéro = même client)
+      // - rien du tout → clé unique par vente (jamais fusionné)
+      let key;
+      if (phone) {
+        key = `phone::${phone}`;
+      } else if (name) {
+        key = `name::${name}::${quartier}`;
+      } else {
+        key = `anon::${s.groupId || s.id}`;
+      }
+
       if (!groups[key]) groups[key] = { name, phone, quartier: s.quartier || "", salesRaw: [] };
-      if (name) { groups[key].name = name; }
-      if (phone) { groups[key].phone = phone; }
-      if (s.quartier) groups[key].quartier = s.quartier;
+      if (name && !groups[key].name) groups[key].name = name;
+      if (phone && !groups[key].phone) groups[key].phone = phone;
+      if (s.quartier && !groups[key].quartier) groups[key].quartier = s.quartier;
       groups[key].salesRaw.push(s);
     });
     return Object.values(groups).map(g => {
@@ -91,7 +106,11 @@ function HistoryPage({ data }) {
     const q = search.toLowerCase();
     return clientGroups.filter(g => {
       const normalize = v => v.replace(/[\s\-\.\(\)\+]/g, "");
-      const nameMatch = !q || g.name.toLowerCase().includes(q) || normalize(g.phone).includes(normalize(q)) || g.quartier.toLowerCase().includes(q);
+      const nq = normalize(q);
+      const nameMatch = !q
+        || g.name.toLowerCase().includes(q)
+        || g.quartier.toLowerCase().includes(q)
+        || (nq.length >= 4 && g.salesRaw.some(s => normalize(s.phone || "").includes(nq)));
       const dateMatch = g.purchases.some(p =>
         (!dateFrom || toDateStr(p[0]?.date || p.date) >= dateFrom) && (!dateTo || toDateStr(p[0]?.date || p.date) <= dateTo)
       );
