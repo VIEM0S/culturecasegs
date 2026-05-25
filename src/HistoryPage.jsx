@@ -90,7 +90,8 @@ function HistoryPage({ data }) {
   const filtered = useMemo(() => {
     const q = search.toLowerCase();
     return clientGroups.filter(g => {
-      const nameMatch = !q || g.name.toLowerCase().includes(q) || g.phone.includes(q) || g.quartier.toLowerCase().includes(q);
+      const normalize = v => v.replace(/[\s\-\.\(\)\+]/g, "");
+      const nameMatch = !q || g.name.toLowerCase().includes(q) || normalize(g.phone).includes(normalize(q)) || g.quartier.toLowerCase().includes(q);
       const dateMatch = g.purchases.some(p =>
         (!dateFrom || toDateStr(p[0]?.date || p.date) >= dateFrom) && (!dateTo || toDateStr(p[0]?.date || p.date) <= dateTo)
       );

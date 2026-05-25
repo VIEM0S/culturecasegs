@@ -540,10 +540,12 @@ function SalesPage({ data, onSale, onCancel, toast }) {
       const prod = productMap[s.productId];
       const q    = search.toLowerCase();
       const sDate = toDateStr(s.date);
+      const normalize = v => v.replace(/[\s\-\.\(\)\+]/g, "");
       const matchText = !q
         || (prod && (`${prod.model} ${prod.design}`).toLowerCase().includes(q))
         || (s.client || "").toLowerCase().includes(q)
-        || (s.quartier || "").toLowerCase().includes(q);
+        || (s.quartier || "").toLowerCase().includes(q)
+        || normalize(s.phone || "").includes(normalize(q));
       const matchDate = (!dateFrom || sDate >= dateFrom) && (!dateTo || sDate <= dateTo);
       const matchDelivery = filterDelivery === "" ? true : filterDelivery === "yes" ? s.delivery : !s.delivery;
       const matchMin = !filterAmountMin || (s.totalAfterDiscount ?? s.total) >= Number(filterAmountMin);
