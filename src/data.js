@@ -1,5 +1,6 @@
 import { getDB, doc, onSnapshot, writeBatch as fbWriteBatch } from "./firebase.js";
 import { CHUNK_SIZE } from "./constants.js";
+import { saveLocalSnapshot } from "./googleSheets.js";
 
 // ── Logique images ────────────────────────────────────────────────────────────
 // "https://res.cloudinary.com/..." → URL Cloudinary → visible partout ✅
@@ -27,6 +28,9 @@ export async function rehydrateImages(data) {
 
 // ── Sauvegarde Firestore ──────────────────────────────────────────────────────
 export async function saveData(data) {
+  // Snapshot local immédiat — protection contre toute perte de données
+  saveLocalSnapshot(data);
+
   const slim = await stripImages(data);
   delete slim.auth;
   const db = getDB();

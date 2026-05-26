@@ -6,6 +6,7 @@ import { useStockActions } from "./useStockActions.js";
 import Icon from "./Icon.jsx";
 import LoginPage from "./LoginPage.jsx";
 import { todayDisplay } from "./utils.js";
+import { initGoogleSheets, maybeWeeklyBackup, getLocalSnapshot } from "./googleSheets.js";
 
 const Dashboard    = lazy(() => import("./Dashboard.jsx"));
 const Products     = lazy(() => import("./Products.jsx"));
@@ -85,6 +86,25 @@ function App() {
     if (authUser !== undefined && !loading) setSplashDone(true);
   }, [authUser, loading]);
 
+  // ── Google Sheets : init + backup hebdomadaire ───────────────────────────
+  useEffect(() => {
+    if (!data || loading) return;
+    initGoogleSheets();
+    maybeWeeklyBackup(data);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [!!data, loading]);
+
+  // ── Snapshot local : restauration d'urgence si Firestore vide ───────────
+  useEffect(() => {
+    if (loading || data?.sales?.length > 0) return;
+    const snap = getLocalSnapshot();
+    if (snap?.data?.sales?.length > 0) {
+      console.warn("[Snapshot] Firestore vide — restauration depuis le cache local :", snap.savedAt);
+      setData(snap.data);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loading, data?.sales?.length]);
+
   const handleInstall = async () => {
     if (!installPrompt) return;
     installPrompt.prompt();
@@ -96,12 +116,9 @@ function App() {
   const [loadingTooLong, setLoadingTooLong] = useState(false);
   useEffect(() => {
     if (!loading) { setLoadingTooLong(false); return; }
-    // 15s avant l'avertissement (réseau mobile lent)
-    const t1 = setTimeout(() => setLoadingTooLong(true), 15000);
-    // 25s : forcer la sortie du splash même sans données (le cache Firestore prendra le relais)
-    const t2 = setTimeout(() => setLoading(false), 25000);
-    return () => { clearTimeout(t1); clearTimeout(t2); };
-  }, [loading, setLoading]);
+    const t = setTimeout(() => setLoadingTooLong(true), 8000);
+    return () => clearTimeout(t);
+  }, [loading]);
 
   // ────────────────────────────────────────────────────────────────────────
   // ÉTATS DE L'APPLICATION

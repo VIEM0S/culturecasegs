@@ -1,9 +1,19 @@
 import { useCallback, useEffect } from "react";
 import { uid } from "./utils.js";
+import {
+  sheetAddSales, sheetCancelSales,
+  sheetAddMovements, sheetSyncProducts,
+  sheetSyncHistory, setSheetsProductsCache,
+} from "./googleSheets.js";
 
 // ── Hook : toutes les actions métier sur les données ─────────────────────────
 // (produits, ventes, mouvements, paramètres, migration)
 export function useStockActions({ data, persist, confirm }) {
+
+  // Garder le cache produits à jour pour enrichir les données Sheets
+  useEffect(() => {
+    if (data?.products) setSheetsProductsCache(data.products);
+  }, [data?.products]);
 
   // ── Produits ──────────────────────────────────────────────────────────────
   const saveProduct = useCallback((product) => {
@@ -15,6 +25,7 @@ export function useStockActions({ data, persist, confirm }) {
       else products = [...products, p];
     });
     persist({ ...data, products });
+    sheetSyncProducts(products); // Sync Google Sheets
   }, [data, persist]);
 
   const deleteProduct = useCallback(async (id) => {
@@ -39,6 +50,8 @@ export function useStockActions({ data, persist, confirm }) {
       });
     }
     persist({ ...data, products, movements: [...data.movements, ...list] });
+    sheetAddMovements(list);   // Sync Google Sheets
+    sheetSyncProducts(products);
   }, [data, persist]);
 
   // ── Ventes ────────────────────────────────────────────────────────────────
@@ -60,12 +73,16 @@ export function useStockActions({ data, persist, confirm }) {
         note: sale.client || "",
       });
     }
+    const allSales = [...data.sales, ...list];
     persist({
       ...data,
       products,
-      sales: [...data.sales, ...list],
+      sales: allSales,
       movements: [...data.movements, ...newMovements],
     });
+    sheetAddSales(list);                              // Sync Google Sheets
+    sheetSyncProducts(products);
+    sheetSyncHistory(allSales, products);
   }, [data, persist]);
 
   const cancelSale = useCallback((saleGroup) => {
@@ -87,12 +104,16 @@ export function useStockActions({ data, persist, confirm }) {
         note: sale.client ? `Remboursement ${sale.client}` : "Vente annulée",
       });
     }
+    const allSales = data.sales.filter(s => !cancelledIds.has(s.id));
     persist({
       ...data,
       products,
-      sales: data.sales.filter(s => !cancelledIds.has(s.id)),
+      sales: allSales,
       movements: [...data.movements, ...newMovements],
     });
+    sheetCancelSales(list);                           // Sync Google Sheets
+    sheetSyncProducts(products);
+    sheetSyncHistory(allSales, products);
   }, [data, persist]);
 
   // ── Paramètres ────────────────────────────────────────────────────────────
