@@ -1,6 +1,7 @@
 import { initializeApp, getApps } from "firebase/app";
 import {
-  getFirestore, doc, getDoc, setDoc, onSnapshot, writeBatch
+  getFirestore, initializeFirestore, persistentLocalCache, persistentMultipleTabManager,
+  doc, getDoc, setDoc, onSnapshot, writeBatch
 } from "firebase/firestore";
 import {
   getAuth,
@@ -27,7 +28,19 @@ const FIREBASE_CONFIG = {
 
 const app  = getApps().length ? getApps()[0] : initializeApp(FIREBASE_CONFIG);
 const auth = getAuth(app);
-const _db  = getFirestore(app);
+
+// Cache offline IndexedDB : les données chargent instantanément depuis le cache local
+// même sans réseau, Firebase synchronise en arrière-plan ensuite.
+let _db;
+try {
+  _db = initializeFirestore(app, {
+    localCache: persistentLocalCache({
+      tabManager: persistentMultipleTabManager(),
+    }),
+  });
+} catch {
+  _db = getFirestore(app);
+}
 
 // ── Remote Config (code viewer stocké côté Firebase, jamais dans le bundle) ─
 const _rc = getRemoteConfig(app);

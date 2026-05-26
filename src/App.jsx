@@ -96,9 +96,12 @@ function App() {
   const [loadingTooLong, setLoadingTooLong] = useState(false);
   useEffect(() => {
     if (!loading) { setLoadingTooLong(false); return; }
-    const t = setTimeout(() => setLoadingTooLong(true), 8000);
-    return () => clearTimeout(t);
-  }, [loading]);
+    // 15s avant l'avertissement (réseau mobile lent)
+    const t1 = setTimeout(() => setLoadingTooLong(true), 15000);
+    // 25s : forcer la sortie du splash même sans données (le cache Firestore prendra le relais)
+    const t2 = setTimeout(() => setLoading(false), 25000);
+    return () => { clearTimeout(t1); clearTimeout(t2); };
+  }, [loading, setLoading]);
 
   // ────────────────────────────────────────────────────────────────────────
   // ÉTATS DE L'APPLICATION

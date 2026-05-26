@@ -25,8 +25,17 @@ export function useAuth({ toast, setSyncStatus, setData, setLoading }) {
         if (user) {
           if (unsubData.current) { unsubData.current(); unsubData.current = null; }
           isFirstLoad.current = true;
+          // Fallback : si Firestore ne répond pas en 12s, sortir du loading
+          // (le cache persistant prendra le relais dès qu'une donnée arrive)
+          const fallbackTimer = setTimeout(() => {
+            if (isFirstLoad.current && mounted) {
+              isFirstLoad.current = false;
+              setLoading(false);
+            }
+          }, 12000);
           const unsub = subscribeToData((freshData) => {
             if (!mounted) return;
+            clearTimeout(fallbackTimer);
             if (isFirstLoad.current) {
               isFirstLoad.current = false;
               setLoading(false);
