@@ -103,14 +103,20 @@ function HistoryPage({ data }) {
   ];
 
   const filtered = useMemo(() => {
-    const q = search.toLowerCase();
+    const q = search.toLowerCase().trim();
     return clientGroups.filter(g => {
-      const normalize = v => v.replace(/[\s\-\.\(\)\+]/g, "");
-      const nq = normalize(q);
+      // Normalise un numéro : retire espaces, tirets, +, points, parenthèses
+      const normalize = v => (v || "").replace(/[\s\-\.\(\)\+]/g, "");
+      const nq = normalize(q); // version normalisée de la recherche
+
       const nameMatch = !q
         || g.name.toLowerCase().includes(q)
         || g.quartier.toLowerCase().includes(q)
-        || (nq.length >= 4 && g.salesRaw.some(s => normalize(s.phone || "").includes(nq)));
+        // Recherche par numéro : on compare le numéro normalisé du groupe
+        // ET chaque vente (au cas où le numéro aurait changé entre les achats)
+        || (nq.length >= 3 && normalize(g.phone).includes(nq))
+        || (nq.length >= 3 && g.salesRaw.some(s => normalize(s.phone || "").includes(nq)));
+
       const dateMatch = g.purchases.some(p =>
         (!dateFrom || toDateStr(p[0]?.date || p.date) >= dateFrom) && (!dateTo || toDateStr(p[0]?.date || p.date) <= dateTo)
       );
