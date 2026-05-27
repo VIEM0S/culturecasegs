@@ -6,7 +6,6 @@ import { useStockActions } from "./useStockActions.js";
 import Icon from "./Icon.jsx";
 import LoginPage from "./LoginPage.jsx";
 import { todayDisplay } from "./utils.js";
-import { initGoogleSheets, maybeWeeklyBackup, getLocalSnapshot } from "./googleSheets.js";
 
 const Dashboard    = lazy(() => import("./Dashboard.jsx"));
 const Products     = lazy(() => import("./Products.jsx"));
@@ -85,25 +84,6 @@ function App() {
   useEffect(() => {
     if (authUser !== undefined && !loading) setSplashDone(true);
   }, [authUser, loading]);
-
-  // ── Google Sheets : init + backup hebdomadaire ───────────────────────────
-  useEffect(() => {
-    if (!data || loading) return;
-    initGoogleSheets();
-    maybeWeeklyBackup(data);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [!!data, loading]);
-
-  // ── Snapshot local : restauration d'urgence si Firestore vide ───────────
-  useEffect(() => {
-    if (loading || data?.sales?.length > 0) return;
-    const snap = getLocalSnapshot();
-    if (snap?.data?.sales?.length > 0) {
-      console.warn("[Snapshot] Firestore vide — restauration depuis le cache local :", snap.savedAt);
-      setData(snap.data);
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [loading, data?.sales?.length]);
 
   const handleInstall = async () => {
     if (!installPrompt) return;
@@ -339,7 +319,7 @@ function App() {
               {page === "sales"     && <SalesPage data={data} onSale={addSale} onCancel={cancelSale} toast={toast} />}
               {page === "history"   && <HistoryPage data={data} />}
               {page === "reports"   && <Reports data={data} />}
-              {page === "settings"  && <SettingsPage data={data} onSave={saveSettings} confirm={confirm} />}
+              {page === "settings"  && <SettingsPage data={data} onSave={saveSettings} onPersist={persist} confirm={confirm} />}
             </Suspense>
           </div>
 

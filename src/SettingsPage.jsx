@@ -44,7 +44,7 @@ function ThemeToggle() {
   );
 }
 
-function SettingsPage({ data, onSave, confirm }) {
+function SettingsPage({ data, onSave, onPersist, confirm }) {
   const { settings } = data;
   const [tab, setTab] = useState("prices");
   const [backupLoading, setBackupLoading] = useState(false);
@@ -65,6 +65,20 @@ function SettingsPage({ data, onSave, confirm }) {
   };
   const [localSettings, setLocalSettings] = useState(() => JSON.parse(JSON.stringify(settings)));
   const [saved, setSaved] = useState(false);
+  const [saveDesignsNow, setSaveDesignsNow] = useState(false);
+
+  // ── Sauvegarde auto des designs sans passer par saveSettings (async) ──
+  useEffect(() => {
+    if (!saveDesignsNow) return;
+    setSaveDesignsNow(false);
+    // Appel direct à persist via onSave avec les settings mis à jour
+    // On utilise un ref pour récupérer localSettings à jour
+    // persist direct : met à jour data.settings sans passer par saveSettings (async)
+    onPersist({ ...data, settings: localSettingsRef.current });
+  }, [saveDesignsNow, onSave]);
+
+  const localSettingsRef = useRef(localSettings);
+  useEffect(() => { localSettingsRef.current = localSettings; }, [localSettings]);
 
   // ── Models ──
   const [newModel, setNewModel] = useState("");
@@ -118,37 +132,25 @@ function SettingsPage({ data, onSave, confirm }) {
   const addDesign = () => {
     if (!newDesign.name.trim()) return;
     const id = newDesign.id.trim() || nextDesignId();
-    setLocalSettings(s => {
-      const updated = { ...s, designs: [...s.designs, { id, name: newDesign.name.trim(), image: newDesign.image }] };
-      onSave(updated); // ── Sauvegarde automatique à l'ajout d'un design ──
-      return updated;
-    });
+    setLocalSettings(s => ({ ...s, designs: [...s.designs, { id, name: newDesign.name.trim(), image: newDesign.image }] }));
+    setSaveDesignsNow(true);
     setNewDesign(emptyNewDesign);
   };
 
   const removeDesign = async (id) => {
     const ok = await confirm("Supprimer ce design ?");
     if (!ok) return;
-    setLocalSettings(s => {
-      const updated = { ...s, designs: s.designs.filter(d => d.id !== id) };
-      onSave(updated); // ── Sauvegarde automatique à la suppression ──
-      return updated;
-    });
+    setLocalSettings(s => ({ ...s, designs: s.designs.filter(d => d.id !== id) }));
+    setSaveDesignsNow(true);
   };
 
   const startEditDesign = (d) => setEditingDesign({ ...d });
 
   const confirmEditDesign = () => {
     if (!editingDesign) return;
-    setLocalSettings(s => {
-      const updated = {
-        ...s,
-        designs: s.designs.map(d => d.id === editingDesign.id ? { ...editingDesign, name: editingDesign.name.trim() || d.name } : d),
-      };
-      onSave(updated); // ── Sauvegarde automatique après édition ──
-      return updated;
-    });
+    setLocalSettings(s => ({ ...s, designs: s.designs.map(d => d.id === editingDesign.id ? { ...editingDesign, name: editingDesign.name.trim() || d.name } : d) }));
     setEditingDesign(null);
+    setSaveDesignsNow(true);
   };
 
   // ── Prices ──
