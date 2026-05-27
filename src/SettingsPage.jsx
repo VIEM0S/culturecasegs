@@ -118,24 +118,36 @@ function SettingsPage({ data, onSave, confirm }) {
   const addDesign = () => {
     if (!newDesign.name.trim()) return;
     const id = newDesign.id.trim() || nextDesignId();
-    setLocalSettings(s => ({ ...s, designs: [...s.designs, { id, name: newDesign.name.trim(), image: newDesign.image }] }));
+    setLocalSettings(s => {
+      const updated = { ...s, designs: [...s.designs, { id, name: newDesign.name.trim(), image: newDesign.image }] };
+      onSave(updated); // ── Sauvegarde automatique à l'ajout d'un design ──
+      return updated;
+    });
     setNewDesign(emptyNewDesign);
   };
 
   const removeDesign = async (id) => {
     const ok = await confirm("Supprimer ce design ?");
     if (!ok) return;
-    setLocalSettings(s => ({ ...s, designs: s.designs.filter(d => d.id !== id) }));
+    setLocalSettings(s => {
+      const updated = { ...s, designs: s.designs.filter(d => d.id !== id) };
+      onSave(updated); // ── Sauvegarde automatique à la suppression ──
+      return updated;
+    });
   };
 
   const startEditDesign = (d) => setEditingDesign({ ...d });
 
   const confirmEditDesign = () => {
     if (!editingDesign) return;
-    setLocalSettings(s => ({
-      ...s,
-      designs: s.designs.map(d => d.id === editingDesign.id ? { ...editingDesign, name: editingDesign.name.trim() || d.name } : d),
-    }));
+    setLocalSettings(s => {
+      const updated = {
+        ...s,
+        designs: s.designs.map(d => d.id === editingDesign.id ? { ...editingDesign, name: editingDesign.name.trim() || d.name } : d),
+      };
+      onSave(updated); // ── Sauvegarde automatique après édition ──
+      return updated;
+    });
     setEditingDesign(null);
   };
 
