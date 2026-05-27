@@ -44,7 +44,7 @@ function ThemeToggle() {
   );
 }
 
-function SettingsPage({ data, onSave, onPersist, confirm }) {
+function SettingsPage({ data, onSave, onPersist, onSaveProduct, confirm }) {
   const { settings } = data;
   const [tab, setTab] = useState("prices");
   const [backupLoading, setBackupLoading] = useState(false);
@@ -132,9 +132,28 @@ function SettingsPage({ data, onSave, onPersist, confirm }) {
   const addDesign = () => {
     if (!newDesign.name.trim()) return;
     const id = newDesign.id.trim() || nextDesignId();
-    setLocalSettings(s => ({ ...s, designs: [...s.designs, { id, name: newDesign.name.trim(), image: newDesign.image }] }));
+    const design = { id, name: newDesign.name.trim(), image: newDesign.image };
+    setLocalSettings(s => ({ ...s, designs: [...s.designs, design] }));
     setSaveDesignsNow(true);
     setNewDesign(emptyNewDesign);
+
+    // Créer automatiquement un produit pour chaque modèle existant
+    if (onSaveProduct && data?.settings?.models?.length > 0) {
+      const models = data.settings.models;
+      const prices = data?.settings?.priceSettings?.modelPrices || {};
+      const today  = new Date().toISOString().slice(0, 10);
+      const newProducts = models.map(model => ({
+        id:        uid(),
+        model,
+        design:    design.name,
+        designId:  design.id,
+        stock:     0,
+        price:     prices[model] || 5000,
+        createdAt: today,
+        imageUrl:  design.image || "",
+      }));
+      onSaveProduct(newProducts);
+    }
   };
 
   const removeDesign = async (id) => {

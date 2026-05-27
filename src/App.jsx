@@ -319,7 +319,7 @@ function App() {
               {page === "sales"     && <SalesPage data={data} onSale={addSale} onCancel={cancelSale} toast={toast} />}
               {page === "history"   && <HistoryPage data={data} />}
               {page === "reports"   && <Reports data={data} />}
-              {page === "settings"  && <SettingsPage data={data} onSave={saveSettings} onPersist={persist} confirm={confirm} />}
+              {page === "settings"  && <SettingsPage data={data} onSave={saveSettings} onSaveProduct={saveProduct} confirm={confirm} />}
             </Suspense>
           </div>
 
