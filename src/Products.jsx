@@ -1,25 +1,18 @@
-import { useState, useEffect, useMemo, useCallback, memo, useRef } from "react";
+import { useState, useMemo } from "react";
 import Icon from "./Icon.jsx";
 import { StockView, stockBadge } from "./StockView.jsx";
-import { Modal, StatCard, FieldError, DesignThumb } from "./components.jsx";
-import { useDialog, useToast } from "./hooks.jsx";
-import { uid, sanitize, validateImageUrl, validateProductForm, validateSaleForm, validateMovementForm, getProductImageUrl, today, fmtMoney } from "./utils.js";
-import { DEFAULT_MODELS, DEFAULT_DESIGNS, DEFAULT_PRICE_SETTINGS, LOW_STOCK } from "./constants.js";
-import { exportData, importData } from "./data.js";
+import { StatCard, DesignThumb } from "./components.jsx";
+import { uid, getProductImageUrl, today, fmtMoney } from "./utils.js";
+import { LOW_STOCK } from "./constants.js";
 
-function Products({ data, onSave, onDelete, onSale, isViewer = false }) {
+function Products({ data, onSale, isViewer = false }) {
   const { products, settings } = data;
   const { designs, models, priceSettings } = settings;
-  const [modal, setModal] = useState(null);
   const [search, setSearch] = useState("");
   const [filterModel, setFilterModel] = useState("");
   const [viewMode, setViewMode] = useState("grid");
-  const [designPickerOpen, setDesignPickerOpen] = useState(false);
-  const [errors, setErrors] = useState({});
 
   // L'image vient uniquement du design sélectionné (designImage). Plus de champ imageUrl dans ce formulaire.
-  const emptyForm = { model: "", design: "", designImage: "", price: "", stock: "" };
-  const [form, setForm] = useState(emptyForm);
 
   // Modèles dans l'ordre défini dans les paramètres (pas calculé depuis les produits)
   const uniqueModels = useMemo(() => {
@@ -42,84 +35,6 @@ function Products({ data, onSave, onDelete, onSale, isViewer = false }) {
     [uniqueModels, products]
   );
 
-  // Pour l'ajout : sélection multi-modèles
-  const [selectedModels, setSelectedModels] = useState([]);
-  const toggleModel = (m) => setSelectedModels(prev => prev.includes(m) ? prev.filter(x => x !== m) : [...prev, m]);
-  const selectAllModels = () => setSelectedModels([...models]);
-  const clearModels = () => setSelectedModels([]);
-
-  const openAdd = () => {
-    setForm(emptyForm);
-    setSelectedModels([]);
-    setErrors({});
-    setModal("add");
-  };
-  const openEdit = (p) => {
-    setForm({
-      ...p,
-      price: String(p.price),
-      stock: String(p.stock),
-    });
-    setErrors({});
-    setModal("edit");
-  };
-
-  const handleModelChange = (modelName) => {
-    const suggestedPrice = priceSettings.modelPrices[modelName] || "";
-    setForm(f => ({ ...f, model: modelName, price: String(suggestedPrice) }));
-    if (errors.model) setErrors(e => ({ ...e, model: undefined }));
-  };
-
-  const handleDesignSelect = (d) => {
-    setForm(f => ({ ...f, design: d.name, designImage: d.image }));
-    setDesignPickerOpen(false);
-    if (errors.design) setErrors(e => ({ ...e, design: undefined }));
-  };
-
-  const handleSave = () => {
-    if (modal === "add") {
-      const errs = {};
-      if (selectedModels.length === 0) errs.model = "Sélectionnez au moins un modèle";
-      if (!form.design?.trim()) errs.design = "Le design est obligatoire";
-      if (!form.price || isNaN(Number(form.price)) || Number(form.price) <= 0) errs.price = "Le prix doit être un nombre positif";
-      if (Object.keys(errs).length > 0) { setErrors(errs); return; }
-      // Construit TOUS les produits d'un coup → un seul appel onSave
-      const newProducts = selectedModels.map(modelName => ({
-        id: uid(),
-        model: modelName,
-        design: form.design,
-        designImage: form.designImage || "",
-        price: parseInt(form.price) || 0,
-        stock: parseInt(form.stock) || 0,
-        imageUrl: "", image: null,
-        createdAt: today(),
-      }));
-      onSave(newProducts); // tableau → un seul persist
-    } else {
-      // Édition : un seul produit
-      // FIX: validateProductForm vérifie form.designs (tableau) mais le form d'édition
-      // utilise form.design (string) — validation inline corrigée
-      const errs = {};
-      if (!form.model) errs.model = "Modèle requis";
-      if (!form.design || !form.design.trim()) errs.design = "Design requis";
-      if (!form.price || isNaN(Number(form.price)) || Number(form.price) <= 0) errs.price = "Prix invalide";
-      if (form.stock === "" || form.stock < 0) errs.stock = "Stock invalide";
-      if (Object.keys(errs).length > 0) { setErrors(errs); return; }
-      onSave({
-        id: form.id || uid(),
-        model: form.model,
-        design: form.design,
-        designImage: form.designImage || "",
-        price: parseInt(form.price) || 0,
-        stock: parseInt(form.stock) || 0,
-        imageUrl: "", image: null,
-        createdAt: form.createdAt || today(),
-      });
-    }
-    setModal(null);
-    setSelectedModels([]);
-    setErrors({});
-  };
 
   // ⚡ Vente rapide — 2 clics sans ouvrir le formulaire complet
   const handleQuickSale = (p) => {
@@ -160,7 +75,6 @@ function Products({ data, onSave, onDelete, onSale, isViewer = false }) {
               ><Icon name={v.icon} size={14} /></button>
             ))}
           </div>
-          {!isViewer && <button className="btn btn-primary btn-sm" onClick={openAdd}><Icon name="plus" size={14} /> Ajouter</button>}
         </div>
       </div>
 
@@ -183,8 +97,6 @@ function Products({ data, onSave, onDelete, onSale, isViewer = false }) {
           products={products}
           modelsWithProducts={modelsWithProducts}
           search={search}
-          openEdit={openEdit}
-          onDelete={onDelete}
           handleQuickSale={handleQuickSale}
           isViewer={isViewer}
         />
@@ -209,10 +121,7 @@ function Products({ data, onSave, onDelete, onSale, isViewer = false }) {
                     <span style={{ fontWeight: 700, color: "var(--gold)", fontSize: 13 }}>{fmtMoney(p.price)}</span>
                     {stockBadge(p.stock)}
                   </div>
-                  <div style={{ display: "flex", gap: 6 }}>
-                    {!isViewer && <button className="btn btn-outline btn-sm btn-icon" onClick={() => openEdit(p)}><Icon name="edit" size={13} /></button>}
-                    {!isViewer && <button className="btn btn-danger btn-sm btn-icon" onClick={() => onDelete(p.id)}><Icon name="trash" size={13} /></button>}
-                  </div>
+
                   {!isViewer && <button className="btn btn-success btn-sm" style={{ width: "100%", marginTop: 6, justifyContent: "center" }} onClick={() => handleQuickSale(p)} disabled={p.stock === 0}>⚡ Vente rapide</button>}
                 </div>
               </div>
@@ -244,8 +153,7 @@ function Products({ data, onSave, onDelete, onSale, isViewer = false }) {
                       <td>{stockBadge(p.stock)}</td>
                       <td>
                         <div style={{ display: "flex", gap: 6 }}>
-                          {!isViewer && <button className="btn btn-outline btn-sm btn-icon" onClick={() => openEdit(p)}><Icon name="edit" size={13} /></button>}
-                          {!isViewer && <button className="btn btn-danger btn-sm btn-icon" onClick={() => onDelete(p.id)}><Icon name="trash" size={13} /></button>}
+
                           {!isViewer && <button className="btn btn-success btn-sm" onClick={() => handleQuickSale(p)} disabled={p.stock === 0}>⚡ Vente rapide</button>}
                         </div>
                       </td>
@@ -259,125 +167,6 @@ function Products({ data, onSave, onDelete, onSale, isViewer = false }) {
         </div>
       )}
 
-      {modal && (
-        <Modal
-          title={modal === "add" ? "Ajouter un produit" : "Modifier le produit"}
-          onClose={() => { setModal(null); setErrors({}); setSelectedModels([]); }}
-          footer={<>
-            <button className="btn btn-outline" onClick={() => { setModal(null); setErrors({}); setSelectedModels([]); }}>Annuler</button>
-            <button className="btn btn-primary" onClick={handleSave}>
-              {modal === "add" && selectedModels.length > 1
-                ? `Créer ${selectedModels.length} produits`
-                : "Enregistrer"}
-            </button>
-          </>}
-        >
-          {/* ── MODÈLE(S) ── */}
-          {modal === "add" ? (
-            <div className="form-group">
-              <label className="form-label">Modèles iPhone * <span style={{ color: "var(--text2)", fontWeight: 400 }}>({selectedModels.length} sélectionné{selectedModels.length > 1 ? "s" : ""})</span></label>
-              <div style={{ display: "flex", gap: 8, marginBottom: 8 }}>
-                <button type="button" className="btn btn-outline btn-sm" onClick={selectAllModels}>Tout sélectionner</button>
-                <button type="button" className="btn btn-outline btn-sm" onClick={clearModels}>Tout effacer</button>
-              </div>
-              <div className="models-grid" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(160px, 1fr))", gap: 6, maxHeight: 220, overflowY: "auto", padding: "8px", background: "var(--bg3)", borderRadius: 8, border: errors.model ? "1px solid var(--danger)" : "1px solid var(--border)" }}>
-                {models.map(m => (
-                  <label key={m} style={{ display: "flex", alignItems: "center", gap: 7, fontSize: 12.5, cursor: "pointer", padding: "5px 6px", borderRadius: 6, background: selectedModels.includes(m) ? "rgba(124,58,237,0.15)" : "transparent", border: selectedModels.includes(m) ? "1px solid var(--accent2)" : "1px solid transparent", transition: "all 0.12s" }}>
-                    <input type="checkbox" checked={selectedModels.includes(m)} onChange={() => toggleModel(m)} style={{ accentColor: "var(--accent)", width: 14, height: 14 }} />
-                    {m}
-                  </label>
-                ))}
-              </div>
-              <FieldError msg={errors.model} />
-            </div>
-          ) : (
-            <div className="form-grid">
-              <div className="form-group">
-                <label className="form-label">Modèle iPhone *</label>
-                <select className={`input${errors.model ? " input-error" : ""}`} value={form.model} onChange={e => handleModelChange(e.target.value)}>
-                  <option value="">Choisir un modèle</option>
-                  {models.map(m => <option key={m} value={m}>{m}</option>)}
-                </select>
-                <FieldError msg={errors.model} />
-              </div>
-              <div className="form-group">
-                <label className="form-label">Prix (FCFA) *</label>
-                <input
-                  className={`input${errors.price ? " input-error" : ""}`}
-                  type="number" min="1"
-                  value={form.price}
-                  onChange={e => { setForm(f => ({ ...f, price: e.target.value })); if (errors.price) setErrors(er => ({ ...er, price: undefined })); }}
-                  placeholder="3500"
-                />
-                {form.model && priceSettings.modelPrices[form.model] && (
-                  <span style={{ fontSize: 11, color: "var(--accent2)" }}>Suggéré : {fmtMoney(priceSettings.modelPrices[form.model])}</span>
-                )}
-                <FieldError msg={errors.price} />
-              </div>
-            </div>
-          )}
-
-          {/* ── PRIX (mode add : commun à tous les modèles) ── */}
-          {modal === "add" && (
-            <div className="form-group">
-              <label className="form-label">Prix (FCFA) * <span style={{ color: "var(--text2)", fontWeight: 400, fontSize: 11 }}>— sera appliqué à tous les modèles</span></label>
-              <input
-                className={`input${errors.price ? " input-error" : ""}`}
-                type="number" min="1"
-                value={form.price}
-                onChange={e => { setForm(f => ({ ...f, price: e.target.value })); if (errors.price) setErrors(er => ({ ...er, price: undefined })); }}
-                placeholder="ex: 5000"
-              />
-              <FieldError msg={errors.price} />
-            </div>
-          )}
-
-          {/* ── DESIGN ── */}
-          <div className="form-group">
-            <label className="form-label">Design *</label>
-            <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-              <input
-                className={`input${errors.design ? " input-error" : ""}`}
-                value={form.design}
-                onChange={e => { setForm(f => ({ ...f, design: e.target.value })); if (errors.design) setErrors(er => ({ ...er, design: undefined })); }}
-                placeholder="Nom du design"
-                style={{ flex: 1 }}
-              />
-              <button className="btn btn-outline btn-sm" onClick={() => setDesignPickerOpen(true)}><Icon name="palette" size={13} /> Parcourir</button>
-            </div>
-            <FieldError msg={errors.design} />
-            {form.designImage && (
-              <img src={form.designImage} alt="" style={{ height: 50, borderRadius: 8, marginTop: 4, objectFit: "contain" }} onError={e => { e.target.style.display = "none"; }} />
-            )}
-          </div>
-
-          <div className="form-group">
-            <label className="form-label">Quantité initiale {modal === "add" && selectedModels.length > 1 ? `(× ${selectedModels.length} modèles)` : ""}</label>
-            <input
-              className={`input${errors.stock ? " input-error" : ""}`}
-              type="number" min="0"
-              value={form.stock}
-              onChange={e => { setForm(f => ({ ...f, stock: e.target.value })); if (errors.stock) setErrors(er => ({ ...er, stock: undefined })); }}
-              placeholder="0"
-            />
-            <FieldError msg={errors.stock} />
-          </div>
-        </Modal>
-      )}
-
-      {designPickerOpen && (
-        <Modal title={`Choisir un design (${designs.length})`} onClose={() => setDesignPickerOpen(false)} wide>
-          <p style={{ fontSize: 12, color: "var(--text2)", marginBottom: 12 }}>Cliquez sur un design pour le sélectionner. Les images uploadées depuis vos fichiers s'affichent, les images Unsplash par défaut nécessitent une mise à jour dans Paramètres → Designs.</p>
-          <div className="designs-grid">
-            {designs.map(d => (
-              <div key={d.id} className={`design-card ${form.design === d.name ? "selected" : ""}`} onClick={() => handleDesignSelect(d)}>
-                <DesignThumb image={d.image} name={d.name} />
-                <div className="design-card-name">{d.id} — {d.name}</div>
-              </div>
-            ))}
-          </div>
-        </Modal>
-      )}
     </div>
   );
 }

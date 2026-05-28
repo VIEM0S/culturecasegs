@@ -89,6 +89,23 @@ function SettingsPage({ data, onSave, onPersist, onSaveProduct, confirm }) {
     if (!name || localSettings.models.includes(name)) return;
     setLocalSettings(s => ({ ...s, models: [...s.models, name].sort() }));
     setNewModel("");
+
+    // Créer automatiquement un produit pour chaque design existant
+    if (onSaveProduct && typeof onSaveProduct === "function" && localSettings.designs?.length > 0) {
+      const prices = localSettings.priceSettings?.modelPrices || {};
+      const today  = new Date().toISOString().slice(0, 10);
+      const newProducts = localSettings.designs.map(design => ({
+        id:        uid(),
+        model:     name,
+        design:    design.name,
+        designId:  design.id,
+        stock:     0,
+        price:     prices[name] || 5000,
+        createdAt: today,
+        imageUrl:  design.image || "",
+      }));
+      onSaveProduct(newProducts);
+    }
   };
 
   const removeModel = async (m) => {

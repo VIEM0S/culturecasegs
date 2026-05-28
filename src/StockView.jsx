@@ -16,8 +16,6 @@ export function StockView({
   products,
   modelsWithProducts,
   search,
-  openEdit,
-  onDelete,
   handleQuickSale,
   isViewer = false,
 }) {
@@ -150,17 +148,9 @@ export function StockView({
                             <td>{stockBadge(p.stock)}</td>
                             {!isViewer && (
                               <td>
-                                <div style={{ display: "flex", gap: 6 }}>
-                                  <button className="btn btn-outline btn-sm btn-icon" onClick={() => openEdit(p)} aria-label={`Modifier ${p.model} — ${p.design}`}>
-                                    <Icon name="edit" size={12} />
-                                  </button>
-                                  <button className="btn btn-danger btn-sm btn-icon" onClick={() => onDelete(p.id)} aria-label={`Supprimer ${p.model} — ${p.design}`}>
-                                    <Icon name="trash" size={12} />
-                                  </button>
-                                  <button className="btn btn-success btn-sm" style={{ fontSize: 11 }} onClick={() => handleQuickSale(p)} aria-label={`Vente rapide ${p.model} — ${p.design}`} disabled={p.stock === 0} title={p.stock === 0 ? "Rupture de stock" : "Enregistrer une vente rapide"}>
-                                    ⚡ Vente
-                                  </button>
-                                </div>
+                                <button className="btn btn-success btn-sm" style={{ fontSize: 11 }} onClick={() => handleQuickSale(p)} aria-label={`Vente rapide ${p.model} — ${p.design}`} disabled={p.stock === 0} title={p.stock === 0 ? "Rupture de stock" : "Enregistrer une vente rapide"}>
+                                  ⚡ Vente
+                                </button>
                               </td>
                             )}
                           </tr>
