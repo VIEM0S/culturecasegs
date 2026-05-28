@@ -151,12 +151,18 @@ export function StockView({
                             {!isViewer && (
                               <td>
                                 <div style={{ display: "flex", gap: 6 }}>
-                                  <button className="btn btn-success btn-sm" style={{ fontSize: 11 }} onClick={() => handleQuickSale(p)} aria-label={`Vente rapide ${p.model} — ${p.design}`} disabled={p.stock === 0} title={p.stock === 0 ? "Rupture de stock" : "Enregistrer une vente rapide"}>
+                                  <button
+                                    className="btn btn-success btn-sm"
+                                    style={{ fontSize: 11 }}
+                                    onClick={() => handleQuickSale(p)}
+                                    disabled={p.stock === 0}
+                                    title={p.stock === 0 ? "Rupture de stock" : "Vente rapide"}
+                                  >
                                     ⚡ Vente
                                   </button>
                                   {isOrphan && isOrphan(p) && (
                                     <button className="btn btn-danger btn-sm" style={{ fontSize: 11 }} onClick={() => onDelete(p.id)} title="Design supprimé — produit orphelin">
-                                      🗑️ Doublon
+                                      🗑️
                                     </button>
                                   )}
                                 </div>
