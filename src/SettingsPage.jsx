@@ -138,7 +138,7 @@ function SettingsPage({ data, onSave, onPersist, onSaveProduct, confirm }) {
     setNewDesign(emptyNewDesign);
 
     // Créer automatiquement un produit pour chaque modèle existant
-    if (onSaveProduct && data?.settings?.models?.length > 0) {
+    if (onSaveProduct && typeof onSaveProduct === "function" && data?.settings?.models?.length > 0) {
       const models = data.settings.models;
       const prices = data?.settings?.priceSettings?.modelPrices || {};
       const today  = new Date().toISOString().slice(0, 10);
