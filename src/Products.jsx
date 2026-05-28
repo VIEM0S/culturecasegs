@@ -5,9 +5,13 @@ import { StatCard, DesignThumb } from "./components.jsx";
 import { uid, getProductImageUrl, today, fmtMoney } from "./utils.js";
 import { LOW_STOCK } from "./constants.js";
 
-function Products({ data, onSale, isViewer = false }) {
+function Products({ data, onSale, onDelete, isViewer = false }) {
   const { products, settings } = data;
   const { designs, models, priceSettings } = settings;
+
+  // Produits dont le designId ne correspond à aucun design dans les paramètres (orphelins)
+  const designIds = useMemo(() => new Set((designs || []).map(d => d.id)), [designs]);
+  const isOrphan = (p) => p.designId && !designIds.has(p.designId);
   const [search, setSearch] = useState("");
   const [filterModel, setFilterModel] = useState("");
   const [viewMode, setViewMode] = useState("grid");
@@ -99,6 +103,8 @@ function Products({ data, onSale, isViewer = false }) {
           search={search}
           handleQuickSale={handleQuickSale}
           isViewer={isViewer}
+          onDelete={onDelete}
+          isOrphan={isOrphan}
         />
       )}
 
@@ -123,6 +129,11 @@ function Products({ data, onSale, isViewer = false }) {
                   </div>
 
                   {!isViewer && <button className="btn btn-success btn-sm" style={{ width: "100%", marginTop: 6, justifyContent: "center" }} onClick={() => handleQuickSale(p)} disabled={p.stock === 0}>⚡ Vente rapide</button>}
+                  {!isViewer && isOrphan(p) && (
+                    <button className="btn btn-danger btn-sm" style={{ width: "100%", marginTop: 4, justifyContent: "center" }} onClick={() => onDelete(p.id)} title="Design supprimé — produit orphelin">
+                      🗑️ Supprimer (doublon)
+                    </button>
+                  )}
                 </div>
               </div>
             );
@@ -153,8 +164,10 @@ function Products({ data, onSale, isViewer = false }) {
                       <td>{stockBadge(p.stock)}</td>
                       <td>
                         <div style={{ display: "flex", gap: 6 }}>
-
                           {!isViewer && <button className="btn btn-success btn-sm" onClick={() => handleQuickSale(p)} disabled={p.stock === 0}>⚡ Vente rapide</button>}
+                          {!isViewer && isOrphan(p) && (
+                            <button className="btn btn-danger btn-sm" onClick={() => onDelete(p.id)} title="Design supprimé — produit orphelin">🗑️ Doublon</button>
+                          )}
                         </div>
                       </td>
                     </tr>
