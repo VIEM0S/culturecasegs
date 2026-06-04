@@ -1,47 +1,3441 @@
-<!doctype html>
-<html lang="fr" dir="ltr">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' 'unsafe-eval' https: data: blob:;">
+  <title>CultureCase — Coques iPhone · Bamako, Mali</title>
+  <script type="module" crossorigin src="/culturecasegs/assets/index-CwoUkBSk.js"></script>
+<link rel="manifest" href="/culturecasegs/manifest.webmanifest"><script id="vite-plugin-pwa:register-sw" src="/culturecasegs/registerSW.js"></script></head>
+<body>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&family=Cormorant+Garamond:ital,wght@0,400;0,600;1,400;1,600&display=swap');
 
-    <!-- AMÉLIORATION : meta description + Open Graph pour les partages de liens -->
-    <meta name="description" content="Culturecase GS — Gestion de stock de coques de téléphone. Application privée." />
-    <meta property="og:title" content="Culturecase GS" />
-    <meta property="og:description" content="Gestion de stock — Application privée" />
-    <meta property="og:type" content="website" />
+/* ─── RESET & TOKENS ─────────────────────────────────────── */
 
-    <!-- PWA / iOS -->
-    <meta name="apple-mobile-web-app-capable" content="yes" />
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-    <meta name="apple-mobile-web-app-title" content="Culturecase" />
-    <meta name="theme-color" content="#07070e" />
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-    <!-- Icônes -->
-    <link rel="icon" type="image/svg+xml" href="/culturecasegs/icon.svg" />
-    <link rel="apple-touch-icon" href="/culturecasegs/icon-192.png" />
+:root {
+  --ink:    #0F0700;
+  --ember:  #D94E15;
+  --ember2: #C03A08;
+  --gold:   #E8A020;
+  --gold2:  #C98010;
+  --sand:   #F4EAD0;
+  --warm:   #FBF6ED;
+  --clay:   #B5601A;
+  --dusk:   #1A0800;
+  --dusk2:  #120500;
+  --cream:  #FDFAF3;
+  --border: #E2CEAA;
+  --border2:#D4BC96;
+  --muted:  #9A7848;
+  --leaf:   #1E5C35;
+  --white:  #fff;
+  --shadow-card: 0 2px 8px rgba(15,7,0,.06), 0 1px 2px rgba(15,7,0,.04);
+  --shadow-hover: 0 16px 48px rgba(217,78,21,.16), 0 4px 16px rgba(15,7,0,.10);
+  --shadow-deep: 0 32px 80px rgba(15,7,0,.35);
+  --radius-sm: 3px;
+  --radius: 6px;
+  --radius-lg: 10px;
+  --transition: cubic-bezier(0.22, 1, 0.36, 1);
+}
 
-    <!-- AMÉLIORATION : preconnect Google Fonts pour éviter le blocage de rendu
-         (l'@import dans le CSS est synchrone et retarde l'affichage de 200-400ms) -->
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&display=swap" />
+html { scroll-behavior: smooth; -webkit-font-smoothing: antialiased; }
 
-    <title>Culturecase GS</title>
-    <!-- Initialisation du thème avant React pour éviter le flash blanc/noir -->
-    <script>
-      (function() {
-        var t = localStorage.getItem('cc-theme') || 'dark';
-        document.documentElement.setAttribute('data-theme', t);
-        document.querySelector('meta[name="theme-color"]') &&
-          document.querySelector('meta[name="theme-color"]').setAttribute('content', t === 'light' ? '#f4f4f8' : '#07070e');
-      })();
-    </script>
-    <script type="module" crossorigin src="/culturecasegs/assets/index-CDkP45Vk.js"></script>
-    <link rel="modulepreload" crossorigin href="/culturecasegs/assets/firebase-Bx5SM082.js">
-    <link rel="stylesheet" crossorigin href="/culturecasegs/assets/index-DvwA98k3.css">
-  <link rel="manifest" href="/culturecasegs/manifest.webmanifest"></head>
-  <body>
-    <div id="root"></div>
-    <style>body{background:#07070e;margin:0}#root{min-height:100dvh}</style>
-  </body>
-</html>
+body {
+  font-family: 'DM Sans', sans-serif;
+  background: var(--cream);
+  color: var(--ink);
+  overflow-x: hidden;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+/* ─── PAGE SYSTEM ─────────────────────────────────────────── */
+
+.pg { display: none; }
+
+.pg.on { display: block; animation: pgFadeUp .45s var(--transition) both; }
+
+@keyframes pgFadeUp {
+  from { opacity: 0; transform: translateY(18px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ─── NAV ─────────────────────────────────────────────────── */
+
+.nav {
+  background: var(--dusk2);
+  height: 72px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 2.5rem;
+  border-bottom: 2px solid rgba(232,160,32,.3);
+  position: sticky;
+  top: 0;
+  z-index: 300;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+/* subtle grain overlay on nav */
+
+.nav::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+  pointer-events: none;
+  opacity: .5;
+}
+
+.logo {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 28px;
+  letter-spacing: 6px;
+  color: var(--gold);
+  cursor: pointer;
+  line-height: 1;
+  position: relative;
+  z-index: 1;
+  transition: letter-spacing .4s var(--transition), color .2s;
+}
+
+.logo:hover { letter-spacing: 9px; color: #F0B030; }
+
+.logo-sub {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 8px;
+  letter-spacing: 3.5px;
+  color: rgba(232,160,32,.45);
+  text-transform: uppercase;
+  display: block;
+  margin-top: 1px;
+  font-weight: 500;
+}
+
+.nav-r { display: flex; align-items: center; gap: 2px; position: relative; z-index: 1; }
+
+.nb {
+  background: none;
+  border: none;
+  color: rgba(255,255,255,.55);
+  font-size: 11.5px;
+  font-weight: 500;
+  letter-spacing: .8px;
+  text-transform: uppercase;
+  padding: 8px 16px;
+  cursor: pointer;
+  transition: color .2s;
+  font-family: 'DM Sans', sans-serif;
+  position: relative;
+}
+
+.nb::after {
+  content: '';
+  position: absolute;
+  bottom: 3px;
+  left: 50%;
+  right: 50%;
+  height: 1.5px;
+  background: var(--gold);
+  border-radius: 2px;
+  transition: left .28s var(--transition), right .28s var(--transition);
+}
+
+.nb:hover, .nb.on { color: rgba(255,255,255,.92); }
+
+.nb:hover::after, .nb.on::after { left: 14px; right: 14px; }
+
+/* ─── HERO ────────────────────────────────────────────────── */
+
+.hero {
+  background: var(--dusk2);
+  position: relative;
+  overflow: hidden;
+}
+
+/* Sophisticated diagonal pattern */
+
+.hero-pat {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.hero-pat::before {
+  content: '';
+  position: absolute;
+  inset: -40%;
+  background-image:
+    repeating-linear-gradient(
+      -55deg,
+      transparent 0,
+      transparent 28px,
+      rgba(232,160,32,.028) 28px,
+      rgba(232,160,32,.028) 29px
+    );
+  animation: patDrift 60s linear infinite;
+}
+
+.hero-pat::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse 70% 80% at 20% 50%, rgba(217,78,21,.07) 0%, transparent 70%);
+}
+
+@keyframes patDrift { to { transform: translateX(60px) translateY(30px); } }
+
+.hero-inner {
+  display: grid;
+  grid-template-columns: 1.15fr .85fr;
+  min-height: 280px;
+  position: relative;
+  z-index: 1;
+}
+
+.hero-l {
+  padding: 1.5rem 2rem 1.5rem 2.5rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 0;
+}
+
+.hero-eyebrow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 1rem;
+  animation: eyebrowIn .6s var(--transition) .1s both;
+}
+
+@keyframes eyebrowIn { from { opacity: 0; transform: translateX(-12px); } to { opacity: 1; transform: translateX(0); } }
+
+.ey-line { width: 24px; height: 1.5px; background: var(--ember); border-radius: 2px; }
+
+.ey-txt  { font-size: 9px; font-weight: 600; letter-spacing: 3.5px; text-transform: uppercase; color: var(--gold); }
+
+.hero-h1 {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 62px;
+  line-height: .9;
+  color: #fff;
+  letter-spacing: 1.5px;
+  margin-bottom: 1rem;
+  animation: h1In .7s var(--transition) .2s both;
+}
+
+@keyframes h1In { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+
+.hero-h1 .acc  { color: var(--ember); display: block; }
+
+.hero-h1 .acc2 {
+  font-family: 'Cormorant Garamond', serif;
+  color: rgba(232,160,32,.7);
+  font-size: .32em;
+  letter-spacing: 6px;
+  display: block;
+  margin-top: .5em;
+  font-style: italic;
+  font-weight: 400;
+}
+
+.hero-p {
+  color: rgba(255,255,255,.42);
+  font-size: 13px;
+  line-height: 1.85;
+  max-width: 320px;
+  margin-bottom: 1.5rem;
+  animation: heroTxtIn .7s var(--transition) .35s both;
+}
+
+@keyframes heroTxtIn { from { opacity: 0; } to { opacity: 1; } }
+
+.hero-btns {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  animation: heroTxtIn .7s var(--transition) .45s both;
+}
+
+.btn-primary {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--ember);
+  color: #fff;
+  border: none;
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 15px;
+  letter-spacing: 2.5px;
+  padding: 13px 26px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: background .25s, transform .2s var(--transition), box-shadow .25s;
+  box-shadow: 0 4px 16px rgba(217,78,21,.3);
+}
+
+.btn-primary:hover {
+  background: var(--ember2);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(217,78,21,.4);
+}
+
+.btn-primary:active { transform: translateY(0); }
+
+.btn-ghost {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: none;
+  border: 1px solid rgba(255,255,255,.15);
+  color: rgba(255,255,255,.5);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  padding: 12px 20px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all .25s;
+}
+
+.btn-ghost:hover { border-color: var(--gold); color: var(--gold); background: rgba(232,160,32,.06); }
+
+/* Hero image grid */
+
+.hero-r { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; padding: 4px; max-height: 280px; overflow: hidden; }
+
+.hi {
+  overflow: hidden;
+  background: var(--dusk);
+  cursor: pointer;
+  position: relative;
+  min-height: 0;
+}
+
+.hi img {
+  width: 100%; height: 100%;
+  object-fit: cover;
+  display: block;
+  transition: filter .4s;
+  filter: brightness(.75) saturate(.9);
+}
+
+.hi:hover img { filter: brightness(.95) saturate(1.1); }
+
+.hi:first-child { grid-row: span 2; }
+
+.hi-lbl {
+  position: absolute;
+  bottom: 0; left: 0; right: 0;
+  padding: .5rem .8rem;
+  background: linear-gradient(to top, rgba(15,7,0,.85) 0%, transparent 100%);
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 12px;
+  letter-spacing: 2.5px;
+  color: var(--gold);
+  transform: translateY(6px);
+  opacity: 0;
+  transition: transform .35s var(--transition), opacity .3s;
+}
+
+.hi:hover .hi-lbl { transform: translateY(0); opacity: 1; }
+
+/* Stats bar */
+
+.hero-stats {
+  display: flex;
+  border-top: 1px solid rgba(255,255,255,.05);
+  background: rgba(0,0,0,.2);
+}
+
+.hst {
+  flex: 1;
+  padding: 1rem 1.5rem;
+  border-right: 1px solid rgba(255,255,255,.05);
+  transition: background .2s;
+}
+
+.hst:last-child { border-right: none; }
+
+.hst:hover { background: rgba(232,160,32,.05); }
+
+.hst-n { font-family: 'Bebas Neue', sans-serif; font-size: 28px; color: var(--gold); letter-spacing: 1px; line-height: 1; }
+
+.hst-l { font-size: 8.5px; letter-spacing: 2px; text-transform: uppercase; color: rgba(255,255,255,.25); margin-top: 3px; }
+
+/* ─── TICKER ─────────────────────────────────────────────── */
+
+.ticker {
+  background: var(--ember);
+  padding: 9px 0;
+  overflow: hidden;
+  white-space: nowrap;
+  border-top: 1px solid rgba(255,255,255,.1);
+  border-bottom: 1px solid rgba(0,0,0,.1);
+}
+
+.ticker-t { display: inline-flex; animation: tick 32s linear infinite; }
+
+@keyframes tick { to { transform: translateX(-50%); } }
+
+.ti {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 12.5px;
+  letter-spacing: 3.5px;
+  color: rgba(255,255,255,.9);
+  padding: 0 2.5rem;
+}
+
+.ti-dot { width: 3px; height: 3px; background: rgba(255,255,255,.5); border-radius: 50%; }
+
+/* ─── FEATURED SECTION ───────────────────────────────────── */
+
+.featured-section { padding: 1.75rem 2rem; }
+
+.section-header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  margin-bottom: 1.25rem;
+}
+
+.section-title { font-family: 'Bebas Neue', sans-serif; font-size: 34px; letter-spacing: 2px; color: var(--ink); line-height: 1; }
+
+.section-title em { color: var(--ember); font-style: normal; }
+
+.section-sub { font-size: 9.5px; color: var(--muted); letter-spacing: 1.5px; text-transform: uppercase; margin-top: 3px; }
+
+.see-all-btn {
+  border: 1.5px solid var(--border);
+  background: transparent;
+  color: var(--muted);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  padding: 7px 16px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all .22s;
+}
+
+.see-all-btn:hover { border-color: var(--ember); color: var(--ember); background: rgba(217,78,21,.04); }
+
+/* ─── MODEL BAR ──────────────────────────────────────────── */
+
+.model-bar {
+  background: var(--sand);
+  border-bottom: 1.5px solid var(--border);
+  padding: .75rem 2rem;
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+  flex-wrap: wrap;
+}
+
+.mb-label {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--ink);
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  white-space: nowrap;
+}
+
+.mb-label i { font-size: 16px; color: var(--ember); }
+
+.mb-sel-wrap { display: flex; align-items: center; gap: 10px; flex: 1; min-width: 200px; }
+
+.mb-sel {
+  border: 1.5px solid var(--border2);
+  background: #fff;
+  color: var(--ink);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 13px;
+  font-weight: 500;
+  padding: 9px 14px;
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition: border-color .2s, box-shadow .2s;
+  flex: 1;
+  max-width: 300px;
+  box-shadow: var(--shadow-card);
+}
+
+.mb-sel:focus { outline: none; border-color: var(--ember); box-shadow: 0 0 0 3px rgba(217,78,21,.12); }
+
+.mb-sel.chosen { border-color: var(--ember); background: rgba(217,78,21,.03); }
+
+.mb-price {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 22px;
+  letter-spacing: 1px;
+  color: var(--ember);
+  white-space: nowrap;
+}
+
+.mb-info { font-size: 11px; color: var(--muted); margin-left: auto; }
+
+.mb-info strong { color: var(--leaf); font-weight: 600; }
+
+/* ─── CATALOGUE TOP ──────────────────────────────────────── */
+
+.cat-top {
+  background: var(--dusk2);
+  padding: 1.25rem 2rem 0;
+  overflow: hidden;
+  position: relative;
+}
+
+.cat-top::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse 60% 120% at 80% 50%, rgba(217,78,21,.07) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+.cat-top-inner { position: relative; z-index: 1; }
+
+.cat-title {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 40px;
+  letter-spacing: 3px;
+  color: #fff;
+  line-height: .92;
+  margin-bottom: .3rem;
+}
+
+.cat-title em { color: var(--gold); font-style: normal; }
+
+.cat-sub { font-size: 9.5px; color: rgba(255,255,255,.5); letter-spacing: 2px; text-transform: uppercase; margin-bottom: 1rem; }
+
+/* ─── FILTERS ────────────────────────────────────────────── */
+
+.cat-filters {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  align-items: center;
+  padding: 1rem 2rem;
+  background: var(--white);
+  border-bottom: 1px solid var(--border);
+  position: sticky;
+  top: 72px;
+  z-index: 100;
+  box-shadow: 0 2px 8px rgba(15,7,0,.04);
+}
+
+.ftag {
+  border: 1.5px solid var(--border);
+  background: transparent;
+  color: var(--muted);
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  padding: 5px 14px;
+  border-radius: 20px;
+  cursor: pointer;
+  transition: all .22s var(--transition);
+  font-family: 'DM Sans', sans-serif;
+  white-space: nowrap;
+}
+
+.ftag:hover { border-color: var(--ember); color: var(--ember); background: rgba(217,78,21,.05); }
+
+.ftag.on  { border-color: var(--ember); background: var(--ember); color: #fff; box-shadow: 0 2px 8px rgba(217,78,21,.25); }
+
+.fsrch {
+  border: 1.5px solid var(--border);
+  background: var(--warm);
+  color: var(--ink);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 12px;
+  padding: 5px 14px;
+  border-radius: 20px;
+  width: 170px;
+  transition: border-color .2s, box-shadow .2s, background .2s;
+}
+
+.fsrch:focus { outline: none; border-color: var(--ember); background: #fff; box-shadow: 0 0 0 3px rgba(217,78,21,.1); }
+
+/* ─── CATALOGUE BODY ─────────────────────────────────────── */
+
+.cat-body { padding: 1.25rem 2rem; }
+
+.cat-count { font-size: 9.5px; color: var(--muted); letter-spacing: 1px; text-transform: uppercase; margin-bottom: 1.25rem; }
+
+.pgrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(175px, 1fr));
+  gap: 14px;
+}
+
+#home-grid {
+  grid-template-columns: repeat(4, 1fr);
+  gap: 14px;
+}
+
+@media (max-width: 900px) {
+  #home-grid { grid-template-columns: repeat(2, 1fr); }
+}
+
+.pcard {
+  background: var(--white);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  cursor: pointer;
+  transition: border-color .28s, box-shadow .28s var(--transition), transform .28s var(--transition);
+  position: relative;
+  box-shadow: var(--shadow-card);
+}
+
+.pcard:hover {
+  border-color: var(--ember);
+  box-shadow: var(--shadow-hover);
+  transform: translateY(-5px);
+}
+
+.pc-img {
+  aspect-ratio: 1;
+  overflow: hidden;
+  background: var(--sand);
+  position: relative;
+}
+
+.pc-img img {
+  width: 100%; height: 100%;
+  object-fit: cover;
+  display: block;
+  transition: transform .6s var(--transition), filter .4s;
+  filter: saturate(.95);
+}
+
+.pcard:hover .pc-img img { filter: brightness(1.06) saturate(1.05); }
+
+.pc-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(15,7,0,.52);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity .3s;
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+}
+
+.pcard:hover .pc-overlay { opacity: 1; }
+
+.pc-ov-btn {
+  background: var(--gold);
+  border: none;
+  color: var(--ink);
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 13px;
+  letter-spacing: 2px;
+  padding: 9px 20px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: background .2s, transform .2s var(--transition);
+  transform: translateY(6px);
+  box-shadow: 0 4px 12px rgba(0,0,0,.2);
+}
+
+.pcard:hover .pc-ov-btn { transform: translateY(0); }
+
+.pc-ov-btn:hover { background: #F0B030; }
+
+.pc-ribbon {
+  position: absolute;
+  top: 10px; left: 10px;
+  background: rgba(217,78,21,.9);
+  color: #fff;
+  font-size: 7.5px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  padding: 3px 9px;
+  border-radius: 2px;
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+}
+
+.pc-body { padding: .9rem 1rem 1rem; }
+
+.pc-name {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 16px;
+  letter-spacing: 1px;
+  color: var(--ink);
+  line-height: 1;
+  margin-bottom: .2rem;
+}
+
+.pc-hint { font-size: 10px; color: var(--muted); margin-bottom: .65rem; }
+
+.pc-row { display: flex; align-items: center; justify-content: space-between; }
+
+.pc-price { font-size: 14px; font-weight: 600; color: var(--ember); }
+
+.pc-add {
+  background: var(--ink);
+  border: none;
+  color: var(--gold);
+  width: 32px; height: 32px;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 17px;
+  transition: background .22s, transform .3s var(--transition), box-shadow .22s;
+  line-height: 1;
+  box-shadow: 0 2px 6px rgba(15,7,0,.15);
+}
+
+.pc-add:hover { background: var(--ember); transform: rotate(90deg) scale(1.1); box-shadow: 0 4px 12px rgba(217,78,21,.3); }
+
+/* ─── STOCK BADGES ───────────────────────────────────────── */
+
+.stock-badge {
+  position: absolute;
+  top: 10px; right: 10px;
+  font-size: 7.5px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  padding: 3px 10px;
+  border-radius: 20px;
+  z-index: 2;
+  pointer-events: none;
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+}
+
+.stock-available { background: rgba(30,92,53,.88); color: #fff; }
+
+.stock-limited   { background: rgba(232,160,32,.92); color: #1E0900; }
+
+.stock-out       { background: rgba(15,7,0,.65); color: rgba(255,255,255,.5); }
+
+.pcard.is-out { opacity: .6; }
+
+.pcard.is-out .pc-add { opacity: .35; pointer-events: none; cursor: not-allowed; }
+
+/* ─── DETAIL PAGE ────────────────────────────────────────── */
+
+.det { padding: 2.5rem; }
+
+.bk {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  background: none;
+  border: 1.5px solid var(--border);
+  color: var(--muted);
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  padding: 7px 16px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  margin-bottom: 2.5rem;
+  transition: all .22s;
+  font-family: 'DM Sans', sans-serif;
+}
+
+.bk:hover { border-color: var(--ember); color: var(--ember); background: rgba(217,78,21,.04); }
+
+.det-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 3.5rem; align-items: start; }
+
+.det-imgbox {
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  aspect-ratio: 1;
+  background: var(--sand);
+  border: 2px solid var(--border);
+  box-shadow: var(--shadow-deep);
+  position: relative;
+}
+
+.det-imgbox::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,.08);
+  pointer-events: none;
+}
+
+.det-imgbox img { width: 100%; height: 100%; object-fit: cover; display: block; transition: transform .6s var(--transition); }
+
+.det-imgbox:hover img { filter: brightness(1.05); }
+
+.det-ey { display: flex; align-items: center; gap: 8px; margin-bottom: .8rem; }
+
+.det-ey-line { width: 18px; height: 1.5px; background: var(--ember); border-radius: 2px; }
+
+.det-ey span { font-size: 9px; letter-spacing: 2.5px; text-transform: uppercase; color: var(--ember); font-weight: 600; }
+
+.det-title { font-family: 'Bebas Neue', sans-serif; font-size: 46px; letter-spacing: 2px; color: var(--ink); line-height: .9; margin-bottom: .65rem; }
+
+.det-story {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 15px;
+  color: var(--muted);
+  line-height: 1.75;
+  margin-bottom: 1.4rem;
+  border-left: 3px solid var(--gold);
+  padding-left: 14px;
+  font-style: italic;
+}
+
+.det-div { height: 1px; background: var(--border); margin: 1.4rem 0; }
+
+.det-lbl { font-size: 9px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: var(--muted); margin-bottom: .45rem; display: block; }
+
+.det-sel {
+  width: 100%;
+  border: 1.5px solid var(--border2);
+  background: var(--warm);
+  color: var(--ink);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 13px;
+  padding: 10px 12px;
+  border-radius: var(--radius);
+  cursor: pointer;
+  margin-bottom: 1rem;
+  transition: border-color .2s, box-shadow .2s;
+  box-shadow: var(--shadow-card);
+}
+
+.det-sel:focus { outline: none; border-color: var(--ember); box-shadow: 0 0 0 3px rgba(217,78,21,.1); }
+
+.qty-row { display: flex; align-items: center; gap: 12px; margin-bottom: 1.5rem; }
+
+.qb {
+  background: var(--warm);
+  border: 1.5px solid var(--border);
+  color: var(--ink);
+  width: 38px; height: 38px;
+  border-radius: var(--radius);
+  cursor: pointer;
+  font-size: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all .22s;
+  font-weight: 300;
+  box-shadow: var(--shadow-card);
+}
+
+.qb:hover { background: var(--ember); border-color: var(--ember); color: #fff; box-shadow: 0 4px 12px rgba(217,78,21,.25); }
+
+.qv { font-size: 18px; font-weight: 700; min-width: 24px; text-align: center; }
+
+.wa-btn {
+  width: 100%;
+  background: #25D366;
+  border: none;
+  color: #fff;
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 18px;
+  letter-spacing: 2px;
+  padding: 16px;
+  border-radius: var(--radius);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  transition: background .25s, transform .2s var(--transition), box-shadow .25s;
+  box-shadow: 0 4px 16px rgba(37,211,102,.3);
+}
+
+.wa-btn:hover:not([disabled]) {
+  background: #1aad54;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(37,211,102,.35);
+}
+
+.wa-btn:active { transform: translateY(0); }
+
+.det-feats { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 1.5rem; }
+
+.df { display: flex; align-items: center; gap: 7px; font-size: 11px; color: var(--muted); }
+
+.df i { font-size: 15px; color: var(--leaf); }
+
+/* Prix recap */
+
+.prix-recap {
+  background: var(--sand);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius);
+  padding: .9rem 1rem;
+  margin-bottom: 1.25rem;
+  box-shadow: var(--shadow-card);
+}
+
+.pr-title { font-size: 9px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: var(--muted); margin-bottom: .65rem; }
+
+.pr-row { display: flex; align-items: center; gap: 8px; padding: .35rem 0; border-bottom: 1px solid var(--border); }
+
+.pr-row:last-child { border-bottom: none; }
+
+.pr-flag { font-size: 14px; }
+
+.pr-market { font-size: 12px; font-weight: 500; color: var(--ink); flex: 1; }
+
+.pr-price { font-size: 13px; font-weight: 700; color: var(--ember); }
+
+/* Stock in detail */
+
+.det-stock {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: .5px;
+  padding: 5px 12px;
+  border-radius: 20px;
+  margin-bottom: 1rem;
+}
+
+.det-stock.available { background: rgba(30,92,53,.1); color: var(--leaf); }
+
+.det-stock.limited   { background: rgba(232,160,32,.12); color: #8B6300; }
+
+.det-stock.out       { background: rgba(15,7,0,.06); color: var(--muted); }
+
+.det-stock i { font-size: 12px; }
+
+/* Livraison form */
+
+.livraison-form {
+  background: var(--warm);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1rem 1.1rem;
+  margin-bottom: 1rem;
+  box-shadow: var(--shadow-card);
+}
+
+.lf-title { font-size: 9px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: var(--muted); margin-bottom: .75rem; display: flex; align-items: center; gap: 6px; }
+
+.lf-title i { font-size: 13px; color: var(--ember); }
+
+.lf-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+
+.lf-g { display: flex; flex-direction: column; gap: 3px; }
+
+.lf-g.full { grid-column: 1 / -1; }
+
+.lf-lbl { font-size: 9px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; color: var(--muted); }
+
+.lf-in {
+  border: 1.5px solid var(--border);
+  background: #fff;
+  color: var(--ink);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 12px;
+  padding: 8px 10px;
+  border-radius: var(--radius);
+  transition: border-color .2s, box-shadow .2s;
+  width: 100%;
+}
+
+.lf-in:focus { outline: none; border-color: var(--ember); box-shadow: 0 0 0 3px rgba(217,78,21,.1); }
+
+/* ─── ABOUT ──────────────────────────────────────────────── */
+
+.ab-hero {
+  background: var(--dusk2);
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  min-height: 300px;
+  overflow: hidden;
+  position: relative;
+}
+
+.ab-hero::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse 70% 100% at 20% 50%, rgba(217,78,21,.07) 0%, transparent 65%);
+  pointer-events: none;
+}
+
+.ab-l { padding: 2rem 2.5rem; display: flex; flex-direction: column; justify-content: center; position: relative; z-index: 1; }
+
+.ab-l h2 { font-family: 'Bebas Neue', sans-serif; font-size: 48px; letter-spacing: 2px; color: #fff; line-height: .9; margin-bottom: .85rem; }
+
+.ab-l h2 em { color: var(--gold); font-style: normal; display: block; }
+
+.ab-l p { font-size: 13px; color: rgba(255,255,255,.65); line-height: 1.85; margin-bottom: .7rem; }
+
+.ab-r { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; padding: 4px; max-height: 240px; overflow: hidden; }
+
+.aimg { overflow: hidden; background: var(--dusk); min-height: 0; }
+
+.aimg img { width: 100%; height: 100%; object-fit: cover; display: block; filter: brightness(.78) saturate(.9); transition: filter .4s; }
+
+.aimg:hover img { filter: brightness(.96) saturate(1.05); }
+
+.aimg:first-child { grid-row: span 2; }
+
+.ab-vals {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  border-top: 3px solid var(--gold);
+}
+
+.av {
+  background: var(--dusk);
+  padding: 1.4rem 1.5rem;
+  border-right: 1px solid rgba(255,255,255,.04);
+  display: flex;
+  gap: .85rem;
+  align-items: flex-start;
+  transition: background .25s;
+}
+
+.av:hover { background: rgba(30,8,0,.8); }
+
+.av:last-child { border-right: none; }
+
+.av i { font-size: 20px; color: var(--gold); flex-shrink: 0; margin-top: 2px; }
+
+.av-t { font-family: 'Bebas Neue', sans-serif; font-size: 13px; letter-spacing: 1px; color: #fff; margin-bottom: .25rem; }
+
+.av-d { font-size: 11px; color: rgba(255,255,255,.55); line-height: 1.55; }
+
+.ab-story { padding: 1.75rem 2.5rem; max-width: 680px; margin: 0 auto; }
+
+.as-h {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 28px;
+  letter-spacing: 2px;
+  color: var(--ink);
+  margin-bottom: 1.1rem;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.as-h::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+
+.as-p { font-size: 13.5px; color: var(--muted); line-height: 1.9; margin-bottom: .9rem; }
+
+.as-quote {
+  border-left: 4px solid var(--ember);
+  padding: 1.1rem 1.25rem;
+  background: var(--sand);
+  border-radius: 0 var(--radius) var(--radius) 0;
+  margin: 1.75rem 0;
+  box-shadow: var(--shadow-card);
+}
+
+.as-quote p { color: var(--dusk); font-family: 'Cormorant Garamond', serif; font-size: 16px; font-style: italic; line-height: 1.65; margin: 0; }
+
+/* ─── TIMELINE ───────────────────────────────────────────── */
+
+.timeline { padding: 1.75rem 2.5rem; background: var(--warm); border-top: 1px solid var(--border); }
+
+.tl-title {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 28px;
+  letter-spacing: 2px;
+  color: var(--ink);
+  margin-bottom: 2rem;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.tl-title::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+
+.tl-items { display: flex; flex-direction: column; max-width: 600px; margin: 0 auto; position: relative; }
+
+.tl-items::before {
+  content: '';
+  position: absolute;
+  left: 19px; top: 8px; bottom: 8px;
+  width: 2px;
+  background: linear-gradient(to bottom, var(--ember), var(--gold));
+  border-radius: 2px;
+  opacity: .6;
+}
+
+.tl-item { display: flex; gap: 1.5rem; padding-bottom: 2rem; position: relative; }
+
+.tl-item:last-child { padding-bottom: 0; }
+
+.tl-dot {
+  width: 40px; height: 40px;
+  border-radius: 50%;
+  background: var(--ember);
+  border: 3px solid var(--warm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  font-size: 15px;
+  z-index: 1;
+  box-shadow: 0 0 0 4px rgba(217,78,21,.12);
+}
+
+.tl-date { font-size: 9px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: var(--ember); margin-bottom: .3rem; }
+
+.tl-head { font-family: 'Bebas Neue', sans-serif; font-size: 17px; letter-spacing: 1px; color: var(--ink); margin-bottom: .35rem; }
+
+.tl-desc { font-size: 12px; color: var(--muted); line-height: 1.7; }
+
+/* ─── MANIFESTE ──────────────────────────────────────────── */
+
+.manifeste {
+  padding: 2rem 2.5rem;
+  background: var(--dusk2);
+  position: relative;
+  overflow: hidden;
+}
+
+.manifeste::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse 70% 80% at 70% 50%, rgba(232,160,32,.06) 0%, transparent 65%);
+  pointer-events: none;
+}
+
+.manifeste::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse 60% 80% at 10% 50%, rgba(217,78,21,.06) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+.mf-kicker { font-size: 9px; font-weight: 700; letter-spacing: 2.5px; text-transform: uppercase; color: rgba(232,160,32,.65); margin-bottom: .65rem; }
+
+.mf-inner { max-width: 680px; margin: 0 auto; position: relative; z-index: 1; }
+
+.mf-title { font-family: 'Bebas Neue', sans-serif; font-size: 36px; letter-spacing: 3px; color: #fff; margin-bottom: 1.25rem; }
+
+.mf-title em { color: var(--gold); font-style: normal; }
+
+.mf-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 1.5rem; }
+
+.mf-item {
+  background: rgba(255,255,255,.04);
+  border: 1px solid rgba(255,255,255,.07);
+  border-radius: var(--radius);
+  padding: 1rem 1.1rem;
+  display: flex;
+  gap: .85rem;
+  align-items: flex-start;
+  transition: background .25s, border-color .25s;
+}
+
+.mf-item:hover { background: rgba(255,255,255,.07); border-color: rgba(232,160,32,.2); }
+
+.mf-item i { font-size: 18px; color: var(--gold); flex-shrink: 0; margin-top: 2px; }
+
+.mf-item-t { font-family: 'Bebas Neue', sans-serif; font-size: 13px; letter-spacing: 1px; color: #fff; margin-bottom: .2rem; }
+
+.mf-item-d { font-size: 11px; color: rgba(255,255,255,.55); line-height: 1.6; }
+
+.mf-cta { display: flex; gap: 12px; flex-wrap: wrap; }
+
+/* ─── BLOG ───────────────────────────────────────────────── */
+
+.blog-hero {
+  background: var(--dusk2);
+  padding: 1.75rem 2.5rem;
+  position: relative;
+  overflow: hidden;
+}
+
+.blog-hero::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse 60% 120% at 30% 50%, rgba(217,78,21,.07) 0%, transparent 65%);
+  pointer-events: none;
+}
+
+.blog-kicker { font-size: 9px; font-weight: 700; letter-spacing: 2.5px; text-transform: uppercase; color: rgba(232,160,32,.65); margin-bottom: .55rem; }
+
+.blog-hero-inner { position: relative; z-index: 1; }
+
+.blog-hero h2 { font-family: 'Bebas Neue', sans-serif; font-size: 44px; letter-spacing: 3px; color: #fff; line-height: .9; margin-bottom: .55rem; }
+
+.blog-hero h2 em { color: var(--gold); font-style: normal; }
+
+.blog-hero p { font-size: 12.5px; color: rgba(255,255,255,.62); line-height: 1.8; max-width: 440px; }
+
+.blog-cats {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  padding: .65rem 2rem;
+  background: var(--white);
+  border-bottom: 1px solid var(--border);
+  position: sticky;
+  top: 72px;
+  z-index: 100;
+  box-shadow: 0 2px 8px rgba(15,7,0,.04);
+}
+
+.blog-body { padding: 1.5rem 2rem; }
+
+.blog-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px; }
+
+.blog-featured {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  background: var(--white);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  cursor: pointer;
+  transition: border-color .28s, box-shadow .28s var(--transition), transform .28s var(--transition);
+  box-shadow: var(--shadow-card);
+}
+
+.blog-featured:hover {
+  border-color: var(--ember);
+  box-shadow: var(--shadow-hover);
+  transform: translateY(-3px);
+}
+
+.bf-img { overflow: hidden; background: var(--sand); }
+
+.bf-img img { width: 100%; height: 100%; object-fit: cover; display: block; transition: transform .6s var(--transition); }
+
+.blog-featured:hover .bf-img img { filter: brightness(1.06); }
+
+.bf-body { padding: 2.25rem; }
+
+.bf-tag { display: inline-block; background: var(--ember); color: #fff; font-size: 8px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; padding: 3px 10px; border-radius: 2px; margin-bottom: .8rem; }
+
+.bf-title { font-family: 'Bebas Neue', sans-serif; font-size: 30px; letter-spacing: 1.5px; color: var(--ink); line-height: 1; margin-bottom: .75rem; }
+
+.bf-excerpt { font-size: 12.5px; color: var(--muted); line-height: 1.8; margin-bottom: 1.25rem; }
+
+.bf-meta { display: flex; align-items: center; gap: 10px; font-size: 10px; color: var(--muted); letter-spacing: .5px; }
+
+.bf-date { color: var(--ember); font-weight: 600; }
+
+.bcard {
+  background: var(--white);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  cursor: pointer;
+  transition: border-color .28s, box-shadow .28s var(--transition), transform .28s var(--transition);
+  box-shadow: var(--shadow-card);
+}
+
+.bcard:hover {
+  border-color: var(--ember);
+  box-shadow: var(--shadow-hover);
+  transform: translateY(-3px);
+}
+
+.bc-img { aspect-ratio: 16/9; overflow: hidden; background: var(--sand); }
+
+.bc-img img { width: 100%; height: 100%; object-fit: cover; display: block; transition: transform .6s var(--transition); }
+
+.bcard:hover .bc-img img { filter: brightness(1.06); }
+
+.bc-body { padding: 1.1rem; }
+
+.bc-tag { display: inline-block; background: var(--sand); color: var(--ember); font-size: 7.5px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; padding: 2px 8px; border-radius: 2px; margin-bottom: .5rem; border: 1px solid var(--border); }
+
+.bc-title { font-family: 'Bebas Neue', sans-serif; font-size: 18px; letter-spacing: 1px; color: var(--ink); line-height: 1.1; margin-bottom: .5rem; }
+
+.bc-excerpt { font-size: 11px; color: var(--muted); line-height: 1.7; margin-bottom: .75rem; }
+
+.bc-meta { font-size: 10px; color: var(--muted); display: flex; gap: 8px; }
+
+.bc-date { color: var(--ember); font-weight: 600; }
+
+/* Blog detail */
+
+.blog-det { padding: 2rem; max-width: 720px; margin: 0 auto; }
+
+.bd-tag { display: inline-block; background: var(--ember); color: #fff; font-size: 8px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; padding: 3px 10px; border-radius: 2px; margin-bottom: .8rem; }
+
+.bd-title { font-family: 'Bebas Neue', sans-serif; font-size: 46px; letter-spacing: 2px; color: var(--ink); line-height: .9; margin-bottom: .75rem; }
+
+.bd-meta { font-size: 10px; color: var(--muted); letter-spacing: .5px; margin-bottom: 1.5rem; display: flex; gap: 12px; }
+
+.bd-img { border-radius: var(--radius-lg); overflow: hidden; margin-bottom: 2rem; aspect-ratio: 16/9; background: var(--sand); border: 2px solid var(--border); box-shadow: var(--shadow-deep); }
+
+.bd-img img { width: 100%; height: 100%; object-fit: cover; display: block; }
+
+.bd-content p { font-size: 14.5px; color: var(--ink); line-height: 1.9; margin-bottom: 1.1rem; }
+
+.bd-content h3 { font-family: 'Bebas Neue', sans-serif; font-size: 24px; letter-spacing: 1.5px; color: var(--ink); margin: 2rem 0 .65rem; }
+
+.bd-content blockquote {
+  border-left: 4px solid var(--ember);
+  padding: 1.1rem 1.25rem;
+  background: var(--sand);
+  border-radius: 0 var(--radius) var(--radius) 0;
+  margin: 1.75rem 0;
+  font-family: 'Cormorant Garamond', serif;
+  font-style: italic;
+  font-size: 15.5px;
+  color: var(--dusk);
+  line-height: 1.7;
+  box-shadow: var(--shadow-card);
+}
+
+.bd-related { background: var(--warm); border-top: 1px solid var(--border); padding: 2rem; margin-top: 3rem; }
+
+.bd-rel-t { font-family: 'Bebas Neue', sans-serif; font-size: 22px; letter-spacing: 2px; color: var(--ink); margin-bottom: 1.25rem; }
+
+.bd-rel-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+
+/* ─── CONTACT ────────────────────────────────────────────── */
+
+.ct-wrap {
+  background: var(--dusk2);
+  padding: 2.5rem;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 3rem;
+  align-items: start;
+  position: relative;
+  overflow: hidden;
+}
+
+.ct-wrap::before {
+  content: '';
+  position: absolute;
+  inset: -50%;
+  background: radial-gradient(ellipse 70% 100% at 20% 50%, rgba(217,78,21,.07) 0%, transparent 65%);
+  pointer-events: none;
+}
+
+.ct-l { position: relative; z-index: 1; }
+
+.ct-l h2 { font-family: 'Bebas Neue', sans-serif; font-size: 42px; letter-spacing: 2px; color: #fff; margin-bottom: .75rem; }
+
+.ct-l p { font-size: 13px; color: rgba(255,255,255,.42); line-height: 1.8; margin-bottom: 1.5rem; }
+
+.ct-links { display: flex; flex-direction: column; gap: .6rem; }
+
+.ct-lnk {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: .9rem 1rem;
+  background: rgba(255,255,255,.04);
+  border: 1px solid rgba(255,255,255,.07);
+  border-radius: var(--radius);
+  color: #fff;
+  text-decoration: none;
+  transition: all .22s var(--transition);
+  cursor: pointer;
+}
+
+.ct-lnk:hover { background: rgba(232,160,32,.08); border-color: rgba(232,160,32,.25); transform: translateX(4px); }
+
+.ct-lnk i { font-size: 20px; color: var(--gold); }
+
+.ct-lnk-m { font-size: 13px; font-weight: 500; }
+
+.ct-lnk-s { font-size: 10px; color: rgba(255,255,255,.3); margin-top: 1px; }
+
+.ct-form {
+  background: var(--sand);
+  border: 2px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 1.75rem;
+  position: relative;
+  z-index: 1;
+  box-shadow: var(--shadow-deep);
+}
+
+.cf-title { font-family: 'Bebas Neue', sans-serif; font-size: 22px; letter-spacing: 2px; color: var(--ink); margin-bottom: 1.1rem; }
+
+.cf-g { margin-bottom: .7rem; }
+
+.cf-lbl { display: block; font-size: 9px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; color: var(--muted); margin-bottom: 4px; }
+
+.cf-in {
+  width: 100%;
+  border: 1.5px solid var(--border2);
+  background: #fff;
+  color: var(--ink);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 13px;
+  padding: 9px 11px;
+  border-radius: var(--radius);
+  transition: border-color .2s, box-shadow .2s;
+  box-shadow: var(--shadow-card);
+}
+
+.cf-in:focus { outline: none; border-color: var(--ember); box-shadow: 0 0 0 3px rgba(217,78,21,.1); }
+
+textarea.cf-in { resize: vertical; min-height: 90px; }
+
+.cf-btn {
+  width: 100%;
+  background: var(--ember);
+  border: none;
+  color: #fff;
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 17px;
+  letter-spacing: 2.5px;
+  padding: 14px;
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition: background .25s, transform .2s var(--transition), box-shadow .25s;
+  margin-top: .5rem;
+  box-shadow: 0 4px 16px rgba(217,78,21,.28);
+}
+
+.cf-btn:hover { background: var(--ember2); transform: translateY(-2px); box-shadow: 0 8px 24px rgba(217,78,21,.35); }
+
+/* ─── TOAST ──────────────────────────────────────────────── */
+
+.toast {
+  background: var(--ink);
+  color: var(--gold);
+  padding: 12px 20px;
+  border-radius: var(--radius);
+  font-size: 13px;
+  font-weight: 500;
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  z-index: 9999;
+  transform: translateY(60px);
+  opacity: 0;
+  transition: transform .35s var(--transition), opacity .3s;
+  pointer-events: none;
+  border-left: 4px solid var(--ember);
+  min-width: 200px;
+  box-shadow: var(--shadow-deep);
+}
+
+.toast.show { transform: translateY(0); opacity: 1; }
+
+/* ─── FOOTER ─────────────────────────────────────────────── */
+
+.footer {
+  background: var(--dusk2);
+  border-top: 1px solid rgba(232,160,32,.12);
+  padding: 3rem 2.5rem 1.5rem;
+}
+
+.footer-top {
+  display: grid;
+  grid-template-columns: 1.6fr 1fr 1fr 1fr;
+  gap: 2.5rem;
+  padding-bottom: 2rem;
+  border-bottom: 1px solid rgba(255,255,255,.06);
+}
+
+.footer-brand-col {}
+
+.footer-logo { font-family: 'Bebas Neue', sans-serif; font-size: 26px; letter-spacing: 5px; color: var(--gold); display: block; margin-bottom: .5rem; }
+
+.footer-brand-desc { font-size: 12px; color: rgba(255,255,255,.32); line-height: 1.7; max-width: 240px; margin-bottom: 1.25rem; }
+
+.footer-col-title { font-size: 9px; letter-spacing: 2.5px; text-transform: uppercase; color: rgba(232,160,32,.5); font-weight: 600; margin-bottom: .9rem; }
+
+.footer-links { display: flex; flex-direction: column; gap: .5rem; }
+
+.footer-link {
+  color: rgba(255,255,255,.35);
+  font-size: 12px;
+  font-weight: 400;
+  cursor: pointer;
+  transition: color .2s;
+  background: none;
+  border: none;
+  font-family: 'DM Sans', sans-serif;
+  text-align: left;
+  padding: 0;
+}
+
+.footer-link:hover { color: var(--gold); }
+
+.footer-social { display: flex; gap: 8px; margin-top: .25rem; }
+
+.footer-bottom {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: 1.25rem;
+}
+
+.footer-copy { font-size: 10.5px; color: rgba(255,255,255,.2); letter-spacing: .5px; }
+
+.footer-made { font-size: 10.5px; color: rgba(255,255,255,.2); }
+
+.footer-made span { color: var(--ember); }
+
+@media (max-width: 768px) {
+  .footer-top { grid-template-columns: 1fr 1fr; gap: 1.5rem; }
+  .footer-brand-col { grid-column: 1 / -1; }
+}
+
+.soc {
+  background: rgba(255,255,255,.05);
+  border: none;
+  color: rgba(255,255,255,.38);
+  width: 34px; height: 34px;
+  border-radius: var(--radius);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 15px;
+  transition: all .22s;
+  text-decoration: none;
+}
+
+.soc:hover { background: var(--ember); color: #fff; transform: translateY(-2px); box-shadow: 0 4px 12px rgba(217,78,21,.3); }
+
+/* ─── RESPONSIVE ─────────────────────────────────────────── */
+
+@media (max-width: 640px) {
+  .hero-inner, .ab-hero, .ct-wrap, .det-grid { grid-template-columns: 1fr; }
+  .hero-r, .ab-r { display: none; }
+  .hero-h1 { font-size: 50px; }
+  .hero-stats { flex-wrap: wrap; }
+  .pgrid { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
+  .ab-vals { grid-template-columns: 1fr; }
+  .blog-featured { grid-template-columns: 1fr; }
+  .bf-img { aspect-ratio: 16/9; }
+  .mf-grid { grid-template-columns: 1fr; }
+  .tl-items::before { left: 16px; }
+  .bd-rel-grid { grid-template-columns: 1fr; }
+  .det { padding: 1.5rem; }
+  .nav { padding: 0 1rem; }
+  .cat-body { padding: 1.25rem 1rem; }
+}
+
+/* ─── CORRECTIONS v2.1 ──────────────────────────────────── */
+
+.tl-body { flex: 1; }
+
+.bd-date { color: var(--ember); font-weight: 600; }
+
+.bd-content { font-size: 14.5px; color: var(--ink); line-height: 1.9; }
+
+.bd-content p { margin-bottom: 1.1rem; }
+
+.bd-content h3 { font-family: 'Bebas Neue', sans-serif; font-size: 24px; letter-spacing: 1.5px; color: var(--ink); margin: 2rem 0 .65rem; }
+
+.bd-content blockquote {
+  border-left: 4px solid var(--ember);
+  padding: 1.1rem 1.25rem;
+  background: var(--sand);
+  border-radius: 0 var(--radius) var(--radius) 0;
+  margin: 1.75rem 0;
+  font-family: 'Cormorant Garamond', serif;
+  font-style: italic;
+  font-size: 15.5px;
+  color: var(--dusk);
+  line-height: 1.7;
+  box-shadow: var(--shadow-card);
+}
+
+/* Prix sélectionné box */
+
+.prix-box {
+  background: var(--sand);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: .75rem 1rem;
+  margin-bottom: 1rem;
+  font-size: 12px;
+  color: var(--muted);
+  line-height: 1.6;
+}
+
+.prix-box strong { color: var(--ink); }
+
+.prix-box .prix-val { color: var(--ember); font-weight: 700; }
+
+/* Quantité label */
+
+.qty-lbl {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+/* ftags-wrap layout */
+
+#ftags-wrap {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+/* Model bar sticky */
+
+.model-bar {
+  position: sticky;
+  top: 62px;
+  z-index: 99;
+}
+
+/* ─── MODEL CTA BAR (accueil) ─────────────────────────────── */
+
+.model-cta-bar {
+  background: var(--ink);
+  border-top: 1px solid rgba(232,160,32,.15);
+  border-bottom: 1px solid rgba(232,160,32,.15);
+  padding: 1.1rem 2.5rem;
+}
+
+.model-cta-inner {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+.model-cta-text {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.model-cta-text i { color: var(--ember); font-size: 18px; }
+
+.model-cta-text > span:first-of-type {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 17px;
+  letter-spacing: 2px;
+  color: #fff;
+}
+
+.model-cta-sub { display: none; }
+
+.model-cta-sel {
+  flex: 1;
+  background: rgba(255,255,255,.06);
+  border: 1.5px solid rgba(232,160,32,.3);
+  color: #fff;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 13px;
+  padding: 10px 14px;
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition: border-color .2s;
+}
+
+.model-cta-sel:focus { outline: none; border-color: var(--ember); }
+
+.model-cta-sel option { background: var(--ink); color: #fff; }
+
+.model-cta-btn {
+  background: var(--ember);
+  color: #fff;
+  border: none;
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 14px;
+  letter-spacing: 2px;
+  padding: 10px 22px;
+  border-radius: var(--radius);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background .2s, transform .2s;
+  flex-shrink: 0;
+}
+
+.model-cta-btn:hover { background: var(--ember2); transform: translateY(-1px); }
+
+/* ─── REVIEWS SECTION ─────────────────────────────────────── */
+
+.reviews-section {
+  padding: 2rem 2.5rem 2.5rem;
+  background: var(--warm);
+  border-top: 1px solid var(--border);
+}
+
+.reviews-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 14px;
+}
+
+@media (max-width: 900px) { .reviews-grid { grid-template-columns: repeat(2, 1fr); } }
+
+@media (max-width: 540px) { .reviews-grid { grid-template-columns: 1fr; } }
+
+.review-card {
+  background: var(--white);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: .75rem;
+  transition: box-shadow .25s, transform .2s;
+}
+
+.review-card:hover { box-shadow: var(--shadow-hover); transform: translateY(-2px); }
+
+.rev-stars { color: var(--gold); font-size: 13px; letter-spacing: 1px; }
+
+.rev-text {
+  font-size: 12.5px;
+  color: rgba(15,7,0,.7);
+  line-height: 1.7;
+  flex: 1;
+  font-style: italic;
+}
+
+.rev-author { display: flex; align-items: center; gap: 10px; }
+
+.rev-avatar {
+  width: 34px; height: 34px;
+  border-radius: 50%;
+  background: var(--ember);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 600;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+
+.rev-name { font-size: 12px; font-weight: 600; color: var(--ink); }
+
+.rev-loc  { font-size: 10px; color: var(--muted); }
+
+/* ─── PHOTO PRODUIT (page détail) ─────────────────────────── */
+
+.det-imgbox {
+  position: relative;
+  background: var(--warm);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  border: 1.5px solid var(--border);
+}
+
+.det-mockup-badge {
+  position: absolute;
+  top: 12px; left: 12px;
+  background: rgba(15,7,0,.65);
+  color: rgba(255,255,255,.8);
+  font-size: 9px;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  padding: 4px 10px;
+  border-radius: 20px;
+  backdrop-filter: blur(4px);
+}
+
+/* ─── COMMANDE STRUCTURÉE (page détail) ──────────────────── */
+
+.order-steps {
+  display: flex;
+  gap: 6px;
+  margin: 1rem 0 .5rem;
+}
+
+.os {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 10px;
+  color: var(--muted);
+  letter-spacing: .5px;
+}
+
+.os-num {
+  width: 20px; height: 20px;
+  border-radius: 50%;
+  background: var(--ember);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 600;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+
+.os-arrow { color: var(--border2); font-size: 12px; }
+
+/* ─── BOUTON COMMANDE ─────────────────────────────────────── */
+
+.wa-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+  background: #25D366;
+  color: #fff;
+  border: none;
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 17px;
+  letter-spacing: 2.5px;
+  padding: 16px 24px;
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition: background .2s, transform .2s var(--transition), box-shadow .25s;
+  box-shadow: 0 4px 20px rgba(37,211,102,.35);
+  margin: 1.25rem 0 .75rem;
+}
+
+.wa-btn:hover { background: #1ebe5d; transform: translateY(-2px); box-shadow: 0 8px 28px rgba(37,211,102,.4); }
+
+/* ─── ORDER CONFIRMATION NOTE ──────────────────────────────── */
+
+.order-note {
+  font-size: 11px;
+  color: var(--muted);
+  text-align: center;
+  line-height: 1.6;
+  margin-bottom: 1rem;
+}
+
+.order-note strong { color: var(--ink); }
+
+@media (max-width: 640px) {
+  .model-cta-inner { flex-direction: column; align-items: stretch; }
+  .model-cta-text > span:first-of-type { font-size: 15px; }
+}
+
+/* ─── BOUTIQUE HEADER ────────────────────────────────────── */
+
+.cat-top {
+  background: var(--dusk2);
+  padding: 2rem 2.5rem 1.5rem;
+  overflow: hidden;
+  position: relative;
+  border-bottom: 1px solid rgba(232,160,32,.12);
+}
+
+.cat-top::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse 60% 120% at 80% 50%, rgba(217,78,21,.07) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+.cat-top-inner {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 2rem;
+  flex-wrap: wrap;
+}
+
+.cat-title {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 52px;
+  letter-spacing: 3px;
+  color: #fff;
+  line-height: .9;
+  margin-bottom: .3rem;
+}
+
+.cat-title em { color: var(--gold); font-style: normal; }
+
+.cat-sub { font-size: 9.5px; color: rgba(255,255,255,.45); letter-spacing: 2px; text-transform: uppercase; margin-top: .5rem; }
+
+/* ─── BARRE MODÈLE INTÉGRÉE dans le header ──────────────── */
+
+.cat-model-pick {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.cat-model-label {
+  font-size: 9px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: rgba(255,255,255,.35);
+  font-weight: 600;
+}
+
+.cat-model-sel {
+  background: rgba(255,255,255,.07);
+  border: 1.5px solid rgba(232,160,32,.35);
+  color: #fff;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 13px;
+  font-weight: 500;
+  padding: 10px 16px;
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition: border-color .2s, background .2s;
+  min-width: 220px;
+}
+
+.cat-model-sel:focus { outline: none; border-color: var(--ember); background: rgba(255,255,255,.1); }
+
+.cat-model-sel option, .cat-model-sel optgroup { background: var(--dusk2); color: #fff; }
+
+.cat-model-price {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 20px;
+  letter-spacing: 2px;
+  color: var(--ember);
+  text-align: right;
+  min-height: 24px;
+}
+
+/* ─── BARRE FILTRES COLLANTE ─────────────────────────────── */
+
+.cat-filters {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  padding: .85rem 2.5rem;
+  background: var(--white);
+  border-bottom: 1.5px solid var(--border);
+  position: sticky;
+  top: 72px;
+  z-index: 100;
+  box-shadow: 0 2px 12px rgba(15,7,0,.06);
+}
+
+.cat-search-wrap {
+  position: relative;
+  flex: 1;
+  max-width: 300px;
+}
+
+.cat-search-wrap i {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--muted);
+  font-size: 14px;
+  pointer-events: none;
+}
+
+.fsrch {
+  border: 1.5px solid var(--border);
+  background: var(--warm);
+  color: var(--ink);
+  font-family: 'DM Sans', sans-serif;
+  font-size: 12px;
+  padding: 8px 14px 8px 34px;
+  border-radius: var(--radius);
+  width: 100%;
+  transition: border-color .2s, box-shadow .2s, background .2s;
+}
+
+.fsrch:focus { outline: none; border-color: var(--ember); background: #fff; box-shadow: 0 0 0 3px rgba(217,78,21,.1); }
+
+.cat-filter-sep { width: 1px; height: 22px; background: var(--border); flex-shrink: 0; }
+
+.ftag {
+  border: 1.5px solid var(--border);
+  background: transparent;
+  color: var(--muted);
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  padding: 6px 16px;
+  border-radius: 20px;
+  cursor: pointer;
+  transition: all .22s var(--transition);
+  font-family: 'DM Sans', sans-serif;
+  white-space: nowrap;
+}
+
+.ftag:hover { border-color: var(--ember); color: var(--ember); background: rgba(217,78,21,.05); }
+
+.ftag.on  { border-color: var(--ember); background: var(--ember); color: #fff; box-shadow: 0 2px 8px rgba(217,78,21,.25); }
+
+.cat-count-bar {
+  padding: .6rem 2.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid var(--border);
+  background: var(--cream);
+}
+
+.cat-count {
+  font-size: 10px;
+  color: var(--muted);
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+.cat-sort {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 10px;
+  color: var(--muted);
+  letter-spacing: .5px;
+}
+
+/* ─── GRILLE CATALOGUE ───────────────────────────────────── */
+
+.cat-body { padding: 1.5rem 2.5rem 3rem; }
+
+.pgrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(195px, 1fr));
+  gap: 16px;
+}
+
+#home-grid {
+  grid-template-columns: repeat(4, 1fr);
+  gap: 14px;
+}
+
+/* ─── CARD PRODUIT — MOCKUP STYLE ───────────────────────── */
+
+.pcard {
+  background: var(--white);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  cursor: pointer;
+  transition: border-color .28s, box-shadow .28s var(--transition), transform .28s var(--transition);
+  position: relative;
+  box-shadow: var(--shadow-card);
+}
+
+.pcard:hover {
+  border-color: var(--ember);
+  box-shadow: var(--shadow-hover);
+  transform: translateY(-4px);
+}
+
+.pc-img {
+  aspect-ratio: 3/4;
+  overflow: hidden;
+  background: var(--sand);
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Mockup frame autour de l'image */
+
+.pc-img::after {
+  content: '';
+  position: absolute;
+  inset: 8px;
+  border-radius: 16px;
+  border: 2px solid rgba(15,7,0,.06);
+  pointer-events: none;
+  z-index: 2;
+}
+
+.pc-img img {
+  width: 78%;
+  height: 88%;
+  object-fit: cover;
+  display: block;
+  border-radius: 12px;
+  transition: transform .6s var(--transition), filter .4s;
+  filter: saturate(.95);
+  box-shadow: 0 8px 32px rgba(15,7,0,.22), 0 2px 8px rgba(15,7,0,.12);
+  position: relative;
+  z-index: 1;
+}
+
+.pcard:hover .pc-img img {
+  transform: scale(1.04);
+  filter: brightness(1.06) saturate(1.08);
+}
+
+/* Ombre portée sous la coque = effet réaliste */
+
+.pc-img::before {
+  content: '';
+  position: absolute;
+  bottom: 10%;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 60%;
+  height: 20px;
+  background: rgba(15,7,0,.18);
+  border-radius: 50%;
+  filter: blur(12px);
+  z-index: 0;
+}
+
+.pc-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(15,7,0,.48);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity .3s;
+  backdrop-filter: blur(3px);
+  -webkit-backdrop-filter: blur(3px);
+  z-index: 3;
+}
+
+.pcard:hover .pc-overlay { opacity: 1; }
+
+.pc-ov-btn {
+  background: var(--gold);
+  border: none;
+  color: var(--ink);
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 13px;
+  letter-spacing: 2px;
+  padding: 10px 22px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: background .2s, transform .2s var(--transition);
+  transform: translateY(6px);
+  box-shadow: 0 4px 12px rgba(0,0,0,.2);
+}
+
+.pcard:hover .pc-ov-btn { transform: translateY(0); }
+
+.pc-ov-btn:hover { background: #F0B030; }
+
+.pc-ribbon {
+  position: absolute;
+  top: 10px; left: 10px;
+  background: rgba(217,78,21,.9);
+  color: #fff;
+  font-size: 7.5px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  padding: 3px 9px;
+  border-radius: 20px;
+  backdrop-filter: blur(4px);
+  z-index: 4;
+}
+
+.pc-body { padding: .9rem 1rem 1rem; }
+
+.pc-name {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 16px;
+  letter-spacing: 1px;
+  color: var(--ink);
+  line-height: 1;
+  margin-bottom: .25rem;
+}
+
+.pc-hint { font-size: 10px; color: var(--muted); margin-bottom: .6rem; }
+
+.pc-row { display: flex; align-items: center; justify-content: space-between; }
+
+.pc-price { font-size: 13px; font-weight: 700; color: var(--ember); }
+
+.pc-stock-dot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  display: inline-block;
+  margin-right: 5px;
+  vertical-align: middle;
+}
+
+.dot-ok  { background: var(--leaf); }
+
+.dot-lim { background: var(--gold); }
+
+.dot-out { background: rgba(15,7,0,.3); }
+
+.pc-add {
+  background: var(--ink);
+  border: none;
+  color: var(--gold);
+  width: 32px; height: 32px;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 15px;
+  transition: background .22s, transform .3s var(--transition), box-shadow .22s;
+  box-shadow: 0 2px 6px rgba(15,7,0,.15);
+}
+
+.pc-add:hover { background: #25D366; transform: scale(1.1); box-shadow: 0 4px 12px rgba(37,211,102,.3); }
+
+/* Stock badges (toujours utilisés) */
+
+.stock-badge {
+  position: absolute;
+  top: 10px; right: 10px;
+  font-size: 7.5px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  padding: 3px 10px;
+  border-radius: 20px;
+  z-index: 4;
+  pointer-events: none;
+  backdrop-filter: blur(4px);
+}
+
+.stock-available { background: rgba(30,92,53,.88); color: #fff; }
+
+.stock-limited   { background: rgba(232,160,32,.92); color: #1E0900; }
+
+.stock-out       { background: rgba(15,7,0,.65); color: rgba(255,255,255,.5); }
+
+.pcard.is-out { opacity: .65; }
+
+.pcard.is-out .pc-add { opacity: .35; pointer-events: none; cursor: not-allowed; }
+
+@media (max-width: 768px) {
+  .cat-top { padding: 1.5rem; }
+  .cat-top-inner { flex-direction: column; align-items: flex-start; }
+  .cat-model-pick { align-items: flex-start; width: 100%; }
+  .cat-model-sel { min-width: unset; width: 100%; }
+  .cat-filters { padding: .75rem 1rem; top: 72px; }
+  .cat-body { padding: 1rem; }
+  .pgrid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+  #home-grid { grid-template-columns: repeat(2, 1fr); }
+}
+
+</style>
+</style>
+</style>
+
+
+<div>
+<nav class="nav">
+  <div class="logo" onclick="go('home')">CULTURECASE<span class="logo-sub">Bamako · Mali</span></div>
+  <div class="nav-r">
+    <div>
+    <button class="nb on" id="nm-home" onclick="go('home')">Accueil</button>
+    <button class="nb" id="nm-catalogue" onclick="go('catalogue')">Catalogue</button>
+    <button class="nb" id="nm-about" onclick="go('about')">Histoire</button>
+    <button class="nb" id="nm-blog" onclick="go('blog')">Blog</button>
+    <button class="nb" id="nm-contact" onclick="go('contact')">Contact</button>
+  </div>
+</nav>
+
+<!-- HOME -->
+<div class="pg on" id="pg-home">
+  <div class="hero">
+    <div class="hero-pat"></div>
+    <div class="hero-inner">
+      <div class="hero-l">
+        <div class="hero-eyebrow"><div class="ey-line"></div><span class="ey-txt">Design exclusif · Fait à Bamako</span></div>
+        <h1 class="hero-h1">L'âme<br>du <span class="acc">Mali</span><span class="acc2">dans ta main</span></h1>
+        <p class="hero-p">Des designs exclusifs inspirés du bogolan, du N'Ko, des monuments et des valeurs du Mali. Conçus à Bamako, portés partout.</p>
+        <div class="hero-btns">
+          <button class="btn-primary" onclick="go('catalogue')"><i class="ti ti-arrow-right" aria-hidden="true"></i> Voir les designs</button>
+          <button class="btn-ghost" onclick="go('about')">Notre histoire →</button>
+        </div>
+      </div>
+      <div class="hero-r">
+        <div class="hi" style="grid-row:span 2" onclick="openDet('D12')"><img src="https://res.cloudinary.com/dknfqd2xp/image/upload/v1779767675/zutdygs9wnxbheeilcl9.jpg" alt="Bogolan"><div class="hi-lbl">BOGOLAN</div></div>
+        <div class="hi" onclick="openDet('D1')"><img src="https://res.cloudinary.com/dknfqd2xp/image/upload/v1779767538/ynvij5rszvqmamfs9hgm.jpg" alt="Djenné"><div class="hi-lbl">DJENNÉ</div></div>
+        <div class="hi" onclick="openDet('D13')"><img src="https://res.cloudinary.com/dknfqd2xp/image/upload/v1779767905/wketzekxsrqlupeqrdi2.jpg" alt="N'Ko"><div class="hi-lbl">N'KO</div></div>
+      </div>
+    </div>
+    <div class="hero-stats">
+      <div class="hst"><div class="hst-n">∞</div><div class="hst-l">Designs en croissance</div></div>
+      <div class="hst"><div class="hst-n">21</div><div class="hst-l">Modèles iPhone</div></div>
+      <div class="hst"><div class="hst-n">Bamako</div><div class="hst-l">Disponible maintenant</div></div>
+      <div class="hst"><div class="hst-n">100%</div><div class="hst-l">Identité malienne</div></div>
+    </div>
+  </div>
+  <div class="ticker"><div class="ticker-t" id="ttick"></div></div>
+
+  <!-- Sélecteur modèle proéminent -->
+
+  <!-- Featured -->
+  <div class="featured-section">
+    <div class="section-header">
+      <div>
+        <div class="section-title">Coups de <em>cœur</em></div>
+        <div class="section-sub">Sélection de la semaine</div>
+      </div>
+      <button class="see-all-btn" onclick="go('catalogue')">Tout voir →</button>
+    </div>
+    <div class="pgrid" id="home-grid"></div>
+  </div>
+
+  <!-- Témoignages -->
+  <div class="reviews-section">
+    <div class="section-header">
+      <div>
+        <div class="section-title">Ils <em>parlent</em> de nous</div>
+        <div class="section-sub">Avis clients vérifiés</div>
+      </div>
+    </div>
+    <div class="reviews-grid" id="reviews-grid">
+      <div class="review-card">
+        <div class="rev-stars">★★★★★</div>
+        <p class="rev-text">« J'ai commandé le Bogolan pour mon iPhone 15. La qualité est incroyable, le design est vraiment fidèle. Tout Bamako me demande où j'ai eu ça ! »</p>
+        <div class="rev-author"><div class="rev-avatar">AK</div><div><div class="rev-name">Aminata K.</div><div class="rev-loc">Badalabougou, Bamako</div></div></div>
+      </div>
+      <div class="review-card">
+        <div class="rev-stars">★★★★★</div>
+        <p class="rev-text">« Livraison rapide, coque bien protégée dans l'emballage. Le design N'Ko est magnifique — un vrai bijou. Je vais en commander une autre pour offrir. »</p>
+        <div class="rev-author"><div class="rev-avatar">IB</div><div><div class="rev-name">Ibrahim B.</div><div class="rev-loc">Hippodrome, Bamako</div></div></div>
+      </div>
+      <div class="review-card">
+        <div class="rev-stars">★★★★★</div>
+        <p class="rev-text">« Enfin une marque malienne qui fait des coques de qualité ! Le Ciwara est mon préféré. Porter sa culture sur son téléphone, c'est exactement ce qu'il faut. »</p>
+        <div class="rev-author"><div class="rev-avatar">FD</div><div><div class="rev-name">Fatoumata D.</div><div class="rev-loc">ACI 2000, Bamako</div></div></div>
+      </div>
+      <div class="review-card">
+        <div class="rev-stars">★★★★☆</div>
+        <p class="rev-text">« La réponse sur WhatsApp est ultra rapide, la livraison le lendemain. La coque Djenné est superbe — ma femme l'a volée directement ! Je vais devoir en racheter une. »</p>
+        <div class="rev-author"><div class="rev-avatar">MS</div><div><div class="rev-name">Moussa S.</div><div class="rev-loc">Kalaban Coura, Bamako</div></div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- CATALOGUE -->
+<div class="pg" id="pg-catalogue">
+  <!-- HEADER BOUTIQUE -->
+  <div class="cat-top">
+    <div class="cat-top-inner">
+      <div>
+        <div class="cat-title">Nos <em>designs</em></div>
+        <div class="cat-sub">Patrimoine malien · Impression HD · Livraison Bamako</div>
+      </div>
+      <!-- Sélecteur modèle intégré dans le header -->
+      <div class="cat-model-pick">
+        <div class="cat-model-label"><i class="ti ti-device-mobile"></i> Mon iPhone</div>
+        <select class="cat-model-sel" id="global-model" onchange="onGlobalModelChange()">
+          <option value="">— Choisir mon modèle —</option>
+          <optgroup label="iPhone 12 / 13 · 3 500 FCFA">
+            <option>iPhone 12</option><option>iPhone 12 Pro Max</option>
+            <option>iPhone 13</option><option>iPhone 13 Pro</option><option>iPhone 13 Pro Max</option>
+          </optgroup>
+          <optgroup label="iPhone 14 et plus · 5 000 FCFA">
+            <option>iPhone 14</option><option>iPhone 14 Plus</option>
+            <option>iPhone 14 Pro</option><option>iPhone 14 Pro Max</option>
+            <option>iPhone 15</option><option>iPhone 15 Plus</option>
+            <option>iPhone 15 Pro</option><option>iPhone 15 Pro Max</option>
+            <option>iPhone 16</option><option>iPhone 16 Plus</option>
+            <option>iPhone 16 Pro</option><option>iPhone 16 Pro Max</option>
+            <option>iPhone 17</option><option>iPhone 17 Air</option>
+            <option>iPhone 17 Pro</option><option>iPhone 17 Pro Max</option>
+          </optgroup>
+        </select>
+        <div class="cat-model-price" id="mb-price-hint"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- BARRE FILTRES -->
+  <div class="cat-filters">
+    <div class="cat-search-wrap">
+      <i class="ti ti-search"></i>
+      <input class="fsrch" type="search" id="sinp" placeholder="Rechercher un design..." oninput="filt()">
+    </div>
+    <div class="cat-filter-sep"></div>
+    <button class="ftag" id="dispo-btn" onclick="toggleDispo(this)">✓ Disponible seulement</button>
+    <div style="margin-left:auto;font-size:10px;color:var(--muted)" id="mb-info"></div>
+  </div>
+
+  <!-- COMPTEUR -->
+  <div class="cat-count-bar">
+    <div class="cat-count" id="cat-count"></div>
+    <div class="cat-sort">Triés par popularité</div>
+  </div>
+
+  <!-- GRILLE -->
+  <div class="cat-body">
+    <div class="pgrid" id="cat-grid"></div>
+  </div>
+</div>
+
+<!-- DETAIL -->
+<div class="pg" id="pg-detail">
+  <div class="det">
+    <button class="bk" onclick="goBack()">← Retour</button>
+    <div class="det-grid">
+      <div class="det-imgbox"><img id="d-img" src="" alt=""><div class="det-mockup-badge">Aperçu du design</div></div>
+      <div>
+        <div class="det-ey"><div class="det-ey-line"></div><span>Design exclusif · CultureCase</span></div>
+        <div class="det-title" id="d-name"></div>
+        <div id="d-stock-badge" class="det-stock"></div>
+        <div class="det-story" id="d-story"></div>
+
+        <div class="prix-recap">
+          <div class="pr-title">Tarifs</div>
+          <div class="pr-row"><span class="pr-flag">🇲🇱</span><span class="pr-market">iPhone 13 Pro Max et en dessous</span><span class="pr-price">3 500 FCFA</span></div>
+          <div class="pr-row"><span class="pr-flag">🇲🇱</span><span class="pr-market">iPhone 14 et au dessus</span><span class="pr-price">5 000 FCFA</span></div>
+        </div>
+
+        <span class="det-lbl">Votre modèle iPhone</span>
+        <select class="det-sel" id="d-mod" onchange="updatePrice()"></select>
+
+        <div class="qty-row">
+          <span class="qty-lbl">Quantité</span>
+          <button class="qb" onclick="dq(-1)">−</button>
+          <span class="qv" id="d-qty">1</span>
+          <button class="qb" onclick="dq(1)">+</button>
+        </div>
+        <div class="prix-box">
+          💬 <strong>Prix sélectionné :</strong> <span id="d-price-display" class="prix-val"></span>
+        </div>
+
+        <div class="livraison-form">
+          <div class="lf-title"><i class="ti ti-truck-delivery" aria-hidden="true"></i>Infos de livraison <span style="color:rgba(154,120,72,.5);font-weight:400">(optionnel mais recommandé)</span></div>
+          <div class="lf-grid">
+            <div class="lf-g">
+              <label class="lf-lbl">Prénom &amp; Nom</label>
+              <input class="lf-in" type="text" id="lf-nom" placeholder="Aminata Koné">
+            </div>
+            <div class="lf-g">
+              <label class="lf-lbl">Téléphone</label>
+              <input class="lf-in" type="tel" id="lf-tel" placeholder="+223...">
+            </div>
+            <div class="lf-g full">
+              <label class="lf-lbl">Quartier / Zone de livraison</label>
+              <input class="lf-in" type="text" id="lf-quartier" placeholder="Badalabougou, ACI 2000, Hippodrome…" list="quartiers-list">
+              <datalist id="quartiers-list">
+                <option>ACI 2000</option><option>Hippodrome</option><option>Badalabougou</option>
+                <option>Baco Djicoroni</option><option>Banankabougou</option><option>Magnambougou</option>
+                <option>Lafiabougou</option><option>Hamdallaye</option><option>Sogoniko</option>
+                <option>Faladiè</option><option>Niamakoro</option><option>Sabalibougou</option>
+                <option>Kalaban Coura</option><option>Missabougou</option><option>Sénou</option>
+                <option>Torokorobougou</option><option>Quartier Mali</option><option>Badala Ouest</option>
+              </datalist>
+            </div>
+          </div>
+        </div>
+
+        <!-- Étapes commande -->
+        <div class="order-steps">
+          <div class="os"><div class="os-num">1</div> Choisir modèle &amp; quantité</div>
+          <div class="os-arrow">›</div>
+          <div class="os"><div class="os-num">2</div> Remplir livraison</div>
+          <div class="os-arrow">›</div>
+          <div class="os"><div class="os-num">3</div> Envoyer WhatsApp</div>
+        </div>
+
+        <button class="wa-btn" id="wa-order-btn" onclick="orderWA()">
+          <i class="ti ti-brand-whatsapp" aria-hidden="true"></i>
+          <span>Commander sur WhatsApp</span>
+        </button>
+        <p class="order-note">Votre commande sera envoyée sur WhatsApp. Nous confirmons <strong>sous 30 min</strong> et livrons <strong>le jour même ou le lendemain</strong> à Bamako.</p>
+        <div class="det-feats">
+          <div class="df"><i class="ti ti-shield-check" aria-hidden="true"></i>Protection renforcée</div>
+          <div class="df"><i class="ti ti-palette" aria-hidden="true"></i>Impression HD</div>
+          <div class="df"><i class="ti ti-truck" aria-hidden="true"></i>Livraison dans tout Bamako</div>
+          <div class="df"><i class="ti ti-rosette" aria-hidden="true"></i>Design exclusif CultureCase</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ABOUT -->
+<div class="pg" id="pg-about">
+  <div class="ab-hero">
+    <div class="ab-l">
+      <div class="hero-eyebrow" style="margin-bottom:1rem"><div class="ey-line"></div><span class="ey-txt">Notre histoire</span></div>
+      <h2>Née à<br><em>Bamako</em></h2>
+      <p>CultureCase est née d'une conviction : la richesse artistique du Mali mérite d'être portée au quotidien. Chaque coque est une déclaration d'identité.</p>
+      <p>Une marque conçue à Bamako, pour ceux qui portent leur culture avec fierté.</p>
+    </div>
+    <div class="ab-r">
+      <div class="aimg" style="grid-row:span 2"><img src="https://res.cloudinary.com/dknfqd2xp/image/upload/v1779767813/ujlarvjopqep37hwm2n2.jpg" alt="Ciwara"></div>
+      <div class="aimg"><img src="https://res.cloudinary.com/dknfqd2xp/image/upload/v1779767550/erdvdubi3wvbb3pgoirj.jpg" alt="Munyu"></div>
+      <div class="aimg"><img src="https://res.cloudinary.com/dknfqd2xp/image/upload/v1779767718/smtv6hdke2pdelv3z0ob.jpg" alt="Bènkadi"></div>
+    </div>
+  </div>
+  <div class="ab-vals">
+    <div class="av"><i class="ti ti-palette" aria-hidden="true"></i><div class="av-t">Design authentique</div><div class="av-d">Chaque motif raconte une histoire du Mali</div></div>
+    <div class="av"><i class="ti ti-shield-check" aria-hidden="true"></i><div class="av-t">Qualité premium</div><div class="av-d">Impression HD, finitions soignées, contrôlées à Bamako</div></div>
+    <div class="av"><i class="ti ti-world" aria-hidden="true"></i><div class="av-t">En expansion</div><div class="av-d">Nouveaux designs et exclusivités à venir</div></div>
+  </div>
+  <div class="ab-story">
+    <div class="as-h">L'histoire</div>
+    <p class="as-p">Tout a commencé à Bamako, avec une idée simple : et si on mettait la richesse culturelle du Mali dans la poche de chacun ? Du bogolan de Ségou aux calligraphies N'Ko, des monuments de Djenné aux masques dogon — notre patrimoine est extraordinaire et mérite d'être visible.</p>
+    <div class="as-quote"><p>«La culture n'est pas un musée. C'est quelque chose qu'on porte avec soi, chaque jour.»</p></div>
+    <p class="as-p">Le constat était là, évident : au Mali, on portait des coques d'iPhone importées, sans âme, sans histoire. Des marques étrangères qui ne nous parlaient pas. Pourquoi ne pas porter le bogolan ? Le Ciwara ? La grande mosquée de Djenné ? Ces symboles qui nous appartiennent et dont on est fiers.</p>
+    <p class="as-p">Chaque design CultureCase est pensé comme une mini-œuvre d'art. On ne copie pas — on crée. On va chercher dans les archives de l'art malien, dans les marchés de Bamako, dans les récits des anciens. Chaque couleur est choisie, chaque ligne a un sens. C'est ça, CultureCase.</p>
+    <div class="as-quote"><p>«Nous ne vendons pas des coques. Nous vendons de la fierté.»</p></div>
+    <p class="as-p">Aujourd'hui CultureCase grandit. De nouveaux designs arrivent, des exclusivités se préparent. La collection évolue avec notre culture — vivante, créative, fière. Chaque coque portée dans les rues de Bamako est un petit acte de résistance culturelle.</p>
+  </div>
+
+  <div class="timeline">
+    <div class="tl-title">Notre parcours</div>
+    <div class="tl-items">
+      <div class="tl-item">
+        <div class="tl-dot">💡</div>
+        <div class="tl-body">
+          <div class="tl-date">Le début</div>
+          <div class="tl-head">L'idée germe à Bamako</div>
+          <div class="tl-desc">Face aux coques sans identité qui envahissent le marché, l'idée naît : créer des designs 100% ancrés dans la culture malienne. Bogolan, N'Ko, Ciwara — tout notre patrimoine mérite d'être visible.</div>
+        </div>
+      </div>
+      <div class="tl-item">
+        <div class="tl-dot">🎨</div>
+        <div class="tl-body">
+          <div class="tl-date">La création</div>
+          <div class="tl-head">Les premiers designs voient le jour</div>
+          <div class="tl-desc">Les premières coques sont créées — Djenné, Bogolan, N'Ko, Ciwara. Chaque motif est travaillé avec soin pour être fidèle à son origine culturelle tout en s'adaptant au format de la coque.</div>
+        </div>
+      </div>
+      <div class="tl-item">
+        <div class="tl-dot">🚀</div>
+        <div class="tl-body">
+          <div class="tl-date">Le lancement</div>
+          <div class="tl-head">CultureCase est lancée à Bamako</div>
+          <div class="tl-desc">Le catalogue s'ouvre. Les premières commandes arrivent via WhatsApp. La réception est immédiate — les Maliens veulent porter leur culture. Le bouche-à-oreille fait le reste.</div>
+        </div>
+      </div>
+      <div class="tl-item">
+        <div class="tl-dot">🌱</div>
+        <div class="tl-body">
+          <div class="tl-date">Aujourd'hui & demain</div>
+          <div class="tl-head">L'expansion du catalogue</div>
+          <div class="tl-desc">De nouveaux designs arrivent régulièrement. Des exclusivités se préparent. CultureCase devient une marque, une communauté, un mouvement culturel.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="manifeste">
+    <div class="mf-inner">
+      <div class="mf-kicker">Notre engagement</div>
+      <div class="mf-title">Pourquoi <em>CultureCase</em> ?</div>
+      <div class="mf-grid">
+        <div class="mf-item"><i class="ti ti-certificate" aria-hidden="true"></i><div class="mf-item-t">Authenticité absolue</div><div class="mf-item-d">Chaque motif est documenté, respectueux de son origine. On ne caricature pas — on honore.</div></div>
+        <div class="mf-item"><i class="ti ti-heart" aria-hidden="true"></i><div class="mf-item-t">Fierté malienne</div><div class="mf-item-d">Porter CultureCase, c'est un geste de fierté. Une façon de dire qui on est sans avoir à parler.</div></div>
+        <div class="mf-item"><i class="ti ti-refresh" aria-hidden="true"></i><div class="mf-item-t">Culture vivante</div><div class="mf-item-d">La culture malienne n'est pas dans un musée. Elle vit, évolue. Nos designs aussi.</div></div>
+        <div class="mf-item"><i class="ti ti-users" aria-hidden="true"></i><div class="mf-item-t">Communauté</div><div class="mf-item-d">CultureCase grandit avec sa communauté. Vos retours, vos suggestions façonnent les prochains designs.</div></div>
+      </div>
+      <div class="mf-cta">
+        <button class="btn-primary" onclick="go('catalogue')"><i class="ti ti-arrow-right" aria-hidden="true"></i> Voir les designs</button>
+        <button class="btn-ghost" onclick="go('blog')">Lire le blog →</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- BLOG -->
+<div class="pg" id="pg-blog">
+  <div class="blog-hero">
+    <div class="blog-hero-inner">
+      <div class="blog-kicker">Culture · Art · Identité</div>
+      <h2>Le <em>Blog</em></h2>
+      <p>Histoires, explications et récits autour de la culture malienne. Pour comprendre ce que vous portez — et en être encore plus fiers.</p>
+    </div>
+  </div>
+
+  <div class="blog-body">
+    <div class="blog-grid" id="blog-grid"></div>
+  </div>
+</div>
+
+<!-- BLOG DETAIL -->
+<div class="pg" id="pg-blogdet">
+  <div class="blog-det">
+    <button class="bk" onclick="go('blog')">← Retour au blog</button>
+    <div id="bd-tag" class="bd-tag"></div>
+    <div class="bd-title" id="bd-title"></div>
+    <div class="bd-meta"><span class="bd-date" id="bd-date"></span><span id="bd-read"></span></div>
+    <div class="bd-img"><img id="bd-img" src="" alt=""></div>
+    <div class="bd-content" id="bd-content"></div>
+  </div>
+  <div class="bd-related">
+    <div class="bd-rel-t">À lire aussi</div>
+    <div class="bd-rel-grid" id="bd-related"></div>
+  </div>
+</div>
+
+<!-- CONTACT -->
+<div class="pg" id="pg-contact">
+  <div class="ct-wrap">
+    <div class="ct-l">
+      <div class="hero-eyebrow" style="margin-bottom:1rem"><div class="ey-line"></div><span class="ey-txt">Nous contacter</span></div>
+      <h2>Parlons-nous</h2>
+      <p>Pour commander, poser une question ou nous rejoindre comme distributeur — on est disponibles sur WhatsApp.</p>
+      <div class="ct-links">
+        <a class="ct-lnk" href="https://wa.me/22375992482"><i class="ti ti-brand-whatsapp" aria-hidden="true"></i><div><div class="ct-lnk-m">+223 75 99 24 82</div><div class="ct-lnk-s">WhatsApp Business · Réponse rapide</div></div></a>
+        <a class="ct-lnk" href="https://www.instagram.com/culturecase_official"><i class="ti ti-brand-instagram" aria-hidden="true"></i><div><div class="ct-lnk-m">@culturecase_official</div><div class="ct-lnk-s">Instagram</div></div></a>
+        <a class="ct-lnk" href="https://www.tiktok.com/@culturecase"><i class="ti ti-brand-tiktok" aria-hidden="true"></i><div><div class="ct-lnk-m">@culturecase</div><div class="ct-lnk-s">TikTok</div></div></a>
+        <a class="ct-lnk" href="https://linktr.ee/culturecase"><i class="ti ti-link" aria-hidden="true"></i><div><div class="ct-lnk-m">linktr.ee/culturecase</div><div class="ct-lnk-s">Tous nos liens</div></div></a>
+        <div class="ct-lnk"><i class="ti ti-map-pin" aria-hidden="true"></i><div><div class="ct-lnk-m">Bamako, Mali</div><div class="ct-lnk-s">Livraison dans tout Bamako</div></div></div>
+      </div>
+    </div>
+    <div class="ct-form">
+      <div class="cf-title">Envoyer un message</div>
+      <div class="cf-g"><label class="cf-lbl">Nom</label><input class="cf-in" type="text" id="cf-n" placeholder="Votre nom"></div>
+      <div class="cf-g"><label class="cf-lbl">Téléphone / WhatsApp</label><input class="cf-in" type="text" id="cf-p" placeholder="+223..."></div>
+      <div class="cf-g"><label class="cf-lbl">Message</label><textarea class="cf-in" id="cf-m" placeholder="Votre question ou commande..."></textarea></div>
+      <button class="cf-btn" onclick="sendContact()">Envoyer via WhatsApp →</button>
+    </div>
+
+    <!-- ══ FORMULAIRE AVIS ══ -->
+    <div class="ct-form" style="margin-top:2rem;border-top:1px solid var(--border);padding-top:2rem">
+      <div class="cf-title" style="display:flex;align-items:center;gap:8px">
+        <i class="ti ti-star" style="color:var(--gold)"></i> Laisser un avis
+      </div>
+      <p style="font-size:13px;color:var(--muted);margin-bottom:1.25rem">Votre avis apparaîtra directement sur l'accueil parmi les autres clients.</p>
+
+      <!-- Étoiles -->
+      <div class="cf-g">
+        <label class="cf-lbl">Note *</label>
+        <div id="star-row" style="display:flex;gap:8px;font-size:2rem;cursor:pointer">
+          <span onclick="pickStar(1)" style="color:var(--border2);transition:color .15s">★</span>
+          <span onclick="pickStar(2)" style="color:var(--border2);transition:color .15s">★</span>
+          <span onclick="pickStar(3)" style="color:var(--border2);transition:color .15s">★</span>
+          <span onclick="pickStar(4)" style="color:var(--border2);transition:color .15s">★</span>
+          <span onclick="pickStar(5)" style="color:var(--border2);transition:color .15s">★</span>
+        </div>
+      </div>
+      <div class="cf-g"><label class="cf-lbl">Prénom &amp; initiale *</label><input class="cf-in" type="text" id="av-nom" placeholder="ex: Aminata K." maxlength="30"></div>
+      <div class="cf-g"><label class="cf-lbl">Quartier (optionnel)</label><input class="cf-in" type="text" id="av-loc" placeholder="ex: Badalabougou, Bamako" maxlength="40"></div>
+      <div class="cf-g"><label class="cf-lbl">Votre avis *</label><textarea class="cf-in" id="av-txt" placeholder="Partagez votre expérience…" maxlength="280" rows="4"></textarea></div>
+      <div id="av-err" style="display:none;background:#fff0ec;border:1px solid #f5c6b0;border-radius:var(--radius);padding:.6rem 1rem;font-size:13px;color:#c03a08;margin-bottom:.75rem"></div>
+      <button class="cf-btn" onclick="submitAvis()">Publier mon avis →</button>
+    </div>
+  </div>
+</div>
+
+<div class="footer">
+  <div class="footer-top">
+    <div class="footer-brand-col">
+      <span class="footer-logo">CULTURECASE</span>
+      <p class="footer-brand-desc">Designs exclusifs inspirés du patrimoine malien. Conçus à Bamako, portés partout.</p>
+      <div class="footer-social">
+        <a class="soc" href="https://www.instagram.com/culturecase_official" title="Instagram"><i class="ti ti-brand-instagram" aria-hidden="true"></i></a>
+        <a class="soc" href="https://www.tiktok.com/@culturecase" title="TikTok"><i class="ti ti-brand-tiktok" aria-hidden="true"></i></a>
+        <a class="soc" href="https://wa.me/22375992482" title="WhatsApp"><i class="ti ti-brand-whatsapp" aria-hidden="true"></i></a>
+      </div>
+    </div>
+    <div>
+      <div class="footer-col-title">Navigation</div>
+      <div class="footer-links">
+        <button class="footer-link" onclick="go('catalogue')">Catalogue</button>
+        <button class="footer-link" onclick="go('about')">Notre histoire</button>
+        <button class="footer-link" onclick="go('blog')">Blog</button>
+        <button class="footer-link" onclick="go('contact')">Contact</button>
+      </div>
+    </div>
+    <div>
+      <div class="footer-col-title">Commander</div>
+      <div class="footer-links">
+        <a class="footer-link" href="https://wa.me/22375992482" style="text-decoration:none">WhatsApp</a>
+        <button class="footer-link" onclick="go('contact')">Nous écrire</button>
+        <button class="footer-link" onclick="go('catalogue')">Voir les designs</button>
+      </div>
+    </div>
+    <div>
+      <div class="footer-col-title">Informations</div>
+      <div class="footer-links">
+        <span class="footer-link" style="cursor:default">📍 Bamako, Mali</span>
+        <span class="footer-link" style="cursor:default">📦 Livraison Bamako</span>
+        <span class="footer-link" style="cursor:default">💬 Réponse rapide WA</span>
+      </div>
+    </div>
+  </div>
+  <div class="footer-bottom">
+    <span class="footer-copy">© <span id="footer-year"></span> CultureCase · Tous droits réservés</span>
+    <div style="display:flex;gap:1.5rem;flex-wrap:wrap;align-items:center">
+      <button class="footer-link" onclick="go('faq')" style="font-size:12px;opacity:.7">FAQ</button>
+      <button class="footer-link" onclick="go('livraison')" style="font-size:12px;opacity:.7">Livraison &amp; retours</button>
+      <button class="footer-link" onclick="go('politique')" style="font-size:12px;opacity:.7">Politique commerciale</button>
+      <button class="footer-link" onclick="go('paiement')" style="font-size:12px;opacity:.7">Modes de paiement</button>
+    </div>
+    <span class="footer-made">Fait avec <span>♥</span> à Bamako</span>
+  </div>
+</div>
+</div>
+
+<!-- ══ PAGE FAQ ══ -->
+<!-- ══ PAGE FAQ ══ -->
+<div class="pg" id="pg-faq">
+  <div style="max-width:760px;margin:0 auto;padding:3rem 1.5rem 5rem">
+    <button onclick="go('home')" style="background:none;border:none;color:var(--ember);font-size:13px;cursor:pointer;display:flex;align-items:center;gap:6px;margin-bottom:2rem;padding:0"><i class="ti ti-arrow-left"></i> Retour à l'accueil</button>
+    <h1 style="font-family:'Bebas Neue',sans-serif;font-size:2.8rem;color:var(--ink);margin-bottom:.5rem">FAQ</h1>
+    <p style="color:var(--muted);margin-bottom:3rem">Questions fréquemment posées</p>
+    <div style="display:flex;flex-direction:column;gap:1rem">
+      <div style="border:1px solid var(--border);border-radius:var(--radius-lg);overflow:hidden"><details><summary style="padding:1.1rem 1.5rem;cursor:pointer;font-weight:500;font-size:15px;color:var(--ink);list-style:none;display:flex;justify-content:space-between;align-items:center">Comment passer une commande ? <i class="ti ti-chevron-down" style="color:var(--ember)"></i></summary><div style="padding:0 1.5rem 1.25rem;color:var(--muted);line-height:1.7;font-size:14px">Choisissez votre design, sélectionnez votre modèle d'iPhone, puis cliquez sur "Commander sur WhatsApp". Un message pré-rédigé s'ouvrira directement.</div></details></div>
+      <div style="border:1px solid var(--border);border-radius:var(--radius-lg);overflow:hidden"><details><summary style="padding:1.1rem 1.5rem;cursor:pointer;font-weight:500;font-size:15px;color:var(--ink);list-style:none;display:flex;justify-content:space-between;align-items:center">Quels modèles d'iPhone sont compatibles ? <i class="ti ti-chevron-down" style="color:var(--ember)"></i></summary><div style="padding:0 1.5rem 1.25rem;color:var(--muted);line-height:1.7;font-size:14px">iPhone 12, 12 Pro Max, 13, 13 Pro, 13 Pro Max (3 500 FCFA) et iPhone 14 à 17 Pro Max (5 000 FCFA).</div></details></div>
+      <div style="border:1px solid var(--border);border-radius:var(--radius-lg);overflow:hidden"><details><summary style="padding:1.1rem 1.5rem;cursor:pointer;font-weight:500;font-size:15px;color:var(--ink);list-style:none;display:flex;justify-content:space-between;align-items:center">Combien de temps pour recevoir ma commande ? <i class="ti ti-chevron-down" style="color:var(--ember)"></i></summary><div style="padding:0 1.5rem 1.25rem;color:var(--muted);line-height:1.7;font-size:14px">Livraison ou retrait dans la journée ou le lendemain à Bamako. Vous serez contacté par WhatsApp.</div></details></div>
+      <div style="border:1px solid var(--border);border-radius:var(--radius-lg);overflow:hidden"><details><summary style="padding:1.1rem 1.5rem;cursor:pointer;font-weight:500;font-size:15px;color:var(--ink);list-style:none;display:flex;justify-content:space-between;align-items:center">Le stock affiché est-il à jour ? <i class="ti ti-chevron-down" style="color:var(--ember)"></i></summary><div style="padding:0 1.5rem 1.25rem;color:var(--muted);line-height:1.7;font-size:14px">Oui, notre stock est synchronisé en temps réel.</div></details></div>
+      <div style="border:1px solid var(--border);border-radius:var(--radius-lg);overflow:hidden"><details><summary style="padding:1.1rem 1.5rem;cursor:pointer;font-weight:500;font-size:15px;color:var(--ink);list-style:none;display:flex;justify-content:space-between;align-items:center">Puis-je retourner un produit ? <i class="ti ti-chevron-down" style="color:var(--ember)"></i></summary><div style="padding:0 1.5rem 1.25rem;color:var(--muted);line-height:1.7;font-size:14px">Pas de retour pour convenance. Échange sans frais dans les 48h uniquement en cas de défaut de fabrication.</div></details></div>
+      <div style="border:1px solid var(--border);border-radius:var(--radius-lg);overflow:hidden"><details><summary style="padding:1.1rem 1.5rem;cursor:pointer;font-weight:500;font-size:15px;color:var(--ink);list-style:none;display:flex;justify-content:space-between;align-items:center">Vous livrez en dehors de Bamako ? <i class="ti ti-chevron-down" style="color:var(--ember)"></i></summary><div style="padding:0 1.5rem 1.25rem;color:var(--muted);line-height:1.7;font-size:14px">Principalement Bamako pour l'instant. Contactez-nous sur WhatsApp pour discuter d'une livraison ailleurs.</div></details></div>
+      <div style="border:1px solid var(--border);border-radius:var(--radius-lg);overflow:hidden"><details><summary style="padding:1.1rem 1.5rem;cursor:pointer;font-weight:500;font-size:15px;color:var(--ink);list-style:none;display:flex;justify-content:space-between;align-items:center">Comment vous contacter ? <i class="ti ti-chevron-down" style="color:var(--ember)"></i></summary><div style="padding:0 1.5rem 1.25rem;color:var(--muted);line-height:1.7;font-size:14px">WhatsApp au +223 75 99 24 82 — réponse dans l'heure en général.</div></details></div>
+    </div>
+    <div style="margin-top:3rem;background:var(--sand);border-radius:var(--radius-lg);padding:1.5rem 2rem;text-align:center">
+      <p style="font-weight:500;margin-bottom:.75rem">Vous n'avez pas trouvé votre réponse ?</p>
+      <a href="https://wa.me/22375992482" style="display:inline-flex;align-items:center;gap:8px;background:var(--ember);color:#fff;padding:.7rem 1.5rem;border-radius:var(--radius);font-size:14px;font-weight:500;text-decoration:none"><i class="ti ti-brand-whatsapp"></i> Nous écrire sur WhatsApp</a>
+    </div>
+  </div>
+</div>
+
+<!-- ══ PAGE LIVRAISON & RETOURS ══ -->
+<div class="pg" id="pg-livraison">
+  <div style="max-width:760px;margin:0 auto;padding:3rem 1.5rem 5rem">
+    <button onclick="go('home')" style="background:none;border:none;color:var(--ember);font-size:13px;cursor:pointer;display:flex;align-items:center;gap:6px;margin-bottom:2rem;padding:0"><i class="ti ti-arrow-left"></i> Retour à l'accueil</button>
+    <h1 style="font-family:'Bebas Neue',sans-serif;font-size:2.8rem;color:var(--ink);margin-bottom:.5rem">Livraison &amp; Retours</h1>
+    <p style="color:var(--muted);margin-bottom:3rem">Tout ce que vous devez savoir</p>
+    <div style="display:flex;flex-direction:column;gap:2rem">
+      <div style="background:var(--warm);border-left:4px solid var(--ember);border-radius:0 var(--radius-lg) var(--radius-lg) 0;padding:1.5rem 2rem"><h2 style="font-size:1.1rem;font-weight:600;margin-bottom:1rem;color:var(--ink)">🛵 Livraison à domicile</h2><p style="color:var(--muted);line-height:1.7;font-size:14px">Livraison directement chez vous à Bamako. Notre livreur vous contacte par WhatsApp. Généralement dans la journée ou le lendemain.</p></div>
+      <div style="background:var(--warm);border-left:4px solid var(--gold);border-radius:0 var(--radius-lg) var(--radius-lg) 0;padding:1.5rem 2rem"><h2 style="font-size:1.1rem;font-weight:600;margin-bottom:1rem;color:var(--ink)">📍 Retrait en point relais</h2><p style="color:var(--muted);line-height:1.7;font-size:14px">Contactez-nous sur WhatsApp pour connaître le point de retrait le plus proche de vous.</p></div>
+      <div style="background:var(--warm);border-left:4px solid #4caf50;border-radius:0 var(--radius-lg) var(--radius-lg) 0;padding:1.5rem 2rem"><h2 style="font-size:1.1rem;font-weight:600;margin-bottom:1rem;color:var(--ink)">🔄 Politique de retour &amp; échange</h2><p style="color:var(--muted);line-height:1.7;font-size:14px">Pas de retour pour convenance. <strong style="color:var(--ink)">Échange uniquement en cas de défaut de fabrication</strong> signalé dans les 48h avec photo.</p></div>
+      <div style="border:1px solid var(--border);border-radius:var(--radius-lg);padding:1.5rem 2rem"><h2 style="font-size:1.1rem;font-weight:600;margin-bottom:1rem;color:var(--ink)">⚠️ Conditions importantes</h2>
+        <div style="display:flex;flex-direction:column;gap:.6rem">
+          <div style="display:flex;gap:10px;font-size:14px;color:var(--muted)"><span style="color:var(--ember);flex-shrink:0">→</span>Produit dans son état d'origine (non utilisé, non rayé).</div>
+          <div style="display:flex;gap:10px;font-size:14px;color:var(--muted)"><span style="color:var(--ember);flex-shrink:0">→</span>Échange soumis à la disponibilité du même modèle en stock.</div>
+          <div style="display:flex;gap:10px;font-size:14px;color:var(--muted)"><span style="color:var(--ember);flex-shrink:0">→</span>Frais de livraison pour l'échange pris en charge par CultureCase.</div>
+          <div style="display:flex;gap:10px;font-size:14px;color:var(--muted)"><span style="color:var(--ember);flex-shrink:0">→</span>Aucun remboursement en espèces — uniquement échange produit.</div>
+          <div style="display:flex;gap:10px;font-size:14px;color:var(--muted)"><span style="color:var(--ember);flex-shrink:0">→</span>Réclamation après 48h non traitée.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ PAGE POLITIQUE COMMERCIALE ══ -->
+<div class="pg" id="pg-politique">
+  <div style="max-width:760px;margin:0 auto;padding:3rem 1.5rem 5rem">
+    <button onclick="go('home')" style="background:none;border:none;color:var(--ember);font-size:13px;cursor:pointer;display:flex;align-items:center;gap:6px;margin-bottom:2rem;padding:0"><i class="ti ti-arrow-left"></i> Retour à l'accueil</button>
+    <h1 style="font-family:'Bebas Neue',sans-serif;font-size:2.8rem;color:var(--ink);margin-bottom:.5rem">Politique Commerciale</h1>
+    <p style="color:var(--muted);margin-bottom:3rem">Conditions générales de vente — CultureCase, Bamako</p>
+    <div style="display:flex;flex-direction:column;gap:2rem;font-size:14px;color:var(--muted);line-height:1.8">
+      <div style="border-bottom:1px solid var(--border);padding-bottom:1.5rem"><h2 style="font-size:1rem;font-weight:600;color:var(--ink);margin-bottom:.5rem">1. Objet</h2><p>Les présentes conditions régissent les ventes de coques iPhone de CultureCase via WhatsApp ou le site web. Toute commande implique leur acceptation.</p></div>
+      <div style="border-bottom:1px solid var(--border);padding-bottom:1.5rem"><h2 style="font-size:1rem;font-weight:600;color:var(--ink);margin-bottom:.5rem">2. Produits</h2><p>Coques iPhone à motifs culturels africains et maliens. Visuels fidèles aux produits réels. De légères variations de teinte peuvent exister selon l'écran.</p></div>
+      <div style="border-bottom:1px solid var(--border);padding-bottom:1.5rem"><h2 style="font-size:1rem;font-weight:600;color:var(--ink);margin-bottom:.5rem">3. Prix</h2><p>Prix en FCFA toutes taxes comprises. Tarifs modifiables à tout moment. Le prix applicable est celui en vigueur à la validation de la commande.</p></div>
+      <div style="border-bottom:1px solid var(--border);padding-bottom:1.5rem"><h2 style="font-size:1rem;font-weight:600;color:var(--ink);margin-bottom:.5rem">4. Commande</h2><p>Commande via WhatsApp, ferme et définitive après confirmation. Aucune annulation possible une fois en préparation.</p></div>
+      <div style="border-bottom:1px solid var(--border);padding-bottom:1.5rem"><h2 style="font-size:1rem;font-weight:600;color:var(--ink);margin-bottom:.5rem">5. Disponibilité</h2><p>Stocks mis à jour en temps réel. En cas d'indisponibilité après confirmation, nous proposons une alternative immédiatement.</p></div>
+      <div style="border-bottom:1px solid var(--border);padding-bottom:1.5rem"><h2 style="font-size:1rem;font-weight:600;color:var(--ink);margin-bottom:.5rem">6. Propriété intellectuelle</h2><p>Tous les designs sont créés ou licenciés exclusivement par CultureCase. Toute reproduction commerciale sans autorisation est interdite.</p></div>
+      <div style="border-bottom:1px solid var(--border);padding-bottom:1.5rem"><h2 style="font-size:1rem;font-weight:600;color:var(--ink);margin-bottom:.5rem">7. Données personnelles</h2><p>Nom, téléphone et quartier collectés uniquement pour la livraison. Jamais partagés à des fins commerciales.</p></div>
+      <div style="border-bottom:1px solid var(--border);padding-bottom:1.5rem"><h2 style="font-size:1rem;font-weight:600;color:var(--ink);margin-bottom:.5rem">8. Litiges</h2><p>Solution amiable recherchée en priorité via WhatsApp. Réponse à toute réclamation sous 48h ouvrables.</p></div>
+      <p style="font-size:12px;color:var(--border2)">Dernière mise à jour : Juin 2026 · CultureCase, Bamako, Mali</p>
+    </div>
+  </div>
+</div>
+
+<!-- ══ PAGE MODES DE PAIEMENT ══ -->
+<div class="pg" id="pg-paiement">
+  <div style="max-width:760px;margin:0 auto;padding:3rem 1.5rem 5rem">
+    <button onclick="go('home')" style="background:none;border:none;color:var(--ember);font-size:13px;cursor:pointer;display:flex;align-items:center;gap:6px;margin-bottom:2rem;padding:0"><i class="ti ti-arrow-left"></i> Retour à l'accueil</button>
+    <h1 style="font-family:'Bebas Neue',sans-serif;font-size:2.8rem;color:var(--ink);margin-bottom:.5rem">Modes de Paiement</h1>
+    <p style="color:var(--muted);margin-bottom:3rem">Payez comme vous voulez — simple et sécurisé</p>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:1.25rem;margin-bottom:2.5rem">
+      <div style="background:var(--warm);border:1px solid var(--border);border-radius:var(--radius-lg);padding:1.5rem;text-align:center"><div style="font-size:2.5rem;margin-bottom:.75rem">🟠</div><div style="font-weight:600;font-size:1rem;margin-bottom:.4rem;color:var(--ink)">Orange Money</div><div style="font-size:13px;color:var(--muted)">Paiement mobile rapide via Orange Mali</div></div>
+      <div style="background:var(--warm);border:1px solid var(--border);border-radius:var(--radius-lg);padding:1.5rem;text-align:center"><div style="font-size:2.5rem;margin-bottom:.75rem">🔵</div><div style="font-weight:600;font-size:1rem;margin-bottom:.4rem;color:var(--ink)">Wave</div><div style="font-size:13px;color:var(--muted)">Transfert instantané via l'application Wave</div></div>
+      <div style="background:var(--warm);border:1px solid var(--border);border-radius:var(--radius-lg);padding:1.5rem;text-align:center"><div style="font-size:2.5rem;margin-bottom:.75rem">💵</div><div style="font-weight:600;font-size:1rem;margin-bottom:.4rem;color:var(--ink)">Espèces</div><div style="font-size:13px;color:var(--muted)">Paiement en cash à la livraison ou au retrait</div></div>
+    </div>
+    <div style="background:var(--sand);border-radius:var(--radius-lg);padding:1.5rem 2rem;margin-bottom:2rem">
+      <h2 style="font-size:1rem;font-weight:600;margin-bottom:1rem;color:var(--ink)">Comment ça marche ?</h2>
+      <div style="display:flex;flex-direction:column;gap:.75rem">
+        <div style="display:flex;gap:12px;align-items:flex-start"><span style="background:var(--ember);color:#fff;width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;flex-shrink:0">1</span><span style="font-size:14px;color:var(--muted);line-height:1.6">Vous passez commande sur WhatsApp en précisant design, modèle et adresse.</span></div>
+        <div style="display:flex;gap:12px;align-items:flex-start"><span style="background:var(--ember);color:#fff;width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;flex-shrink:0">2</span><span style="font-size:14px;color:var(--muted);line-height:1.6">Notre équipe confirme et vous communique le montant total.</span></div>
+        <div style="display:flex;gap:12px;align-items:flex-start"><span style="background:var(--ember);color:#fff;width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;flex-shrink:0">3</span><span style="font-size:14px;color:var(--muted);line-height:1.6">Vous choisissez : Orange Money, Wave ou espèces à la livraison.</span></div>
+        <div style="display:flex;gap:12px;align-items:flex-start"><span style="background:var(--ember);color:#fff;width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;flex-shrink:0">4</span><span style="font-size:14px;color:var(--muted);line-height:1.6">Orange Money / Wave : paiement avant ou à la livraison selon accord.</span></div>
+        <div style="display:flex;gap:12px;align-items:flex-start"><span style="background:var(--ember);color:#fff;width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;flex-shrink:0">5</span><span style="font-size:14px;color:var(--muted);line-height:1.6">Espèces : règlement au moment de la remise du colis.</span></div>
+      </div>
+    </div>
+    <div style="border:1px solid var(--border);border-radius:var(--radius-lg);padding:1.25rem 1.5rem;font-size:13px;color:var(--muted)"><strong style="color:var(--ink)">Note :</strong> CultureCase ne demande jamais de paiement anticipé total avant confirmation. Méfiez-vous de toute demande non initiée par notre équipe officielle WhatsApp.</div>
+  </div>
+</div>
+
+<div class="toast" id="toast-el"></div>
+
+<!-- ══ FIREBASE SDK ══ -->
+
+<script>
+// ══ DONNÉES STATIQUES (fallback + état initial) ══════════════════════════════
+// Remplacées en temps réel par Firebase dès que Firestore répond.
+
+// status: 'available' | 'limited' | 'out'
+// Basé sur le backup stock réel du 31 mai 2026
+const DS=[
+  {id:'D1', name:'DJENNÉ',           img:'https://res.cloudinary.com/dknfqd2xp/image/upload/v1779767538/ynvij5rszvqmamfs9hgm.jpg',  story:'La Grande Mosquée de Djenné — monument le plus emblématique de l\'architecture soudano-sahélienne. Ce design célèbre l\'une des plus belles constructions d\'Afrique, inscrite au patrimoine mondial de l\'UNESCO.',cat:'MONUMENT'},
+  {id:'D2', name:'PORTE DE TOMBOUCTOU',status:'available',img:'https://res.cloudinary.com/dknfqd2xp/image/upload/v1779767531/idasnkfvznmlzfn6vux1.jpg',  story:'Tombouctou, la ville mystérieuse au bout du désert. Ses portes ont vu passer des siècles de commerce, de savoir et de civilisation. Un hommage à la cité des 333 saints.',cat:'MONUMENT'},
+  {id:'D3', name:'MUNYU',            img:'https://res.cloudinary.com/dknfqd2xp/image/upload/v1779767550/erdvdubi3wvbb3pgoirj.jpg',  story:'Munyu — mot bambara qui signifie la patience, la résilience. Une valeur cardinale de la culture malienne. Ce design en porte l\'essence et la beauté.',cat:'VALEUR'},
+  {id:'D4', name:'BLM',                    img:'https://res.cloudinary.com/dknfqd2xp/image/upload/v1779767873/x3wc21gdtcsosbkb8tsk.jpg',  story:'Un design qui porte un message universel — la dignité et la fierté noire. Ancré dans l\'identité africaine, ouvert au monde entier.',cat:'VALEUR'},
+  {id:'D5', name:'INDIGO & CORIS',   img:'https://res.cloudinary.com/dknfqd2xp/image/upload/v1779767559/bxujdu2161ecy1zttj3y.jpg',  story:'L\'indigo, teinture ancestrale des tisserands du Mali. Les cauris, monnaie d\'échange et symbole de prospérité. Un mariage de traditions qui traverse les siècles.',cat:'TEXTILE'},
+  {id:'D6', name:'MASQUE DOGON',       img:'https://res.cloudinary.com/dknfqd2xp/image/upload/v1779767579/l0zypv1qg1yxkjzt50c3.jpg',  story:'Les masques dogon sont parmi les plus fascinants d\'Afrique de l\'Ouest. Utilisés lors des cérémonies Dama, ils incarnent les esprits des ancêtres et la connexion entre le monde des vivants et celui des morts.',cat:'MASQUE'},
+  {id:'D7', name:'AFRICA',             img:'https://res.cloudinary.com/dknfqd2xp/image/upload/v1779767567/cbryluhomr6fn6ucoc38.jpg',  story:'L\'Afrique dans toute sa splendeur. Un design qui célèbre le continent mère, berceau de l\'humanité et source inépuisable de culture, de richesse et de créativité.',cat:'VALEUR'},
+  {id:'D8', name:'TOUAREG',          img:'https://res.cloudinary.com/dknfqd2xp/image/upload/v1779767591/y4lfqumr2zpnu1ayydxh.jpg',  story:'Peuple du désert, gardiens du Sahara. Les Touaregs du Mali sont des nomades fiers dont la culture, les bijoux et les motifs géométriques constituent un art à part entière.',cat:'PEUPLE'},
+  {id:'D9', name:'KÔ MUSSO',         img:'https://res.cloudinary.com/dknfqd2xp/image/upload/v1779767513/g9hlo9nazfns8zio19kh.jpg',  story:'La femme ciwara — symbole de fertilité et de travail. Dans la cosmogonie bambara, le ciwara est mi-homme mi-antilope, enseignant aux hommes l\'art de la culture de la terre.',cat:'CIWARA'},
+  {id:'D10',name:'MUSSO',                  img:'https://res.cloudinary.com/dknfqd2xp/image/upload/v1779767522/rh1twzztxdfkvxszxm2e.jpg',  story:'Musso signifie femme en bambara. Un hommage à la femme malienne — pilier de la famille, gardienne des traditions, force silencieuse d\'une société entière.',cat:'VALEUR'},
+  {id:'D11',name:'DJOLIBA',                img:'https://res.cloudinary.com/dknfqd2xp/image/upload/v1779767684/kz0hqllpclzst4tdxe4w.jpg',  story:'Le Djoliba — nom bambara du fleuve Niger. Artère vitale du Mali, source de vie pour des millions de personnes depuis des millénaires. Ce design rend hommage au grand fleuve.',cat:'NATURE'},
+  {id:'D12',name:'BOGOLAN',          img:'https://res.cloudinary.com/dknfqd2xp/image/upload/v1779767675/zutdygs9wnxbheeilcl9.jpg',  story:'Le bogolan est l\'âme textile du Mali. Fabriqué à partir de coton tissé à la main et teint à la boue fermentée, ses motifs géométriques racontent des histoires, des proverbes et des batailles. Le textile africain le plus distinctif au monde.',cat:'TEXTILE'},
+  {id:'D13',name:"N'KO",            img:'https://res.cloudinary.com/dknfqd2xp/image/upload/v1779767905/wketzekxsrqlupeqrdi2.jpg',  story:'L\'alphabet N\'Ko, créé par Solomana Kanté en 1949 pour transcrire les langues mandingues. Un système d\'écriture né au Mali, symbole d\'indépendance culturelle et de fierté africaine.',cat:'CULTURE'},
+  {id:'D14',name:'CIWARA MARON',     img:'https://res.cloudinary.com/dknfqd2xp/image/upload/v1779767813/ujlarvjopqep37hwm2n2.jpg',  story:'Le Ciwara, heaume cérémoniel bambara représentant l\'antilope mythique qui enseigna l\'agriculture aux hommes. L\'une des icônes les plus reconnues de l\'art africain dans le monde.',cat:'CIWARA'},
+  {id:'D15',name:'HOMME BLEU',         img:'https://res.cloudinary.com/dknfqd2xp/image/upload/v1779767825/aucphxdwahbfgtfvf3aw.jpg',  story:'L\'Homme Bleu — surnom des Touaregs dont les vêtements en indigo teignent la peau. Figure mystérieuse du désert, symbole d\'un peuple libre et indomptable.',cat:'PEUPLE'},
+  {id:'D16',name:'AZTÈQUE',                img:'https://res.cloudinary.com/dknfqd2xp/image/upload/v1779767836/siov0fyjiemh53flyiod.jpg',  story:'Un dialogue entre les civilisations — les motifs aztèques résonnent avec les géométries du bogolan malien. Deux mondes, une même recherche de beauté et de sens.',cat:'CULTURE'},
+  {id:'D17',name:'CAURIS & BAMBARA',   img:'https://res.cloudinary.com/dknfqd2xp/image/upload/v1779767944/e9hka8dwnpzsxdiltivc.jpg',  story:'Les cauris, monnaie sacrée et ornement de beauté. Le masque bambara, gardien des rites d\'initiation. Deux symboles fondamentaux de la culture malienne réunis dans un design unique.',cat:'MASQUE'},
+  {id:'D18',name:'MONUMENT DU MALI',       img:'https://res.cloudinary.com/dknfqd2xp/image/upload/v1779767503/avfyqvpk913qxdhdaluq.jpg',  story:'Le Monument de la Paix de Bamako — symbole de la réconciliation nationale et de l\'unité malienne. Porter ce design c\'est affirmer son attachement à la paix et à la patrie.',cat:'MONUMENT'},
+  {id:'D19',name:'DJENNÉ ROUGE',           img:'https://res.cloudinary.com/dknfqd2xp/image/upload/v1779767700/nnj30wpau0ubjtwkcsuk.jpg',  story:'Djenné dans les teintes du soleil couchant. La grande mosquée baignée de rouge ocre — couleur de la terre du Mali, couleur de la vie et de la chaleur africaine.',cat:'MONUMENT'},
+  {id:'D20',name:'NYA',                    img:'https://res.cloudinary.com/dknfqd2xp/image/upload/v1779767662/ighfjwqwh4n8qqzxgclm.jpg',  story:'Nya — la divinité de la guérison et de la protection dans la tradition bambara. Un design qui porte en lui la puissance bienveillante des anciennes croyances maliennes.',cat:'CULTURE'},
+  {id:'D21',name:'CIWARA & BOGOLAN',       img:'https://res.cloudinary.com/dknfqd2xp/image/upload/v1779767961/cnfo3mbjmc0z6wd9x22l.jpg',  story:'La rencontre des deux grands symboles du Mali — le Ciwara antilope et le bogolan mud cloth. Un design qui condense l\'essence même de l\'identité malienne.',cat:'CIWARA'},
+  {id:'D22',name:'SARAMAYA',               img:'https://res.cloudinary.com/dknfqd2xp/image/upload/v1779767610/lenx0fj5n2cd8zlzauj9.jpg',  story:'Saramaya — "la beauté de l\'effort" en bambara. Ce design célèbre ceux qui travaillent dans l\'ombre pour faire briller les autres. Un hommage à la dignité du labeur.',cat:'VALEUR'},
+  {id:'D25',name:'WAX',                img:'https://res.cloudinary.com/dknfqd2xp/image/upload/v1779767470/hvzqpryowauueraiszqj.jpg',  story:'Le wax africain — tissu aux mille couleurs et aux mille histoires. Adopté et réinterprété par toute l\'Afrique de l\'Ouest, il est devenu un symbole de la mode africaine contemporaine.',cat:'TEXTILE'},
+  {id:'D28',name:'BÈNKADI',            img:'https://res.cloudinary.com/dknfqd2xp/image/upload/v1779767718/smtv6hdke2pdelv3z0ob.jpg',  story:'Bènkadi signifie "la bonne entente" en bambara — valeur fondamentale de la société malienne. Un appel à l\'harmonie, au dialogue et au vivre-ensemble.',cat:'VALEUR'},
+  {id:'D33',name:'SABABU',                 img:'https://res.cloudinary.com/dknfqd2xp/image/upload/v1779767455/ygwn0mfqo8fslzspvjko.jpg',  story:'Sababu — "la raison d\'être" en bambara. Ce design invite à la réflexion sur le sens et l\'identité. Pourquoi sommes-nous là ? Pour porter notre culture et la transmettre.',cat:'VALEUR'},
+  {id:'D34',name:'WARI',                   img:'https://res.cloudinary.com/dknfqd2xp/image/upload/v1779767415/sfayi0sxmnru3sjmcynq.jpg',  story:'Le Wari — jeu de stratégie ancestral répandu dans toute l\'Afrique de l\'Ouest. Bien plus qu\'un jeu, c\'est un exercice de sagesse, de calcul et de patience transmis de génération en génération.',cat:'CULTURE'},
+  {id:'D42',name:'AFRO QUEEN',             img:'https://res.cloudinary.com/dknfqd2xp/image/upload/v1779767356/yeiqf4sdqghcpuzjetti.jpg',  story:'La Reine Afro — célébration de la beauté naturelle africaine. Ce design est un hommage aux femmes noires qui portent leur identité avec fierté et élégance.',cat:'VALEUR'},
+  {id:'D43',name:'KAKÔLÔ',           img:'https://res.cloudinary.com/dknfqd2xp/image/upload/v1779926695/scyw8ovkaojowkrnbibc.jpg',  story:'Kakôlô — terme bambara évoquant l\'origine, les racines profondes. Se souvenir d\'où l\'on vient pour savoir où l\'on va.',cat:'CULTURE'},
+  {id:'D44',name:'BOZO',             img:'https://res.cloudinary.com/dknfqd2xp/image/upload/v1779926709/fozrtqbz0gzwn6nvgegu.jpg',  story:'Les Bozo — peuple pêcheur du fleuve Niger, maîtres de l\'eau et gardiens du Djoliba. Leur savoir-faire ancestral et leur lien intime avec le fleuve sont au cœur de ce design.',cat:'PEUPLE'},
+  {id:'D45',name:"N'MA",            img:'https://res.cloudinary.com/dknfqd2xp/image/upload/v1779926721/f3mjcfsij2dwxljd1jzx.jpg',  story:'N\'Ma — "la mère" en bambara. La mère est le pilier de la société malienne, source d\'amour, de sagesse et de continuité culturelle.',cat:'VALEUR'},
+  {id:'D46',name:'SOUDAN',           img:'https://res.cloudinary.com/dknfqd2xp/image/upload/v1779926774/zqfkjq0fug2htgxl1mql.jpg',  story:'Le Soudan français — nom historique du Mali avant l\'indépendance. Un design qui rappelle les racines historiques du pays et le chemin parcouru vers la liberté.',cat:'MONUMENT'}
+];
+
+// stock réel par design × modèle — extrait du backup 31/05/2026
+const STOCK_MAP = {
+  "D1":  {"iPhone 12":2,"iPhone 12 Pro Max":0,"iPhone 13":2,"iPhone 13 Pro":1,"iPhone 13 Pro Max":0,"iPhone 14":1,"iPhone 14 Plus":1,"iPhone 14 Pro":0,"iPhone 14 Pro Max":2,"iPhone 15":1,"iPhone 15 Plus":1,"iPhone 15 Pro":0,"iPhone 15 Pro Max":1,"iPhone 16":0,"iPhone 16 Plus":0,"iPhone 16 Pro":1,"iPhone 16 Pro Max":0,"iPhone 17":0,"iPhone 17 Air":0,"iPhone 17 Pro":5,"iPhone 17 Pro Max":6},
+  "D2":  {"iPhone 12":1,"iPhone 12 Pro Max":1,"iPhone 13":2,"iPhone 13 Pro":0,"iPhone 13 Pro Max":0,"iPhone 14":1,"iPhone 14 Plus":1,"iPhone 14 Pro":0,"iPhone 14 Pro Max":1,"iPhone 15":2,"iPhone 15 Plus":2,"iPhone 15 Pro":0,"iPhone 15 Pro Max":0,"iPhone 16":0,"iPhone 16 Plus":0,"iPhone 16 Pro":0,"iPhone 16 Pro Max":1,"iPhone 17":0,"iPhone 17 Air":1,"iPhone 17 Pro":1,"iPhone 17 Pro Max":0},
+  "D3":  {"iPhone 12":1,"iPhone 12 Pro Max":1,"iPhone 13":1,"iPhone 13 Pro":1,"iPhone 13 Pro Max":0,"iPhone 14":1,"iPhone 14 Plus":1,"iPhone 14 Pro":1,"iPhone 14 Pro Max":0,"iPhone 15":2,"iPhone 15 Plus":0,"iPhone 15 Pro":0,"iPhone 15 Pro Max":1,"iPhone 16":0,"iPhone 16 Plus":0,"iPhone 16 Pro":1,"iPhone 16 Pro Max":0,"iPhone 17":0,"iPhone 17 Air":0,"iPhone 17 Pro":0,"iPhone 17 Pro Max":0},
+  "D4":  {"iPhone 12":0,"iPhone 12 Pro Max":0,"iPhone 13":0,"iPhone 13 Pro":0,"iPhone 13 Pro Max":0,"iPhone 14":1,"iPhone 14 Plus":1,"iPhone 14 Pro":0,"iPhone 14 Pro Max":0,"iPhone 15":0,"iPhone 15 Plus":0,"iPhone 15 Pro":0,"iPhone 15 Pro Max":1,"iPhone 16":0,"iPhone 16 Plus":0,"iPhone 16 Pro":1,"iPhone 16 Pro Max":1,"iPhone 17":0,"iPhone 17 Air":1,"iPhone 17 Pro":1,"iPhone 17 Pro Max":0},
+  "D5":  {"iPhone 12":3,"iPhone 12 Pro Max":1,"iPhone 13":3,"iPhone 13 Pro":1,"iPhone 13 Pro Max":0,"iPhone 14":1,"iPhone 14 Plus":2,"iPhone 14 Pro":1,"iPhone 14 Pro Max":1,"iPhone 15":1,"iPhone 15 Plus":1,"iPhone 15 Pro":1,"iPhone 15 Pro Max":0,"iPhone 16":0,"iPhone 16 Plus":0,"iPhone 16 Pro":1,"iPhone 16 Pro Max":1,"iPhone 17":0,"iPhone 17 Air":0,"iPhone 17 Pro":1,"iPhone 17 Pro Max":0},
+  "D6":  {"iPhone 12":1,"iPhone 12 Pro Max":1,"iPhone 13":1,"iPhone 13 Pro":0,"iPhone 13 Pro Max":1,"iPhone 14":2,"iPhone 14 Plus":0,"iPhone 14 Pro":0,"iPhone 14 Pro Max":0,"iPhone 15":1,"iPhone 15 Plus":1,"iPhone 15 Pro":1,"iPhone 15 Pro Max":1,"iPhone 16":0,"iPhone 16 Plus":0,"iPhone 16 Pro":1,"iPhone 16 Pro Max":1,"iPhone 17":0,"iPhone 17 Air":0,"iPhone 17 Pro":1,"iPhone 17 Pro Max":0},
+  "D7":  {"iPhone 12":0,"iPhone 12 Pro Max":1,"iPhone 13":0,"iPhone 13 Pro":0,"iPhone 13 Pro Max":0,"iPhone 14":2,"iPhone 14 Plus":1,"iPhone 14 Pro":0,"iPhone 14 Pro Max":0,"iPhone 15":1,"iPhone 15 Plus":0,"iPhone 15 Pro":1,"iPhone 15 Pro Max":0,"iPhone 16":0,"iPhone 16 Plus":0,"iPhone 16 Pro":1,"iPhone 16 Pro Max":0,"iPhone 17":0,"iPhone 17 Air":1,"iPhone 17 Pro":0,"iPhone 17 Pro Max":0},
+  "D8":  {"iPhone 12":1,"iPhone 12 Pro Max":1,"iPhone 13":0,"iPhone 13 Pro":0,"iPhone 13 Pro Max":2,"iPhone 14":2,"iPhone 14 Plus":1,"iPhone 14 Pro":0,"iPhone 14 Pro Max":1,"iPhone 15":0,"iPhone 15 Plus":0,"iPhone 15 Pro":1,"iPhone 15 Pro Max":1,"iPhone 16":0,"iPhone 16 Plus":0,"iPhone 16 Pro":1,"iPhone 16 Pro Max":0,"iPhone 17":0,"iPhone 17 Air":0,"iPhone 17 Pro":1,"iPhone 17 Pro Max":0},
+  "D9":  {"iPhone 12":0,"iPhone 12 Pro Max":0,"iPhone 13":1,"iPhone 13 Pro":1,"iPhone 13 Pro Max":2,"iPhone 14":0,"iPhone 14 Plus":3,"iPhone 14 Pro":1,"iPhone 14 Pro Max":0,"iPhone 15":1,"iPhone 15 Plus":0,"iPhone 15 Pro":0,"iPhone 15 Pro Max":1,"iPhone 16":0,"iPhone 16 Plus":0,"iPhone 16 Pro":0,"iPhone 16 Pro Max":0,"iPhone 17":0,"iPhone 17 Air":0,"iPhone 17 Pro":1,"iPhone 17 Pro Max":0},
+  "D10": {"iPhone 12":0,"iPhone 12 Pro Max":0,"iPhone 13":0,"iPhone 13 Pro":0,"iPhone 13 Pro Max":0,"iPhone 14":0,"iPhone 14 Plus":0,"iPhone 14 Pro":0,"iPhone 14 Pro Max":0,"iPhone 15":0,"iPhone 15 Plus":0,"iPhone 15 Pro":0,"iPhone 15 Pro Max":1,"iPhone 16":0,"iPhone 16 Plus":0,"iPhone 16 Pro":0,"iPhone 16 Pro Max":0,"iPhone 17":0,"iPhone 17 Air":2,"iPhone 17 Pro":1,"iPhone 17 Pro Max":1},
+  "D11": {"iPhone 12":0,"iPhone 12 Pro Max":0,"iPhone 13":2,"iPhone 13 Pro":0,"iPhone 13 Pro Max":0,"iPhone 14":1,"iPhone 14 Plus":1,"iPhone 14 Pro":1,"iPhone 14 Pro Max":0,"iPhone 15":1,"iPhone 15 Plus":1,"iPhone 15 Pro":2,"iPhone 15 Pro Max":0,"iPhone 16":0,"iPhone 16 Plus":0,"iPhone 16 Pro":1,"iPhone 16 Pro Max":0,"iPhone 17":0,"iPhone 17 Air":1,"iPhone 17 Pro":0,"iPhone 17 Pro Max":1},
+  "D12": {"iPhone 12":0,"iPhone 12 Pro Max":0,"iPhone 13":0,"iPhone 13 Pro":0,"iPhone 13 Pro Max":1,"iPhone 14":0,"iPhone 14 Plus":1,"iPhone 14 Pro":0,"iPhone 14 Pro Max":1,"iPhone 15":1,"iPhone 15 Plus":0,"iPhone 15 Pro":0,"iPhone 15 Pro Max":0,"iPhone 16":0,"iPhone 16 Plus":1,"iPhone 16 Pro":0,"iPhone 16 Pro Max":0,"iPhone 17":0,"iPhone 17 Air":0,"iPhone 17 Pro":1,"iPhone 17 Pro Max":9},
+  "D13": {},
+  "D14": {"iPhone 12":1,"iPhone 12 Pro Max":1,"iPhone 13":0,"iPhone 13 Pro":0,"iPhone 13 Pro Max":1,"iPhone 14":1,"iPhone 14 Plus":0,"iPhone 14 Pro":0,"iPhone 14 Pro Max":1,"iPhone 15":0,"iPhone 15 Plus":0,"iPhone 15 Pro":1,"iPhone 15 Pro Max":0,"iPhone 16":0,"iPhone 16 Plus":0,"iPhone 16 Pro":1,"iPhone 16 Pro Max":0,"iPhone 17":0,"iPhone 17 Air":3,"iPhone 17 Pro":1,"iPhone 17 Pro Max":2},
+  "D15": {},
+  "D16": {"iPhone 12":0,"iPhone 12 Pro Max":0,"iPhone 13":0,"iPhone 13 Pro":0,"iPhone 13 Pro Max":0,"iPhone 14":0,"iPhone 14 Plus":0,"iPhone 14 Pro":0,"iPhone 14 Pro Max":0,"iPhone 15":0,"iPhone 15 Plus":0,"iPhone 15 Pro":0,"iPhone 15 Pro Max":0,"iPhone 16":0,"iPhone 16 Plus":0,"iPhone 16 Pro":1,"iPhone 16 Pro Max":0,"iPhone 17":0,"iPhone 17 Air":0,"iPhone 17 Pro":2,"iPhone 17 Pro Max":1},
+  "D17": {},
+  "D18": {},
+  "D19": {"iPhone 12":0,"iPhone 12 Pro Max":0,"iPhone 13":0,"iPhone 13 Pro":0,"iPhone 13 Pro Max":0,"iPhone 14":2,"iPhone 14 Plus":0,"iPhone 14 Pro":0,"iPhone 14 Pro Max":0,"iPhone 15":0,"iPhone 15 Plus":0,"iPhone 15 Pro":0,"iPhone 15 Pro Max":0,"iPhone 16":0,"iPhone 16 Plus":0,"iPhone 16 Pro":0,"iPhone 16 Pro Max":0,"iPhone 17":0,"iPhone 17 Air":1,"iPhone 17 Pro":1,"iPhone 17 Pro Max":0},
+  "D20": {"iPhone 12":0,"iPhone 12 Pro Max":0,"iPhone 13":1,"iPhone 13 Pro":0,"iPhone 13 Pro Max":0,"iPhone 14":1,"iPhone 14 Plus":2,"iPhone 14 Pro":0,"iPhone 14 Pro Max":0,"iPhone 15":1,"iPhone 15 Plus":0,"iPhone 15 Pro":0,"iPhone 15 Pro Max":0,"iPhone 16":0,"iPhone 16 Plus":0,"iPhone 16 Pro":2,"iPhone 16 Pro Max":0,"iPhone 17":0,"iPhone 17 Air":0,"iPhone 17 Pro":1,"iPhone 17 Pro Max":0},
+  "D21": {},
+  "D22": {"iPhone 12":0,"iPhone 12 Pro Max":0,"iPhone 13":0,"iPhone 13 Pro":0,"iPhone 13 Pro Max":0,"iPhone 14":0,"iPhone 14 Plus":0,"iPhone 14 Pro":0,"iPhone 14 Pro Max":0,"iPhone 15":0,"iPhone 15 Plus":0,"iPhone 15 Pro":0,"iPhone 15 Pro Max":0,"iPhone 16":0,"iPhone 16 Plus":0,"iPhone 16 Pro":0,"iPhone 16 Pro Max":0,"iPhone 17":0,"iPhone 17 Air":0,"iPhone 17 Pro":0,"iPhone 17 Pro Max":1},
+  "D25": {"iPhone 12":0,"iPhone 12 Pro Max":1,"iPhone 13":0,"iPhone 13 Pro":0,"iPhone 13 Pro Max":0,"iPhone 14":0,"iPhone 14 Plus":0,"iPhone 14 Pro":0,"iPhone 14 Pro Max":0,"iPhone 15":1,"iPhone 15 Plus":0,"iPhone 15 Pro":0,"iPhone 15 Pro Max":0,"iPhone 16":0,"iPhone 16 Plus":0,"iPhone 16 Pro":0,"iPhone 16 Pro Max":0,"iPhone 17":0,"iPhone 17 Air":0,"iPhone 17 Pro":1,"iPhone 17 Pro Max":0},
+  "D28": {"iPhone 12":1,"iPhone 12 Pro Max":1,"iPhone 13":0,"iPhone 13 Pro":0,"iPhone 13 Pro Max":1,"iPhone 14":1,"iPhone 14 Plus":0,"iPhone 14 Pro":0,"iPhone 14 Pro Max":0,"iPhone 15":0,"iPhone 15 Plus":0,"iPhone 15 Pro":0,"iPhone 15 Pro Max":0,"iPhone 16":0,"iPhone 16 Plus":0,"iPhone 16 Pro":0,"iPhone 16 Pro Max":0,"iPhone 17":0,"iPhone 17 Air":0,"iPhone 17 Pro":2,"iPhone 17 Pro Max":0},
+  "D33": {"iPhone 12":0,"iPhone 12 Pro Max":0,"iPhone 13":0,"iPhone 13 Pro":0,"iPhone 13 Pro Max":0,"iPhone 14":0,"iPhone 14 Plus":0,"iPhone 14 Pro":0,"iPhone 14 Pro Max":0,"iPhone 15":0,"iPhone 15 Plus":0,"iPhone 15 Pro":0,"iPhone 15 Pro Max":0,"iPhone 16":0,"iPhone 16 Plus":0,"iPhone 16 Pro":0,"iPhone 16 Pro Max":0,"iPhone 17":0,"iPhone 17 Air":0,"iPhone 17 Pro":2,"iPhone 17 Pro Max":0},
+  "D34": {},
+  "D42": {"iPhone 12":0,"iPhone 12 Pro Max":0,"iPhone 13":0,"iPhone 13 Pro":0,"iPhone 13 Pro Max":0,"iPhone 14":0,"iPhone 14 Plus":0,"iPhone 14 Pro":0,"iPhone 14 Pro Max":0,"iPhone 15":0,"iPhone 15 Plus":0,"iPhone 15 Pro":0,"iPhone 15 Pro Max":0,"iPhone 16":1,"iPhone 16 Plus":0,"iPhone 16 Pro":0,"iPhone 16 Pro Max":0,"iPhone 17":0,"iPhone 17 Air":3,"iPhone 17 Pro":2,"iPhone 17 Pro Max":2},
+  "D43": {},
+  "D44": {"iPhone 12":0,"iPhone 12 Pro Max":0,"iPhone 13":0,"iPhone 13 Pro":0,"iPhone 13 Pro Max":0,"iPhone 14":0,"iPhone 14 Plus":0,"iPhone 14 Pro":0,"iPhone 14 Pro Max":0,"iPhone 15":0,"iPhone 15 Plus":0,"iPhone 15 Pro":0,"iPhone 15 Pro Max":0,"iPhone 16":0,"iPhone 16 Plus":0,"iPhone 16 Pro":0,"iPhone 16 Pro Max":0,"iPhone 17":0,"iPhone 17 Air":0,"iPhone 17 Pro":1,"iPhone 17 Pro Max":0},
+  "D45": {},
+  "D46": {}
+};
+
+function getModelStock(designId, model){
+  const map = STOCK_MAP[designId] || {};
+  return map[model] ?? -1; // -1 = pas de données
+}
+
+function getDesignGlobalStatus(designId){
+  const map = STOCK_MAP[designId] || {};
+  const vals = Object.values(map);
+  if(vals.length === 0) return 'unknown';
+  const total = vals.reduce((a,b)=>a+b,0);
+  const dispo = vals.filter(v=>v>0).length;
+  if(total === 0) return 'out';
+  if(dispo <= 3) return 'limited';
+  return 'available';
+}
+
+// NOTE: Ces tableaux sont mutables — Firebase les met à jour en temps réel
+// MDS_G1 = modèles ≤ 3 500 FCFA | MDS_G2 = modèles > 3 500 FCFA
+const MDS_G1=['iPhone 12','iPhone 12 Pro Max','iPhone 13','iPhone 13 Pro','iPhone 13 Pro Max'];
+const MDS_G2=['iPhone 14','iPhone 14 Plus','iPhone 14 Pro','iPhone 14 Pro Max','iPhone 15','iPhone 15 Plus','iPhone 15 Pro','iPhone 15 Pro Max','iPhone 16','iPhone 16 Plus','iPhone 16 Pro','iPhone 16 Pro Max','iPhone 17','iPhone 17 Air','iPhone 17 Pro','iPhone 17 Pro Max'];
+const ALL_MDS=[...MDS_G1,...MDS_G2]; // Firebase remplace le contenu via .length=0 + push
+
+let curD=null,dQty=1,prevPg='catalogue',activeTag='all',stockFilter='all';
+
+function fp(n){return Number(n).toLocaleString('fr-FR')+' FCFA'}
+
+// ticker
+const tItems=['BOGOLAN','DJENNÉ','N\'KO','TOUAREG','AFRICA','CIWARA','MUNYU','WAX','SARAMAYA','AFRO QUEEN','BÈNKADI','MASQUE DOGON','DJOLIBA','NYA','SABABU','WARI','MONUMENT DU MALI'];
+
+// Le script est après le DOM — on initialise directement
+const tEl=document.getElementById('ttick');
+if(tEl){const tH=tItems.map(x=>`<span class="ti"><span class="ti-dot"></span>${x}</span>`).join('');tEl.innerHTML=tH+tH;}
+// Année dynamique dans le footer
+const fyEl=document.getElementById('footer-year');
+if(fyEl) fyEl.textContent=new Date().getFullYear();
+initHome();
+
+// ══ FIREBASE → UI ════════════════════════════════════════════════════════════
+window.__applyFirebaseData = function(data) {
+  try {
+    const settings = data.settings || {};
+    const rawDesigns = settings.designs || [];
+    if (!rawDesigns.length) return;
+
+    // 1. Designs (images Cloudinary uniquement)
+    const newDS = rawDesigns
+      .filter(d => d.image && d.image.startsWith('http'))
+      .map(d => ({
+        id:    d.id,
+        name:  (d.name || '').toUpperCase(),
+        img:   d.image,
+        story: d.description || d.name || '',
+        cat:   (d.category || 'CULTURE').toUpperCase()
+      }));
+    if (!newDS.length) return;
+
+    // 2. Stock Map — products: [{design, model, stock}]
+    // Matching par ID d'abord (fiable), fallback sur nom normalisé
+    const normalize = s => (s || '').toUpperCase().trim()
+      .replace(/['']/g, "'").replace(/\s+/g, ' ');
+    const newStockMap = {};
+    for (const p of (data.products || [])) {
+      const dsItem = newDS.find(d => d.id === p.designId) ||
+                     newDS.find(d => normalize(d.name) === normalize(p.design));
+      if (!dsItem || !p.model) continue;
+      if (!newStockMap[dsItem.id]) newStockMap[dsItem.id] = {};
+      newStockMap[dsItem.id][p.model] = typeof p.stock === 'number' ? p.stock : 0;
+    }
+
+    // 3. Modèles & prix — MDS_G1 (≤3500 FCFA) et MDS_G2 (>3500 FCFA) depuis Firebase
+    const modelPrices = (settings.priceSettings || {}).modelPrices || {};
+    const allModels   = settings.models || [];
+    const newMdsG1    = allModels.filter(m => (modelPrices[m] || 5000) <= 3500);
+    const newMdsG2    = allModels.filter(m => (modelPrices[m] || 5000) >  3500);
+
+    // 4. Mise à jour des variables globales (y compris MDS_G2)
+    DS.length = 0; newDS.forEach(d => DS.push(d));
+    Object.keys(STOCK_MAP).forEach(k => delete STOCK_MAP[k]);
+    Object.assign(STOCK_MAP, newStockMap);
+    MDS_G1.length = 0; newMdsG1.forEach(m => MDS_G1.push(m));
+    MDS_G2.length = 0; newMdsG2.forEach(m => MDS_G2.push(m));
+    ALL_MDS.length = 0; allModels.forEach(m => ALL_MDS.push(m));
+
+    // 5. Rafraîchir l'UI
+    const pg = document.querySelector('.pg.on')?.id?.replace('pg-','') || 'home';
+    if (pg === 'home')      initHome();
+    if (pg === 'catalogue') filt();
+    if (pg === 'detail' && curD) {
+      const sel = document.getElementById('d-mod');
+      if (sel) {
+        const cur = sel.value;
+        sel.innerHTML = ALL_MDS.map(m => {
+          const q = getModelStock(curD.id, m);
+          const lbl = q === 0 ? m + ' — Rupture' : q <= 2 ? `${m} — ${q} restant${q>1?'s':''}` : m;
+          return `<option value="${m}" ${q===0?'disabled':''}>${lbl}</option>`;
+        }).join('');
+        if (cur && ALL_MDS.includes(cur)) sel.value = cur;
+        updatePrice();
+      }
+    }
+    // Mettre à jour tous les sélecteurs de modèle (catalogue header)
+    const gSel = document.getElementById('global-model');
+    if (gSel) {
+      const cur = gSel.value;
+      const opts = '<option value="">— Choisir mon modèle —</option>' +
+        ALL_MDS.map(m => `<option value="${m}">${m} — ${modelPrices[m] ? Number(modelPrices[m]).toLocaleString('fr-FR') + ' FCFA' : '3 500 – 5 000 FCFA'}</option>`).join('');
+      gSel.innerHTML = opts;
+      if (cur && ALL_MDS.includes(cur)) { gSel.value = cur; onGlobalModelChange(); }
+    }
+    console.log(`[CultureCase] ✅ ${DS.length} designs · ${Object.keys(STOCK_MAP).length} stocks · ${ALL_MDS.length} modèles`);
+
+    // 6. Blog — articles depuis Firebase
+    const fbBlog = settings.blog || [];
+    if (fbBlog.length > 0) {
+      BLOG.length = 0;
+      fbBlog.forEach(function(a) { BLOG.push(a); });
+      const pg2 = document.querySelector('.pg.on')?.id?.replace('pg-','');
+      if (pg2 === 'blog') renderBlog();
+      console.log('[CultureCase] ✅ ' + BLOG.length + ' articles blog chargés depuis Firebase');
+    }
+
+  } catch(e) { console.error('[CultureCase] Firebase apply error:', e); }
+};
+
+function getPrice(model){
+  return MDS_G1.includes(model)?fp(3500):fp(5000);
+}
+
+function updatePrice(){
+  if(!curD) return;
+  const model=document.getElementById('d-mod').value;
+  const qty=getModelStock(curD.id,model);
+  const price=(MDS_G1.includes(model)?3500:5000);
+  document.getElementById('d-price-display').textContent=fp(price)+' × '+dQty+' = '+fp(price*dQty);
+  const sb=document.getElementById('d-stock-badge');
+  const waBtn=document.getElementById('wa-order-btn');
+  const waSpan=waBtn.querySelector('span');
+  if(qty===0){
+    sb.className='det-stock out';
+    sb.innerHTML='<i class="ti ti-clock"></i> Rupture pour ce modèle';
+    waBtn.disabled=true;waBtn.style.opacity='.4';waBtn.style.cursor='not-allowed';
+    waSpan.textContent='Indisponible pour ce modèle';
+  } else if(qty>0&&qty<=2){
+    sb.className='det-stock limited';
+    sb.innerHTML=`<i class="ti ti-alert-triangle"></i> Plus que ${qty} en stock — commandez vite`;
+    waBtn.disabled=false;waBtn.style.opacity='1';waBtn.style.cursor='pointer';
+    waSpan.textContent='Commander sur WhatsApp';
+  } else if(qty>2){
+    sb.className='det-stock available';
+    sb.innerHTML='<i class="ti ti-circle-check"></i> En stock';
+    waBtn.disabled=false;waBtn.style.opacity='1';waBtn.style.cursor='pointer';
+    waSpan.textContent='Commander sur WhatsApp';
+  } else {
+    sb.className='det-stock available';
+    sb.innerHTML='<i class="ti ti-circle-check"></i> Disponible';
+    waBtn.disabled=false;waBtn.style.opacity='1';waBtn.style.cursor='pointer';
+    waSpan.textContent='Commander sur WhatsApp';
+  }
+}
+
+function toast(msg){
+  const el=document.getElementById('toast-el');
+  el.textContent=msg;el.classList.add('show');
+  setTimeout(()=>el.classList.remove('show'),2800);
+}
+
+// ══ BLOG DATA ══
+const BLOG=[
+  {
+    id:'B1',
+    title:'Le Bogolan : quand la boue devient art',
+    tag:'TEXTILE',
+    date:'Mai 2025',
+    read:'5 min de lecture',
+    img:'https://res.cloudinary.com/dknfqd2xp/image/upload/v1779767675/zutdygs9wnxbheeilcl9.jpg',
+    excerpt:'Le bogolan, ou mud cloth, est bien plus qu\'un tissu. C\'est une écriture, un langage visuel qui traverse les siècles. Plongée au cœur de l\'art textile le plus emblématique du Mali.',
+    featured:true,
+    content:`<p>Le bogolan — du bambara <em>bogo</em> (terre, boue) et <em>lan</em> (par le moyen de) — est un tissu de coton teint à la boue fermentée selon des techniques transmises de génération en génération. Son nom signifie littéralement "qui vient de la terre", et c'est peut-être la définition la plus belle qu'on puisse donner à un tissu.</p>
+    <h3>Une technique millénaire</h3>
+    <p>La fabrication du bogolan commence sur un métier à tisser à bandes étroites, typiquement utilisé par les hommes dans les villages du Mali, notamment autour de Ségou. Ces bandes sont ensuite assemblées pour former de grands panneaux. C'est là qu'intervient le travail des femmes — c'est elles, traditionnellement, qui appliquent les motifs.</p>
+    <p>Le tissu est d'abord trempé dans un bain de feuilles de n'gallama, qui lui donne une teinte jaune. Ensuite, des dessins sont tracés à la boue fermentée — récoltée dans les mares et les rivières, fermentée pendant des mois pour développer ses tanins. Là où la boue touche le tissu, la couleur devient noire. Les parties non traitées gardent leur teinte ocre.</p>
+    <blockquote>«Chaque motif du bogolan a un nom, une signification. Ce ne sont pas des décorations — ce sont des messages.»</blockquote>
+    <h3>Un langage visuel</h3>
+    <p>Ce qui fascine dans le bogolan, c'est que ses motifs ne sont pas aléatoires. Chaque géométrie a une signification : certains évoquent des proverbes, d'autres des événements historiques, des batailles ou des rites d'initiation. Les chasseurs dogon portaient des chemises en bogolan pour se protéger spirituellement. Les femmes en accouchement étaient enveloppées dans ses tissus pour capter sa force protectrice.</p>
+    <p>C'est cette profondeur symbolique que CultureCase cherche à capturer dans son design BOGOLAN. Pas une simple reproduction de motifs — une invitation à comprendre ce que ces lignes signifient vraiment.</p>
+    <h3>Le bogolan aujourd'hui</h3>
+    <p>Aujourd'hui, le bogolan a conquis le monde. Des créateurs de mode internationaux s'en inspirent, des musées l'exposent. Mais la vraie magie est à Bamako, dans les marchés, dans les ateliers de Ségou, là où des artisanes continuent de plonger leurs mains dans la boue pour créer des chefs-d'œuvre qui dureront des générations.</p>
+    <p>Porter le design BOGOLAN de CultureCase, c'est porter un peu de cette histoire. Une histoire qui commence dans la terre rouge du Mali.</p>`
+  },
+  {
+    id:'B2',
+    title:"Le N'Ko : l'Afrique qui s'écrit elle-même",
+    tag:'CULTURE',
+    date:'Avril 2025',
+    read:'4 min de lecture',
+    img:'https://res.cloudinary.com/dknfqd2xp/image/upload/v1779767905/wketzekxsrqlupeqrdi2.jpg',
+    excerpt:"En 1949, un homme seul invente un alphabet pour des millions de personnes. Solomana Kanté et le N'Ko : l'histoire extraordinaire d'une écriture née au Mali.",
+    featured:false,
+    content:`<p>Le 19 avril 1949, à Kankan (Guinée), Solomana Kanté pose son stylo et regarde ce qu'il vient de créer. Dix-neuf lettres. Un alphabet complet, capable de transcrire toutes les langues mandingues — le bambara, le dioula, le mandinka, le soussou. Il l'appelle N'Ko, qui signifie "je dis" dans toutes ces langues.</p>
+    <h3>L'homme qui répondait à une insulte</h3>
+    <p>L'histoire commence par une provocation. Kanté lit dans un livre qu'il n'existe pas d'écriture africaine, que les Africains n'ont pas su développer de système graphique propre. Humilié par cette affirmation, il consacre sa vie à la réfuter.</p>
+    <p>Autodidacte, il étudie les systèmes d'écriture du monde entier. Il analyse l'arabe, le latin, l'éthiopien. Et il conclut qu'aucun ne convient parfaitement aux langues mandingues — leurs tons, leurs sonorités particulières ne peuvent pas être capturés par ces alphabets étrangers. Alors il crée le sien.</p>
+    <blockquote>«Un peuple sans écriture est comme un aveugle qui marche dans la nuit. Le N'Ko est notre lumière.» — Solomana Kanté</blockquote>
+    <h3>Une écriture de droite à gauche</h3>
+    <p>Le N'Ko s'écrit de droite à gauche, comme l'arabe. Ses lettres sont liées entre elles, formant des mots fluides et élégants. Kanté développe non seulement l'alphabet mais toute une grammaire, une orthographe, et commence à traduire des textes fondamentaux — le Coran, des traités de médecine, des livres d'histoire africaine.</p>
+    <p>Aujourd'hui, le N'Ko est enseigné dans des centaines d'écoles à travers l'Afrique de l'Ouest. Des millions de personnes l'utilisent pour lire, écrire, communiquer. C'est l'un des rares exemples modernes d'un système d'écriture créé ex nihilo par un seul homme et adopté massivement.</p>
+    <h3>Pourquoi N'Ko chez CultureCase</h3>
+    <p>Le design N'Ko de CultureCase n'est pas seulement graphique — c'est politique. Porter ces caractères sur son téléphone, c'est affirmer que nos langues ont une écriture, que notre culture a une forme graphique propre, que nous ne dépendons de personne pour nous exprimer.</p>
+    <p>Solomana Kanté est né en Guinée mais a rayonné sur tout le monde mandingue — dont le Mali est le cœur. En portant le N'Ko, vous honorez un génie africain et un acte d'indépendance culturelle extraordinaire.</p>`
+  },
+  {
+    id:'B3',
+    title:'Le Ciwara : l\'antilope qui a tout appris aux hommes',
+    tag:'SPIRITUEL',
+    date:'Mars 2025',
+    read:'4 min de lecture',
+    img:'https://res.cloudinary.com/dknfqd2xp/image/upload/v1779767813/ujlarvjopqep37hwm2n2.jpg',
+    excerpt:'Mi-homme, mi-antilope, le Ciwara est l\'une des figures les plus puissantes de la cosmogonie bambara. L\'histoire du génie qui enseigna l\'agriculture à l\'humanité.',
+    featured:false,
+    content:`<p>Dans la cosmogonie bambara, avant que les hommes sachent cultiver la terre, le monde était dur. Les humains ne savaient pas semer, ne savaient pas récolter. C'est alors qu'apparut le Ciwara — un être extraordinaire, mi-homme mi-antilope, enfant du Dieu suprême Pemba et de la Terre.</p>
+    <h3>Le génie de l'agriculture</h3>
+    <p>Le Ciwara était un cultivateur prodigieux. Selon la tradition bambara, il travailla sans relâche pendant sept ans, labourant la terre avec ses cornes, enseignant aux hommes les secrets du mil, du sorgho, de la terre fertile. Il était infatigable, précis, parfait. Mais les hommes devinrent paresseux, gaspillèrent les récoltes, oublièrent de rendre grâce.</p>
+    <p>Déçu, le Ciwara s'enterra dans la terre — certains disent qu'il se transforma en elle. C'est pour ne pas oublier son enseignement que les Bambara créèrent les heaumes-cimiers Ciwara : des sculptures portées sur la tête lors des cérémonies agricoles, pour rappeler que la terre est sacrée et que l'effort est une vertu divine.</p>
+    <blockquote>«Le Ciwara ne mourait pas — il devenait la terre elle-même. Chaque champ cultivé est son corps.»</blockquote>
+    <h3>Un chef-d'œuvre de l'art africain</h3>
+    <p>Les heaumes Ciwara sont parmi les sculptures africaines les plus connues dans le monde. Ils viennent toujours par paires — un mâle et une femelle — représentant la complémentarité entre l'homme et la femme, entre le ciel et la terre. Les formes varient selon les villages : certains Ciwara sont élancés et géométriques, d'autres plus ronds et figuratifs.</p>
+    <p>Ces sculptures ne sont pas des objets décoratifs. Lors des cérémonies Ciwara, les jeunes cultivateurs les portent attachées à leur tête et dansent au rythme des tambours pour invoquer la fertilité des champs. C'est une danse de travail, de prière et de gratitude à la fois.</p>
+    <h3>Le Ciwara de CultureCase</h3>
+    <p>Les designs Ciwara de CultureCase — Kô Musso, Ciwara Maron, Ciwara & Bogolan — cherchent à capturer cette force symbolique. La silhouette de l'antilope, ses cornes qui s'élèvent vers le ciel, incarne une énergie de croissance, d'effort et de connexion avec la terre.</p>
+    <p>Porter le Ciwara, c'est porter la mémoire de ceux qui ont labouré la terre rouge du Mali pour que leurs enfants puissent vivre.</p>`
+  },
+  {
+    id:'B4',
+    title:'Djenné : la cathédrale de terre la plus grande du monde',
+    tag:'MONUMENT',
+    date:'Février 2025',
+    read:'5 min de lecture',
+    img:'https://res.cloudinary.com/dknfqd2xp/image/upload/v1779767538/ynvij5rszvqmamfs9hgm.jpg',
+    excerpt:'La Grande Mosquée de Djenné est le plus grand bâtiment en pisé du monde et un chef-d\'œuvre de l\'architecture soudano-sahélienne. L\'histoire d\'un monument qui se reconstruit chaque année.',
+    featured:false,
+    content:`<p>Sur une île au milieu du delta intérieur du Niger, à 570 km de Bamako, se dresse l'une des constructions les plus étonnantes de l'humanité. La Grande Mosquée de Djenné — classée au patrimoine mondial de l'UNESCO depuis 1988 — est le plus grand édifice en terre crue du monde. Et elle est au Mali.</p>
+    <h3>Une architecture née de la terre</h3>
+    <p>L'architecture soudano-sahélienne qu'incarne Djenné est une réponse parfaite à son environnement. Dans une région où la pierre manque mais où la terre argileuse est abondante, les bâtisseurs maliens ont développé une technique extraordinaire : le banco, un mélange de terre, de paille et d'eau, façonné en briques séchées au soleil, puis recouvert d'un enduit de même nature.</p>
+    <p>Ces constructions respirent. En journée, la terre absorbe la chaleur. La nuit, elle la restitue. Dans un Sahel brûlant, c'est du génie climatique ancestral. Les toits-terrasses, les murs épais, les tours-minarets — tout est pensé pour vivre avec le désert, pas contre lui.</p>
+    <blockquote>«Djenné prouve que l'Afrique a inventé l'architecture durable bien avant que le monde en parle.»</blockquote>
+    <h3>La mosquée qui se reconstruit chaque année</h3>
+    <p>Ce qui rend la Grande Mosquée de Djenné unique, c'est qu'elle vit. Chaque année, après la saison des pluies qui érode l'enduit de banco, toute la ville se mobilise pour la restaurer. C'est le "crépissage" — une fête collective, un acte de communauté. Des milliers d'habitants grimpent sur les murs, portent la boue fraîche, chantent et travaillent ensemble.</p>
+    <p>Les poteaux en bois de palmier qui sortent des murs — appelés torons — servent d'échafaudages permanents pour ces restaurations annuelles. C'est une architecture pensée pour être entretenue, réparée, aimée. Une mosquée vivante.</p>
+    <h3>L'histoire de la cité des savants</h3>
+    <p>Djenné ne se résume pas à sa mosquée. C'est l'une des plus anciennes cités subsahariennes — habitée depuis le IIIème siècle avant notre ère. Au Moyen Âge, elle était un centre intellectuel et commercial majeur, carrefour des routes trans-sahariennes. Des milliers de manuscrits y ont été écrits et conservés.</p>
+    <p>Les designs DJENNÉ et DJENNÉ ROUGE de CultureCase rendent hommage à cette cité extraordinaire. Chaque fois que vous regardez votre téléphone, vous avez sous les yeux un monument classé à l'UNESCO — né sur la terre rouge du Mali.</p>`
+  },
+  {
+    id:'B5',
+    title:'Les Touaregs : peuple libre du désert',
+    tag:'PEUPLE',
+    date:'Janvier 2025',
+    read:'4 min de lecture',
+    img:'https://res.cloudinary.com/dknfqd2xp/image/upload/v1779767591/y4lfqumr2zpnu1ayydxh.jpg',
+    excerpt:'Gardiens du Sahara, nomades indomptables, maîtres de l\'indigo. Les Touaregs du Mali portent une culture aussi vaste et profonde que le désert qu\'ils habitent.',
+    featured:false,
+    content:`<p>Ils s'appellent eux-mêmes "Kel Tamasheq" — ceux qui parlent le tamasheq. Le monde les appelle Touaregs. Ce peuple berbère nomade occupe le Sahara depuis des millénaires, de l'Algérie au Niger, du Mali à la Libye. Et dans le nord du Mali — à Kidal, Gao, Tombouctou — leur présence est indissociable de l'identité du pays.</p>
+    <h3>Les hommes bleus</h3>
+    <p>Le surnom est venu tout seul. Les Touaregs portent des vêtements en tissu teint à l'indigo — un bleu profond, dense, qui marque la peau. Sous le soleil du désert, les hommes portent le chèche, un long voile qui recouvre la tête et le visage, ne laissant voir que les yeux. Ce tissu bleu indigo teint progressivement leur peau, leur donnant cette teinte caractéristique.</p>
+    <p>C'est là l'origine du design HOMME BLEU de CultureCase — cet homme mystérieux dont on ne voit que les yeux, enveloppé dans son voile d'indigo, figure du désert libre et indomptable.</p>
+    <blockquote>«Le désert n'appartient à personne. C'est pour ça que les Touaregs s'y sentent chez eux.»</blockquote>
+    <h3>Une culture de la beauté</h3>
+    <p>Contrairement à beaucoup de sociétés, chez les Touaregs c'est l'homme qui se pare et s'embellit. Bijoux en argent ciselé, épées à poignée de cuir tressé, selles de chameau brodées — l'artisanat touareg est d'une raffinesse extraordinaire. Les femmes, elles, ont un statut remarquable : lettrées, elles transmettent l'écriture tifinagh, le système graphique ancestral des Berbères, que seules elles maîtrisaient traditionnellement.</p>
+    <h3>Le Mali et les Touaregs</h3>
+    <p>L'histoire des Touaregs au Mali est complexe, faite de tensions et de réconciliations. Mais leur contribution à la culture malienne est immense — la musique touarègue, le "blues du désert", a donné naissance à des groupes comme Tinariwen qui ont conquis le monde entier. Le Mali sans ses Touaregs ne serait pas le Mali.</p>
+    <p>Porter le design TOUAREG ou HOMME BLEU, c'est rendre hommage à ce peuple libre qui, depuis des millénaires, rappelle que la liberté existe — même au milieu du plus grand désert du monde.</p>`
+  }
+];
+
+let activeBlogTag='all';
+
+function filterBlog(tag,btn){
+  activeBlogTag=tag;
+  document.querySelectorAll('.blog-cats .ftag').forEach(x=>x.classList.remove('on'));
+  if(btn)btn.classList.add('on');
+  renderBlog();
+}
+
+function renderBlog(){
+  const filtered=BLOG.filter(b=>activeBlogTag==='all'||b.tag===activeBlogTag);
+  const grid=document.getElementById('blog-grid');
+  if(!grid)return;
+  let html='';
+  filtered.forEach((b,i)=>{
+    if(i===0&&activeBlogTag==='all'){
+      html+=`<div class="blog-featured" onclick="openBlog('${b.id}')">
+        <div class="bf-img"><img src="${b.img}" alt="${b.title}" loading="lazy"></div>
+        <div class="bf-body">
+          <span class="bf-tag">${b.tag}</span>
+          <div class="bf-title">${b.title}</div>
+          <div class="bf-excerpt">${b.excerpt}</div>
+          <div class="bf-meta"><span class="bf-date">${b.date}</span><span>·</span><span>${b.read}</span></div>
+        </div>
+      </div>`;
+    } else {
+      html+=`<div class="bcard" onclick="openBlog('${b.id}')">
+        <div class="bc-img"><img src="${b.img}" alt="${b.title}" loading="lazy"></div>
+        <div class="bc-body">
+          <span class="bc-tag">${b.tag}</span>
+          <div class="bc-title">${b.title}</div>
+          <div class="bc-excerpt">${b.excerpt}</div>
+          <div class="bc-meta"><span class="bc-date">${b.date}</span><span>·</span><span>${b.read}</span></div>
+        </div>
+      </div>`;
+    }
+  });
+  grid.innerHTML=html||`<p style="grid-column:1/-1;text-align:center;padding:4rem;color:var(--muted)">Aucun article dans cette catégorie pour l'instant.</p>`;
+}
+
+function openBlog(id){
+  const b=BLOG.find(x=>x.id===id);
+  if(!b)return;
+  document.getElementById('bd-tag').textContent=b.tag;
+  document.getElementById('bd-title').textContent=b.title;
+  document.getElementById('bd-date').textContent=b.date;
+  document.getElementById('bd-read').textContent=b.read;
+  document.getElementById('bd-img').src=b.img;
+  document.getElementById('bd-content').innerHTML=b.content;
+  // related
+  const rel=BLOG.filter(x=>x.id!==id).slice(0,3);
+  document.getElementById('bd-related').innerHTML=rel.map(r=>`<div class="bcard" onclick="openBlog('${r.id}')">
+    <div class="bc-img"><img src="${r.img}" alt="${r.title}" loading="lazy"></div>
+    <div class="bc-body"><span class="bc-tag">${r.tag}</span><div class="bc-title">${r.title}</div><div class="bc-meta"><span class="bc-date">${r.date}</span><span>·</span><span>${r.read}</span></div></div>
+  </div>`).join('');
+  go('blogdet');
+}
+
+function go(p){
+  document.querySelectorAll('.pg').forEach(x=>x.classList.remove('on'));
+  document.getElementById('pg-'+p).classList.add('on');
+  document.querySelectorAll('.nb').forEach(x=>x.classList.remove('on'));
+  const nb=document.getElementById('nm-'+p);if(nb)nb.classList.add('on');
+  window.scrollTo(0,0);
+  if(p==='catalogue')initCat();
+  if(p==='home')initHome();
+  if(p==='blog')renderBlog();
+}
+
+
+
+function card(d){
+  const gmEl = document.getElementById('global-model');
+  const gm = gmEl ? gmEl.value : '';
+
+  // Badge dispo si modèle sélectionné
+  let availBadge = '';
+  let stockDot = '<span class="pc-stock-dot dot-ok"></span>';
+  let stockHint = 'Disponible';
+  if(gm){
+    const qty = getModelStock(d.id, gm);
+    if(qty > 0 && qty <= 3){
+      availBadge = `<div class="stock-badge stock-limited">Derniers</div>`;
+      stockDot = '<span class="pc-stock-dot dot-lim"></span>';
+      stockHint = `${qty} restant${qty>1?'s':''} pour ${gm}`;
+    } else if(qty > 3){
+      availBadge = `<div class="stock-badge stock-available">Dispo</div>`;
+      stockHint = `En stock pour ${gm}`;
+    } else {
+      availBadge = `<div class="stock-badge stock-out">Rupture</div>`;
+      stockDot = '<span class="pc-stock-dot dot-out"></span>';
+      stockHint = `Rupture pour ${gm}`;
+    }
+  }
+
+  const price = gm ? (MDS_G1.includes(gm) ? '3 500 FCFA' : '5 000 FCFA') : '3 500 – 5 000 FCFA';
+  const isOut = gm && getModelStock(d.id, gm) === 0;
+
+  return `<div class="pcard${isOut?' is-out':''}" onclick="openDet('${d.id}')">
+    <div class="pc-img">
+      <img src="${d.img}" alt="${d.name}" loading="lazy" onerror="this.parentNode.style.background='var(--sand)'">
+      <div class="pc-overlay">
+        <button class="pc-ov-btn" onclick="event.stopPropagation();openDet('${d.id}')">Voir le design</button>
+      </div>
+      ${availBadge}
+    </div>
+    <div class="pc-body">
+      <div class="pc-name">${d.name}</div>
+      <div class="pc-hint">${stockDot}${stockHint}</div>
+      <div class="pc-row">
+        <div class="pc-price">${price}</div>
+        <button class="pc-add" onclick="event.stopPropagation();orderQuick('${d.id}')" aria-label="Commander via WhatsApp" title="Commander via WhatsApp">
+          <i class="ti ti-brand-whatsapp" aria-hidden="true"></i>
+        </button>
+      </div>
+    </div>
+  </div>`;
+}
+
+function goToCatalogueWithModel(model){
+  go('catalogue');
+  if(model){
+    setTimeout(()=>{
+      const sel = document.getElementById('global-model');
+      if(sel){ sel.value = model; onGlobalModelChange(); }
+    }, 100);
+  }
+}
+
+function initHome(){
+  const grid = document.getElementById('home-grid');
+  if(grid) grid.innerHTML = DS.slice(0,8).map(card).join(''); // 8 designs = 2 rangées de 4
+}
+
+function initCat(){
+  filt();
+}
+
+function toggleDispo(btn){
+  stockFilter = stockFilter === 'available' ? 'all' : 'available';
+  btn.classList.toggle('on');
+  filt();
+}
+
+function onGlobalModelChange(){
+  const sel = document.getElementById('global-model');
+  const m = sel.value;
+  sel.classList.toggle('chosen', !!m);
+  const hint = document.getElementById('mb-price-hint');
+  const info = document.getElementById('mb-info');
+  if(m){
+    hint.textContent = MDS_G1.includes(m) ? '3 500 FCFA' : '5 000 FCFA';
+    const dispo = DS.filter(d=>getModelStock(d.id,m)>0).length;
+    info.innerHTML = `<strong>${dispo} design${dispo>1?'s':''}</strong> disponibles pour ${m}`;
+  } else {
+    if(hint) hint.textContent = '';
+    if(info) info.textContent = '';
+  }
+  filt();
+}
+
+function filt(){
+  const q=(document.getElementById('sinp')?.value||'').toLowerCase();
+  const gm=(document.getElementById('global-model')?.value)||'';
+  let res=DS.filter(d=>{
+    if(stockFilter==='available'&&gm&&getModelStock(d.id,gm)===0)return false;
+    if(q&&!d.name.toLowerCase().includes(q))return false;
+    return true;
+  });
+  // compteur
+  let countTxt = `${res.length} design${res.length>1?'s':''}`;
+  if(gm){
+    const dispo=res.filter(d=>getModelStock(d.id,gm)>0).length;
+    countTxt += ` · <span style="color:var(--leaf);font-weight:600">${dispo} disponible${dispo>1?'s':''} pour ${gm}</span>`;
+  }
+  document.getElementById('cat-count').innerHTML=countTxt;
+  document.getElementById('cat-grid').innerHTML=res.length?res.map(card).join(''):`<p style="grid-column:1/-1;text-align:center;padding:4rem;color:var(--muted)">Aucun résultat.</p>`;
+}
+
+function openDet(id){
+  prevPg=document.querySelector('.pg.on')?.id?.replace('pg-','')||'catalogue';
+  curD=DS.find(d=>d.id===id);if(!curD)return;
+  dQty=1;
+  document.getElementById('d-img').src=curD.img;
+  document.getElementById('d-name').textContent=curD.name;
+  document.getElementById('d-story').textContent=curD.story;
+  document.getElementById('d-qty').textContent='1';
+  // sélecteur avec stock visible par modèle
+  const sel=document.getElementById('d-mod');
+  sel.innerHTML=ALL_MDS.map(m=>{
+    const qty=getModelStock(curD.id,m);
+    let label=m;
+    if(qty===0) label+=' — Rupture';
+    else if(qty===1) label+=' — 1 restant';
+    else if(qty===2) label+=' — 2 restants';
+    const disabled=qty===0?'style="color:var(--muted);opacity:.5"':'';
+    return `<option value="${m}" ${disabled}>${label}</option>`;
+  }).join('');
+  // pré-sélectionner le modèle global si choisi, sinon le premier dispo
+  const gm = (document.getElementById('global-model')?.value)||'';
+  const firstAvail = gm || ALL_MDS.find(m=>getModelStock(curD.id,m)>0) || ALL_MDS[0];
+  if(firstAvail) sel.value=firstAvail;
+  // pré-remplir infos client si mémorisées
+  try{
+    const sn=localStorage.getItem('cc_nom')||'';
+    const st=localStorage.getItem('cc_tel')||'';
+    if(sn) document.getElementById('lf-nom').value=sn;
+    if(st) document.getElementById('lf-tel').value=st;
+  }catch(e){}
+  updatePrice();
+  go('detail');
+}
+
+function goBack(){go(prevPg)}
+function dq(d){dQty=Math.max(1,dQty+d);document.getElementById('d-qty').textContent=dQty;updatePrice();}
+
+function orderWA(){
+  if(!curD)return;
+  const model=document.getElementById('d-mod').value;
+  const nom=(document.getElementById('lf-nom').value||'').trim();
+  const tel=(document.getElementById('lf-tel').value||'').trim();
+  const quartier=(document.getElementById('lf-quartier').value||'').trim();
+  // mémoriser pour la prochaine commande
+  if(nom) localStorage.setItem('cc_nom',nom);
+  if(tel) localStorage.setItem('cc_tel',tel);
+  const price=getPrice(model);
+  const total=fp((MDS_G1.includes(model)?3500:5000)*dQty);
+  let msg=`Bonjour CultureCase 👋\n\n🎨 Design : ${curD.name}\n📱 Modèle : ${model}\n🔢 Quantité : ${dQty}\n💰 Total : ${total}`;
+  if(nom) msg+=`\n\n👤 Nom : ${nom}`;
+  if(tel) msg+=`\n📞 Téléphone : ${tel}`;
+  if(quartier) msg+=`\n📍 Quartier : ${quartier}`;
+  msg+=`\n\nMerci !`;
+  window.open('https://wa.me/22375992482?text='+encodeURIComponent(msg),'_blank');
+}
+
+function orderQuick(id){
+  const d=DS.find(x=>x.id===id);if(!d)return;
+  const gm=(document.getElementById('global-model')?.value)||'';
+  const nom=localStorage.getItem('cc_nom')||'';
+  const tel=localStorage.getItem('cc_tel')||'';
+  let msg=`Bonjour CultureCase 👋\n\nJe voudrais commander :\n🎨 Design : ${d.name}\n📱 Modèle : ${gm||'(à préciser)'}\n🔢 Quantité : 1`;
+  if(nom) msg+=`\n\n👤 Nom : ${nom}`;
+  if(tel) msg+=`\n📞 Téléphone : ${tel}`;
+  msg+=`\n\nMerci !`;
+  window.open('https://wa.me/22375992482?text='+encodeURIComponent(msg),'_blank');
+}
+
+function sendContact(){
+  const n=document.getElementById('cf-n').value.trim();
+  const m=document.getElementById('cf-m').value.trim();
+  if(!n||!m){toast('Veuillez remplir le formulaire');return;}
+  const msg=encodeURIComponent(`Bonjour CultureCase 👋\nNom : ${n}\nTéléphone : ${document.getElementById('cf-p').value}\n\n${m}`);
+  window.open('https://wa.me/22375992482?text='+msg,'_blank');
+}
+
+// ══ SYSTÈME D'AVIS ═══════════════════════════════════════════════════════════
+var _stars = 0;
+
+function pickStar(n) {
+  _stars = n;
+  document.querySelectorAll('#star-row span').forEach(function(s, i) {
+    s.style.color = i < n ? 'var(--gold)' : 'var(--border2)';
+  });
+}
+
+function submitAvis() {
+  var nom = (document.getElementById('av-nom').value || '').trim();
+  var loc = (document.getElementById('av-loc').value || '').trim();
+  var txt = (document.getElementById('av-txt').value || '').trim();
+  var err = document.getElementById('av-err');
+  if (!_stars)         { err.textContent='Veuillez choisir une note.'; err.style.display='block'; return; }
+  if (!nom)            { err.textContent='Veuillez indiquer votre prénom.'; err.style.display='block'; return; }
+  if (txt.length < 15) { err.textContent='Votre avis doit faire au moins 15 caractères.'; err.style.display='block'; return; }
+  err.style.display = 'none';
+
+  var starsStr = '★'.repeat(_stars) + '☆'.repeat(5 - _stars);
+  var initials = nom.trim().split(/\s+/).map(function(w){return w[0];}).join('').toUpperCase().slice(0,2);
+
+  var card = document.createElement('div');
+  card.className = 'review-card';
+  card.style.animation = 'pgFadeUp .4s ease both';
+  card.innerHTML =
+    '<div class="rev-stars" style="color:var(--gold)">' + starsStr + '</div>' +
+    '<p class="rev-text">' + '« ' + txt + ' »' + '</p>' +
+    '<div class="rev-author">' +
+      '<div class="rev-avatar">' + initials + '</div>' +
+      '<div><div class="rev-name">' + nom + '</div>' +
+      '<div class="rev-loc">' + (loc || 'Bamako, Mali') + '</div></div>' +
+    '</div>';
+
+  var grid = document.getElementById('reviews-grid');
+  if (grid) {
+    grid.insertBefore(card, grid.firstChild);
+    var all = grid.querySelectorAll('.review-card');
+    if (all.length > 8) grid.removeChild(all[all.length - 1]);
+  }
+
+  document.getElementById('av-nom').value = '';
+  document.getElementById('av-loc').value = '';
+  document.getElementById('av-txt').value = '';
+  pickStar(0);
+  toast('Merci ' + nom.split(' ')[0] + ' ! Votre avis est publié. ✨');
+  go('home');
+}
+
+
+</script>
+</body></html>
