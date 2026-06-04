@@ -14,6 +14,7 @@ const SalesPage    = lazy(() => import("./SalesPage.jsx"));
 const HistoryPage  = lazy(() => import("./HistoryPage.jsx"));
 const Reports      = lazy(() => import("./Reports.jsx"));
 const SettingsPage = lazy(() => import("./SettingsPage.jsx"));
+const BlogPage     = lazy(() => import("./BlogPage.jsx"));
 
 function App() {
   // ── UI state ────────────────────────────────────────────────────────────
@@ -173,6 +174,7 @@ function App() {
     { id: "sales",     label: "Ventes",             icon: "sales"     },
     { id: "history",   label: "Historique clients", icon: "phone"     },
     { id: "reports",   label: "Rapports",           icon: "reports"   },
+    { id: "blog",      label: "Blog",               icon: "edit"      },
     { id: "settings",  label: "Paramètres",         icon: "settings"  },
   ];
 
@@ -183,6 +185,7 @@ function App() {
     sales:     "Ventes",
     history:   "Historique clients",
     reports:   "Rapports",
+    blog:      "Blog",
     settings:  "Paramètres",
   };
 
@@ -320,6 +323,7 @@ function App() {
               {page === "history"   && <HistoryPage data={data} />}
               {page === "reports"   && <Reports data={data} />}
               {page === "settings"  && <SettingsPage data={data} onSave={saveSettings} onSaveProduct={saveProduct} onPersist={persist} confirm={confirm} />}
+              {page === "blog"      && <BlogPage data={data} onPersist={persist} />}
             </Suspense>
           </div>
 
