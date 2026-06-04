@@ -1,293 +1,365 @@
-import { useState, useCallback } from "react";
-import Icon from "./Icon.jsx";
+import { useState, useEffect, useCallback } from "react";
+import { getDB, doc, onSnapshot, writeBatch } from "./firebase.js";
+import { collection, addDoc, updateDoc, deleteDoc, serverTimestamp } from "firebase/firestore";
+import { uid } from "./utils.js";
 
-const CATS = ["CULTURE", "TEXTILE", "HISTOIRE", "ART", "MODE", "LIFESTYLE"];
-
-const EMPTY = {
-  id: "", title: "", tag: "CULTURE", date: "", read: "3 min de lecture",
-  img: "", excerpt: "", content: "",
-};
-
-function uid() {
-  return "B" + Date.now().toString(36).toUpperCase();
+// ── Utilitaires ───────────────────────────────────────────────────────────────
+function fmtDate(ts) {
+  if (!ts) return "—";
+  const d = ts.toDate ? ts.toDate() : new Date(ts);
+  return d.toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" });
 }
 
-// ── Formulaire article ────────────────────────────────────────────────────────
-function ArticleForm({ initial, onSave, onCancel }) {
-  const [form, setForm] = useState({ ...EMPTY, ...initial });
-  const [err,  setErr]  = useState({});
-
-  const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
+// ── Éditeur de post ───────────────────────────────────────────────────────────
+function PostEditor({ post, onSave, onCancel }) {
+  const [form, setForm] = useState({
+    title:    post?.title    || "",
+    excerpt:  post?.excerpt  || "",
+    content:  post?.content  || "",
+    cover:    post?.cover    || "",
+    tags:     post?.tags?.join(", ") || "",
+    published: post?.published ?? false,
+  });
+  const [saving, setSaving] = useState(false);
+  const [errors, setErrors] = useState({});
 
   const validate = () => {
     const e = {};
     if (!form.title.trim())   e.title   = "Titre requis";
-    if (!form.excerpt.trim()) e.excerpt  = "Résumé requis";
-    if (!form.content.trim()) e.content  = "Contenu requis";
-    if (!form.date.trim())    e.date     = "Date requise";
-    setErr(e);
-    return Object.keys(e).length === 0;
+    if (!form.content.trim()) e.content = "Contenu requis";
+    return e;
   };
 
-  const handleSave = () => {
-    if (!validate()) return;
-    onSave({ ...form, id: form.id || uid() });
+  const handleSave = async () => {
+    const e = validate();
+    if (Object.keys(e).length) { setErrors(e); return; }
+    setSaving(true);
+    try {
+      await onSave({
+        ...form,
+        title:   form.title.trim(),
+        excerpt: form.excerpt.trim(),
+        content: form.content.trim(),
+        cover:   form.cover.trim(),
+        tags:    form.tags.split(",").map(t => t.trim()).filter(Boolean),
+      });
+    } finally {
+      setSaving(false);
+    }
   };
 
-  const inp = {
-    background: "var(--bg3)", border: "1px solid var(--border)",
-    borderRadius: 8, padding: "10px 12px", color: "var(--text1)",
-    fontSize: 14, width: "100%", fontFamily: "inherit",
-  };
-  const lbl = { fontSize: 12, fontWeight: 600, color: "var(--text2)", marginBottom: 4, display: "block" };
-  const errStyle = { fontSize: 11, color: "var(--warn)", marginTop: 3 };
-  const fieldWrap = { marginBottom: 16 };
+  const inp = (field) => ({
+    value: form[field],
+    onChange: (e) => { setForm(f => ({ ...f, [field]: e.target.value })); setErrors(er => ({ ...er, [field]: "" })); },
+  });
 
   return (
-    <div style={{ maxWidth: 680, margin: "0 auto" }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 24 }}>
-        <button onClick={onCancel} style={{ background: "none", border: "none", color: "var(--text2)", cursor: "pointer", display: "flex", alignItems: "center", gap: 6, fontSize: 13 }}>
-          <Icon name="arrow_up" size={14} style={{ transform: "rotate(-90deg)" }} /> Retour
-        </button>
-        <h2 style={{ fontSize: 18, fontWeight: 700, color: "var(--text1)" }}>
-          {form.id ? "Modifier l'article" : "Nouvel article"}
-        </h2>
+    <div className="card" style={{ maxWidth: 720, margin: "0 auto" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
+        <h3 style={{ fontSize: 16, fontWeight: 700 }}>{post ? "Modifier l'article" : "Nouvel article"}</h3>
+        <button className="btn btn-outline btn-sm" onClick={onCancel}>Annuler</button>
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
-        {/* Titre */}
-        <div style={{ ...fieldWrap, gridColumn: "1/-1" }}>
-          <label style={lbl}>Titre *</label>
-          <input style={inp} value={form.title} onChange={e => set("title", e.target.value)} placeholder="ex: Le Bogolan, un art ancestral" />
-          {err.title && <div style={errStyle}>{err.title}</div>}
-        </div>
+      {/* Titre */}
+      <div style={{ marginBottom: 14 }}>
+        <label className="form-label">Titre *</label>
+        <input className={`form-input${errors.title ? " error" : ""}`} placeholder="Titre de l'article" {...inp("title")} />
+        {errors.title && <p className="field-error">{errors.title}</p>}
+      </div>
 
-        {/* Catégorie */}
-        <div style={fieldWrap}>
-          <label style={lbl}>Catégorie</label>
-          <select style={inp} value={form.tag} onChange={e => set("tag", e.target.value)}>
-            {CATS.map(c => <option key={c} value={c}>{c}</option>)}
-          </select>
-        </div>
+      {/* Extrait */}
+      <div style={{ marginBottom: 14 }}>
+        <label className="form-label">Extrait <span style={{ color: "var(--text2)", fontWeight: 400 }}>(affiché sur la liste)</span></label>
+        <textarea className="form-input" rows={2} placeholder="Résumé court de l'article…" {...inp("excerpt")} style={{ resize: "vertical", fontFamily: "inherit" }} />
+      </div>
 
-        {/* Date */}
-        <div style={fieldWrap}>
-          <label style={lbl}>Date *</label>
-          <input style={inp} value={form.date} onChange={e => set("date", e.target.value)} placeholder="ex: Juin 2026" />
-          {err.date && <div style={errStyle}>{err.date}</div>}
-        </div>
-
-        {/* Temps de lecture */}
-        <div style={fieldWrap}>
-          <label style={lbl}>Temps de lecture</label>
-          <input style={inp} value={form.read} onChange={e => set("read", e.target.value)} placeholder="ex: 5 min de lecture" />
-        </div>
-
-        {/* Image URL */}
-        <div style={fieldWrap}>
-          <label style={lbl}>URL image (Cloudinary)</label>
-          <input style={inp} value={form.img} onChange={e => set("img", e.target.value)} placeholder="https://res.cloudinary.com/..." />
-        </div>
-
-        {/* Aperçu image */}
-        {form.img && (
-          <div style={{ gridColumn: "1/-1", marginBottom: 16 }}>
-            <label style={lbl}>Aperçu image</label>
-            <img
-              src={form.img} alt="aperçu"
-              onError={e => { e.target.style.display = "none"; }}
-              style={{ width: "100%", maxHeight: 200, objectFit: "cover", borderRadius: 8, border: "1px solid var(--border)" }}
-            />
-          </div>
+      {/* Image de couverture */}
+      <div style={{ marginBottom: 14 }}>
+        <label className="form-label">Image de couverture <span style={{ color: "var(--text2)", fontWeight: 400 }}>(URL Cloudinary)</span></label>
+        <input className="form-input" placeholder="https://res.cloudinary.com/..." {...inp("cover")} />
+        {form.cover && (
+          <img src={form.cover} alt="couverture" style={{ marginTop: 8, width: "100%", maxHeight: 160, objectFit: "cover", borderRadius: 8, border: "1px solid var(--border)" }} />
         )}
-
-        {/* Résumé */}
-        <div style={{ ...fieldWrap, gridColumn: "1/-1" }}>
-          <label style={lbl}>Résumé * <span style={{ fontWeight: 400, color: "var(--text2)" }}>(affiché sur la liste)</span></label>
-          <textarea
-            style={{ ...inp, resize: "vertical", minHeight: 80 }}
-            value={form.excerpt}
-            onChange={e => set("excerpt", e.target.value)}
-            placeholder="Courte description de l'article (2-3 phrases)…"
-          />
-          {err.excerpt && <div style={errStyle}>{err.excerpt}</div>}
-        </div>
-
-        {/* Contenu */}
-        <div style={{ ...fieldWrap, gridColumn: "1/-1" }}>
-          <label style={lbl}>Contenu complet * <span style={{ fontWeight: 400, color: "var(--text2)" }}>(corps de l'article)</span></label>
-          <textarea
-            style={{ ...inp, resize: "vertical", minHeight: 220, lineHeight: 1.7 }}
-            value={form.content}
-            onChange={e => set("content", e.target.value)}
-            placeholder="Rédigez votre article ici…"
-          />
-          {err.content && <div style={errStyle}>{err.content}</div>}
-        </div>
       </div>
 
-      <div style={{ display: "flex", gap: 10, justifyContent: "flex-end", marginTop: 8 }}>
-        <button
-          onClick={onCancel}
-          style={{ padding: "10px 20px", borderRadius: 8, border: "1px solid var(--border)", background: "var(--bg3)", color: "var(--text1)", cursor: "pointer", fontFamily: "inherit", fontSize: 14 }}
+      {/* Contenu */}
+      <div style={{ marginBottom: 14 }}>
+        <label className="form-label">Contenu *</label>
+        <textarea
+          className={`form-input${errors.content ? " error" : ""}`}
+          rows={10}
+          placeholder="Écris l'article ici. Tu peux utiliser du Markdown ou du texte simple."
+          {...inp("content")}
+          style={{ resize: "vertical", fontFamily: "monospace", fontSize: 13, lineHeight: 1.7 }}
+        />
+        {errors.content && <p className="field-error">{errors.content}</p>}
+      </div>
+
+      {/* Tags */}
+      <div style={{ marginBottom: 14 }}>
+        <label className="form-label">Tags <span style={{ color: "var(--text2)", fontWeight: 400 }}>(séparés par des virgules)</span></label>
+        <input className="form-input" placeholder="bogolan, culture, mali" {...inp("tags")} />
+      </div>
+
+      {/* Statut de publication */}
+      <div style={{ marginBottom: 20, display: "flex", alignItems: "center", gap: 10 }}>
+        <div
+          onClick={() => setForm(f => ({ ...f, published: !f.published }))}
+          style={{
+            width: 40, height: 22, borderRadius: 11, cursor: "pointer", transition: "background 0.2s",
+            background: form.published ? "var(--success)" : "var(--bg3)",
+            border: "1px solid var(--border2)", position: "relative", flexShrink: 0,
+          }}
         >
-          Annuler
-        </button>
+          <div style={{
+            width: 16, height: 16, borderRadius: "50%", background: "#fff",
+            position: "absolute", top: 2,
+            left: form.published ? 20 : 2,
+            transition: "left 0.2s",
+          }} />
+        </div>
+        <span style={{ fontSize: 13, fontWeight: 600 }}>
+          {form.published ? "✅ Publié — visible sur le site vitrine" : "⏸ Brouillon — non visible"}
+        </span>
+      </div>
+
+      <div style={{ display: "flex", gap: 10 }}>
         <button
+          className="btn btn-primary"
           onClick={handleSave}
-          style={{ padding: "10px 22px", borderRadius: 8, border: "none", background: "var(--accent2)", color: "#fff", cursor: "pointer", fontFamily: "inherit", fontSize: 14, fontWeight: 600 }}
+          disabled={saving}
+          style={{ minWidth: 120 }}
         >
-          {form.id ? "Enregistrer" : "Publier l'article"}
+          {saving ? "Enregistrement…" : (post ? "Mettre à jour" : "Publier")}
         </button>
+        <button className="btn btn-outline" onClick={onCancel}>Annuler</button>
       </div>
     </div>
   );
 }
 
-// ── Carte article ─────────────────────────────────────────────────────────────
-function ArticleCard({ article, onEdit, onDelete }) {
+// ── Carte d'article ───────────────────────────────────────────────────────────
+function PostCard({ post, onEdit, onDelete, onTogglePublish }) {
   return (
-    <div style={{
-      background: "var(--bg2)", border: "1px solid var(--border)", borderRadius: 12,
-      overflow: "hidden", display: "flex", flexDirection: "column",
-    }}>
-      {article.img && (
-        <img
-          src={article.img} alt={article.title}
-          onError={e => { e.target.style.display = "none"; }}
-          style={{ width: "100%", height: 160, objectFit: "cover" }}
-        />
-      )}
-      {!article.img && (
-        <div style={{ width: "100%", height: 100, background: "var(--bg3)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-          <Icon name="image" size={32} style={{ color: "var(--text2)", opacity: 0.4 }} />
+    <div className="card" style={{ position: "relative", overflow: "hidden" }}>
+      {post.cover && (
+        <div style={{ margin: "-20px -20px 16px", height: 140, overflow: "hidden" }}>
+          <img src={post.cover} alt={post.title} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
         </div>
       )}
-      <div style={{ padding: 16, flex: 1, display: "flex", flexDirection: "column", gap: 8 }}>
-        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-          <span style={{ fontSize: 10, fontWeight: 700, background: "var(--accent2)", color: "#fff", padding: "2px 8px", borderRadius: 20 }}>
-            {article.tag}
-          </span>
-          <span style={{ fontSize: 11, color: "var(--text2)" }}>{article.date}</span>
-          <span style={{ fontSize: 11, color: "var(--text2)" }}>· {article.read}</span>
+
+      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 8 }}>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6, flexWrap: "wrap" }}>
+            <span className={`badge ${post.published ? "badge-success" : "badge-warn"}`}>
+              {post.published ? "Publié" : "Brouillon"}
+            </span>
+            {post.tags?.map(t => (
+              <span key={t} style={{ fontSize: 10, padding: "2px 7px", borderRadius: 10, background: "var(--bg3)", color: "var(--text2)", fontWeight: 600 }}>
+                {t}
+              </span>
+            ))}
+          </div>
+          <h3 style={{ fontSize: 15, fontWeight: 700, marginBottom: 6, lineHeight: 1.3 }}>{post.title}</h3>
+          {post.excerpt && (
+            <p style={{ fontSize: 12, color: "var(--text2)", lineHeight: 1.5, marginBottom: 8,
+              display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>
+              {post.excerpt}
+            </p>
+          )}
+          <p style={{ fontSize: 11, color: "var(--text2)" }}>
+            {fmtDate(post.createdAt)}
+            {post.updatedAt && post.updatedAt !== post.createdAt && " · modifié"}
+          </p>
         </div>
-        <div style={{ fontWeight: 700, fontSize: 15, color: "var(--text1)", lineHeight: 1.4 }}>{article.title}</div>
-        <div style={{ fontSize: 13, color: "var(--text2)", lineHeight: 1.55, flex: 1 }}>
-          {article.excerpt?.slice(0, 120)}{article.excerpt?.length > 120 ? "…" : ""}
-        </div>
-        <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
-          <button
-            onClick={() => onEdit(article)}
-            style={{ flex: 1, padding: "8px 0", borderRadius: 8, border: "1px solid var(--border)", background: "var(--bg3)", color: "var(--text1)", cursor: "pointer", fontFamily: "inherit", fontSize: 13, display: "flex", alignItems: "center", justifyContent: "center", gap: 6 }}
-          >
-            <Icon name="edit" size={13} /> Modifier
-          </button>
-          <button
-            onClick={() => onDelete(article.id)}
-            style={{ padding: "8px 14px", borderRadius: 8, border: "1px solid var(--border)", background: "var(--bg3)", color: "var(--warn)", cursor: "pointer", display: "flex", alignItems: "center", gap: 4 }}
-          >
-            <Icon name="trash" size={13} />
-          </button>
-        </div>
+      </div>
+
+      <div style={{ display: "flex", gap: 8, marginTop: 14 }}>
+        <button className="btn btn-outline btn-sm" onClick={() => onEdit(post)}>✏️ Modifier</button>
+        <button
+          className="btn btn-outline btn-sm"
+          onClick={() => onTogglePublish(post)}
+          style={{ color: post.published ? "var(--warn)" : "var(--success)" }}
+        >
+          {post.published ? "⏸ Dépublier" : "✅ Publier"}
+        </button>
+        <button
+          className="btn btn-outline btn-sm"
+          onClick={() => onDelete(post)}
+          style={{ color: "var(--danger)", marginLeft: "auto" }}
+        >
+          🗑
+        </button>
       </div>
     </div>
   );
 }
 
 // ── Page principale Blog ──────────────────────────────────────────────────────
-export default function BlogPage({ data, onPersist }) {
-  const [view,    setView]    = useState("list"); // "list" | "form"
-  const [editing, setEditing] = useState(null);
+export default function BlogPage() {
+  const [posts,    setPosts]    = useState([]);
+  const [loading,  setLoading]  = useState(true);
+  const [editing,  setEditing]  = useState(null);   // null | "new" | post
+  const [filter,   setFilter]   = useState("all");  // "all" | "published" | "draft"
+  const [toast,    setToast]    = useState(null);
 
-  const articles = data?.settings?.blog || [];
-
-  const saveArticle = useCallback((article) => {
-    const existing = articles.find(a => a.id === article.id);
-    const updated = existing
-      ? articles.map(a => a.id === article.id ? article : a)
-      : [...articles, article];
-
-    onPersist({
-      ...data,
-      settings: { ...data.settings, blog: updated },
-    });
-    setView("list");
-    setEditing(null);
-  }, [articles, data, onPersist]);
-
-  const deleteArticle = useCallback((id) => {
-    if (!window.confirm("Supprimer cet article ? Cette action est irréversible.")) return;
-    onPersist({
-      ...data,
-      settings: { ...data.settings, blog: articles.filter(a => a.id !== id) },
-    });
-  }, [articles, data, onPersist]);
-
-  const handleEdit = (article) => {
-    setEditing(article);
-    setView("form");
+  const showToast = (msg, type = "success") => {
+    setToast({ msg, type });
+    setTimeout(() => setToast(null), 3500);
   };
 
-  const handleNew = () => {
-    setEditing(null);
-    setView("form");
-  };
+  // ── Écoute Firestore temps réel ──────────────────────────────────────────
+  useEffect(() => {
+    const db = getDB();
+    // import dynamique de collection/query pour éviter de casser le reste
+    import("firebase/firestore").then(({ collection, query, orderBy, onSnapshot: oss }) => {
+      const q = query(collection(db, "blog_posts"), orderBy("createdAt", "desc"));
+      const unsub = oss(q, (snap) => {
+        setPosts(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+        setLoading(false);
+      }, () => setLoading(false));
+      return unsub;
+    });
+  }, []);
 
-  // ── Vue formulaire ──────────────────────────────────────────────────────────
-  if (view === "form") {
+  // ── Sauvegarder (créer ou modifier) ─────────────────────────────────────
+  const handleSave = useCallback(async (formData) => {
+    const db = getDB();
+    const { collection, addDoc, updateDoc, serverTimestamp } = await import("firebase/firestore");
+    if (editing === "new") {
+      await addDoc(collection(db, "blog_posts"), {
+        ...formData,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      });
+      showToast("Article créé ✓");
+    } else {
+      const { doc: fDoc, updateDoc: updDoc } = await import("firebase/firestore");
+      await updDoc(fDoc(db, "blog_posts", editing.id), {
+        ...formData,
+        updatedAt: serverTimestamp(),
+      });
+      showToast("Article mis à jour ✓");
+    }
+    setEditing(null);
+  }, [editing]);
+
+  // ── Supprimer ────────────────────────────────────────────────────────────
+  const handleDelete = useCallback(async (post) => {
+    if (!window.confirm(`Supprimer "${post.title}" ?`)) return;
+    const { doc: fDoc, deleteDoc: delDoc } = await import("firebase/firestore");
+    const db = getDB();
+    await delDoc(fDoc(db, "blog_posts", post.id));
+    showToast("Article supprimé");
+  }, []);
+
+  // ── Publier / Dépublier ──────────────────────────────────────────────────
+  const handleTogglePublish = useCallback(async (post) => {
+    const { doc: fDoc, updateDoc: updDoc, serverTimestamp: sts } = await import("firebase/firestore");
+    const db = getDB();
+    await updDoc(fDoc(db, "blog_posts", post.id), {
+      published: !post.published,
+      updatedAt: sts(),
+    });
+    showToast(post.published ? "Article dépublié" : "Article publié ✓");
+  }, []);
+
+  // ── Filtrage ─────────────────────────────────────────────────────────────
+  const filtered = posts.filter(p => {
+    if (filter === "published") return p.published;
+    if (filter === "draft")     return !p.published;
+    return true;
+  });
+
+  const published = posts.filter(p => p.published).length;
+  const drafts    = posts.filter(p => !p.published).length;
+
+  // ── Rendu éditeur ────────────────────────────────────────────────────────
+  if (editing !== null) {
     return (
-      <div style={{ padding: 24 }}>
-        <ArticleForm
-          initial={editing || {}}
-          onSave={saveArticle}
-          onCancel={() => { setView("list"); setEditing(null); }}
-        />
-      </div>
+      <PostEditor
+        post={editing === "new" ? null : editing}
+        onSave={handleSave}
+        onCancel={() => setEditing(null)}
+      />
     );
   }
 
-  // ── Vue liste ───────────────────────────────────────────────────────────────
   return (
-    <div style={{ padding: 24 }}>
-      {/* Header */}
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 24, flexWrap: "wrap", gap: 12 }}>
+    <div>
+      {/* Toast */}
+      {toast && (
+        <div style={{
+          position: "fixed", bottom: 80, left: "50%", transform: "translateX(-50%)",
+          background: toast.type === "success" ? "var(--success)" : "var(--danger)",
+          color: "#fff", padding: "10px 20px", borderRadius: 20,
+          fontSize: 13, fontWeight: 700, zIndex: 9999, boxShadow: "0 4px 20px rgba(0,0,0,0.4)",
+        }}>
+          {toast.msg}
+        </div>
+      )}
+
+      {/* En-tête */}
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20, flexWrap: "wrap", gap: 12 }}>
         <div>
-          <h2 style={{ fontSize: 20, fontWeight: 700, color: "var(--text1)", marginBottom: 4 }}>Articles du Blog</h2>
-          <p style={{ fontSize: 13, color: "var(--text2)" }}>
-            {articles.length} article{articles.length !== 1 ? "s" : ""} · Les modifications s'affichent sur le site client en temps réel
+          <h2 style={{ fontSize: 18, fontWeight: 800, marginBottom: 4 }}>Articles du blog</h2>
+          <p style={{ fontSize: 12, color: "var(--text2)" }}>
+            {published} publié(s) · {drafts} brouillon(s) · synchronisé avec le site vitrine
           </p>
         </div>
-        <button
-          onClick={handleNew}
-          style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 18px", borderRadius: 8, border: "none", background: "var(--accent2)", color: "#fff", cursor: "pointer", fontFamily: "inherit", fontSize: 14, fontWeight: 600 }}
-        >
-          <Icon name="plus" size={15} /> Nouvel article
+        <button className="btn btn-primary" onClick={() => setEditing("new")}>
+          + Nouvel article
         </button>
       </div>
 
-      {/* Liste vide */}
-      {articles.length === 0 && (
-        <div style={{ textAlign: "center", padding: "60px 20px", color: "var(--text2)" }}>
-          <div style={{ fontSize: 40, marginBottom: 16 }}>✍️</div>
-          <div style={{ fontSize: 16, fontWeight: 600, marginBottom: 8, color: "var(--text1)" }}>Aucun article pour l'instant</div>
-          <div style={{ fontSize: 13, marginBottom: 24 }}>Créez votre premier article pour qu'il apparaisse sur le site.</div>
+      {/* Filtres */}
+      <div style={{ display: "flex", gap: 8, marginBottom: 18 }}>
+        {[
+          { id: "all",       label: `Tous (${posts.length})` },
+          { id: "published", label: `Publiés (${published})` },
+          { id: "draft",     label: `Brouillons (${drafts})` },
+        ].map(f => (
           <button
-            onClick={handleNew}
-            style={{ padding: "10px 22px", borderRadius: 8, border: "none", background: "var(--accent2)", color: "#fff", cursor: "pointer", fontFamily: "inherit", fontSize: 14, fontWeight: 600 }}
+            key={f.id}
+            onClick={() => setFilter(f.id)}
+            className={`btn btn-sm ${filter === f.id ? "btn-primary" : "btn-outline"}`}
           >
+            {f.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Liste */}
+      {loading && (
+        <div style={{ padding: 40, textAlign: "center", color: "var(--text2)", fontSize: 13 }}>
+          Chargement…
+        </div>
+      )}
+
+      {!loading && filtered.length === 0 && (
+        <div className="card" style={{ textAlign: "center", padding: 40 }}>
+          <p style={{ fontSize: 32, marginBottom: 12 }}>✍️</p>
+          <p style={{ fontWeight: 700, marginBottom: 6 }}>Aucun article</p>
+          <p style={{ fontSize: 13, color: "var(--text2)", marginBottom: 16 }}>
+            Crée ton premier article pour alimenter le blog du site vitrine.
+          </p>
+          <button className="btn btn-primary" onClick={() => setEditing("new")}>
             Créer un article
           </button>
         </div>
       )}
 
-      {/* Grille articles */}
-      {articles.length > 0 && (
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: 16 }}>
-          {articles.map(a => (
-            <ArticleCard key={a.id} article={a} onEdit={handleEdit} onDelete={deleteArticle} />
-          ))}
-        </div>
-      )}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: 16 }}>
+        {filtered.map(post => (
+          <PostCard
+            key={post.id}
+            post={post}
+            onEdit={setEditing}
+            onDelete={handleDelete}
+            onTogglePublish={handleTogglePublish}
+          />
+        ))}
+      </div>
     </div>
   );
 }

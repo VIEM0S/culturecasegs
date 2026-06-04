@@ -174,7 +174,7 @@ function App() {
     { id: "sales",     label: "Ventes",             icon: "sales"     },
     { id: "history",   label: "Historique clients", icon: "phone"     },
     { id: "reports",   label: "Rapports",           icon: "reports"   },
-    { id: "blog",      label: "Blog",               icon: "edit"      },
+    { id: "blog",      label: "Blog",               icon: "blog"      },
     { id: "settings",  label: "Paramètres",         icon: "settings"  },
   ];
 
@@ -322,8 +322,8 @@ function App() {
               {page === "sales"     && <SalesPage data={data} onSale={addSale} onCancel={cancelSale} toast={toast} />}
               {page === "history"   && <HistoryPage data={data} />}
               {page === "reports"   && <Reports data={data} />}
+              {page === "blog"      && <BlogPage />}
               {page === "settings"  && <SettingsPage data={data} onSave={saveSettings} onSaveProduct={saveProduct} onPersist={persist} confirm={confirm} />}
-              {page === "blog"      && <BlogPage data={data} onPersist={persist} />}
             </Suspense>
           </div>
 
