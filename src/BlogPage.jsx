@@ -1,7 +1,10 @@
 import { useState, useEffect, useCallback } from "react";
-import { getDB, doc, onSnapshot, writeBatch } from "./firebase.js";
-import { collection, addDoc, updateDoc, deleteDoc, serverTimestamp } from "firebase/firestore";
-import { uid } from "./utils.js";
+import { getDB } from "./firebase.js";
+import {
+  collection, addDoc, updateDoc, deleteDoc,
+  serverTimestamp, query, orderBy, onSnapshot,
+  doc as fDoc,
+} from "firebase/firestore";
 
 // ── Utilitaires ───────────────────────────────────────────────────────────────
 function fmtDate(ts) {
@@ -199,6 +202,7 @@ function PostCard({ post, onEdit, onDelete, onTogglePublish }) {
 export default function BlogPage() {
   const [posts,    setPosts]    = useState([]);
   const [loading,  setLoading]  = useState(true);
+  const [error,    setError]    = useState(null);
   const [editing,  setEditing]  = useState(null);   // null | "new" | post
   const [filter,   setFilter]   = useState("all");  // "all" | "published" | "draft"
   const [toast,    setToast]    = useState(null);
@@ -211,21 +215,26 @@ export default function BlogPage() {
   // ── Écoute Firestore temps réel ──────────────────────────────────────────
   useEffect(() => {
     const db = getDB();
-    // import dynamique de collection/query pour éviter de casser le reste
-    import("firebase/firestore").then(({ collection, query, orderBy, onSnapshot: oss }) => {
-      const q = query(collection(db, "blog_posts"), orderBy("createdAt", "desc"));
-      const unsub = oss(q, (snap) => {
+    const q = query(collection(db, "blog_posts"), orderBy("createdAt", "desc"));
+    const unsub = onSnapshot(
+      q,
+      (snap) => {
         setPosts(snap.docs.map(d => ({ id: d.id, ...d.data() })));
         setLoading(false);
-      }, () => setLoading(false));
-      return unsub;
-    });
+        setError(null);
+      },
+      (err) => {
+        console.error("Blog Firestore error:", err);
+        setLoading(false);
+        setError("Impossible de charger les articles. Vérifie ta connexion ou les règles Firestore.");
+      }
+    );
+    return () => unsub();
   }, []);
 
   // ── Sauvegarder (créer ou modifier) ─────────────────────────────────────
   const handleSave = useCallback(async (formData) => {
     const db = getDB();
-    const { collection, addDoc, updateDoc, serverTimestamp } = await import("firebase/firestore");
     if (editing === "new") {
       await addDoc(collection(db, "blog_posts"), {
         ...formData,
@@ -234,8 +243,7 @@ export default function BlogPage() {
       });
       showToast("Article créé ✓");
     } else {
-      const { doc: fDoc, updateDoc: updDoc } = await import("firebase/firestore");
-      await updDoc(fDoc(db, "blog_posts", editing.id), {
+      await updateDoc(fDoc(db, "blog_posts", editing.id), {
         ...formData,
         updatedAt: serverTimestamp(),
       });
@@ -247,19 +255,17 @@ export default function BlogPage() {
   // ── Supprimer ────────────────────────────────────────────────────────────
   const handleDelete = useCallback(async (post) => {
     if (!window.confirm(`Supprimer "${post.title}" ?`)) return;
-    const { doc: fDoc, deleteDoc: delDoc } = await import("firebase/firestore");
     const db = getDB();
-    await delDoc(fDoc(db, "blog_posts", post.id));
+    await deleteDoc(fDoc(db, "blog_posts", post.id));
     showToast("Article supprimé");
   }, []);
 
   // ── Publier / Dépublier ──────────────────────────────────────────────────
   const handleTogglePublish = useCallback(async (post) => {
-    const { doc: fDoc, updateDoc: updDoc, serverTimestamp: sts } = await import("firebase/firestore");
     const db = getDB();
-    await updDoc(fDoc(db, "blog_posts", post.id), {
+    await updateDoc(fDoc(db, "blog_posts", post.id), {
       published: !post.published,
-      updatedAt: sts(),
+      updatedAt: serverTimestamp(),
     });
     showToast(post.published ? "Article dépublié" : "Article publié ✓");
   }, []);
@@ -333,6 +339,17 @@ export default function BlogPage() {
       {loading && (
         <div style={{ padding: 40, textAlign: "center", color: "var(--text2)", fontSize: 13 }}>
           Chargement…
+        </div>
+      )}
+
+      {!loading && error && (
+        <div className="card" style={{ textAlign: "center", padding: 32, borderColor: "var(--danger)" }}>
+          <p style={{ fontSize: 28, marginBottom: 10 }}>⚠️</p>
+          <p style={{ fontWeight: 700, color: "var(--danger)", marginBottom: 6 }}>Erreur de chargement</p>
+          <p style={{ fontSize: 13, color: "var(--text2)", marginBottom: 16 }}>{error}</p>
+          <button className="btn btn-outline btn-sm" onClick={() => window.location.reload()}>
+            Réessayer
+          </button>
         </div>
       )}
 

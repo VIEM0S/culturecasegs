@@ -163,6 +163,16 @@ function App() {
     );
 
   // 4. App principale
+  // Pages accessibles en mode viewer
+  const VIEWER_PAGES = ["dashboard", "products"];
+
+  // setPage sécurisé : le viewer ne peut pas accéder aux pages interdites
+  const safePage = (id) => {
+    if (isViewer && !VIEWER_PAGES.includes(id)) return;
+    setPage(id);
+    setSidebarOpen(false);
+  };
+
   const navItems = isViewer ? [
     { id: "dashboard", label: "Tableau de bord", icon: "dashboard" },
     { id: "products",  label: "Produits",        icon: "products"  },
@@ -240,7 +250,7 @@ function App() {
               <button
                 key={item.id}
                 className={`nav-item ${page === item.id ? "active" : ""}`}
-                onClick={() => { setPage(item.id); setSidebarOpen(false); }}
+                onClick={() => safePage(item.id)}
               >
                 <Icon name={item.icon} size={15} /> {item.label}
               </button>
@@ -315,9 +325,11 @@ function App() {
 
           <div className="content">
             <Suspense fallback={<div style={{ padding: 40, textAlign: "center", color: "var(--text2)", fontSize: 13 }}>Chargement…</div>}>
-              {page === "dashboard" && <Dashboard data={data} isViewer={isViewer} />}
-              {page === "products"  && <Products data={data} onSale={addSale} onDelete={deleteProduct} isViewer={isViewer} />}
-              {page === "stock"     && <StockPage data={data} onMove={addMovement} isViewer={isViewer} />}
+              {/* Garde viewer : si page interdite, afficher dashboard */}
+              {isViewer && !VIEWER_PAGES.includes(page) && <Dashboard data={data} isViewer={isViewer} />}
+              {(!isViewer || VIEWER_PAGES.includes(page)) && page === "dashboard" && <Dashboard data={data} isViewer={isViewer} />}
+              {(!isViewer || VIEWER_PAGES.includes(page)) && page === "products"  && <Products data={data} onSale={addSale} onDelete={deleteProduct} isViewer={isViewer} />}
+              {!isViewer && page === "stock"     && <StockPage data={data} onMove={addMovement} isViewer={isViewer} />}
               {page === "sales"     && <SalesPage data={data} onSale={addSale} onCancel={cancelSale} toast={toast} />}
               {page === "history"   && <HistoryPage data={data} />}
               {page === "reports"   && <Reports data={data} />}
@@ -341,7 +353,7 @@ function App() {
                 <button
                   key={item.id}
                   className={`bottom-nav-item ${page === item.id ? "active" : ""}`}
-                  onClick={() => { setPage(item.id); setSidebarOpen(false); }}
+                  onClick={() => safePage(item.id)}
                 >
                   <div className="bn-pip" />
                   <Icon name={item.icon} size={20} />
