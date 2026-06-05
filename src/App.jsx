@@ -166,7 +166,6 @@ function App() {
   const navItems = isViewer ? [
     { id: "dashboard", label: "Tableau de bord", icon: "dashboard" },
     { id: "products",  label: "Produits",        icon: "products"  },
-    { id: "stock",     label: "Stock",           icon: "stock"     },
   ] : [
     { id: "dashboard", label: "Tableau de bord",    icon: "dashboard" },
     { id: "products",  label: "Produits",           icon: "products"  },
@@ -296,11 +295,11 @@ function App() {
 
               <span style={{ fontSize: 11.5, color: "var(--text2)" }}>{todayDisplay()}</span>
 
-              <button className="btn btn-outline btn-sm" onClick={() => exportData(data)} aria-label="Exporter les données">
+              <button className="btn btn-outline btn-sm" onClick={() => exportData(data)} aria-label="Exporter les données" style={{ display: isViewer ? "none" : undefined }}>
                 <Icon name="download" size={13} /> Exporter
               </button>
 
-              <label className="btn btn-outline btn-sm" style={{ cursor: "pointer", display: "flex", alignItems: "center", gap: 5 }}>
+              <label className="btn btn-outline btn-sm" style={{ cursor: "pointer", display: isViewer ? "none" : "flex", alignItems: "center", gap: 5 }}>
                 <Icon name="arrow_up" size={13} /> Importer
                 <input
                   type="file" accept=".json" style={{ display: "none" }}
@@ -332,7 +331,6 @@ function App() {
               {(isViewer ? [
                 { id: "dashboard", label: "Accueil",  icon: "dashboard" },
                 { id: "products",  label: "Produits", icon: "products"  },
-                { id: "stock",     label: "Stock",    icon: "stock"     },
               ] : [
                 { id: "dashboard", label: "Accueil",  icon: "dashboard" },
                 { id: "products",  label: "Produits", icon: "products"  },

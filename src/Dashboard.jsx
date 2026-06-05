@@ -263,7 +263,7 @@ const Dashboard = memo(function Dashboard({ data, isViewer = false }) {
                   <th scope="col">Type</th>
                   <th scope="col">Produit</th>
                   <th scope="col">Qté</th>
-                  <th scope="col">Détail</th>
+                  {!isViewer && <th scope="col">Détail</th>}
                 </tr>
               </thead>
               <tbody>
@@ -293,13 +293,15 @@ const Dashboard = memo(function Dashboard({ data, isViewer = false }) {
                           )}
                         </td>
                         <td style={{ fontWeight: 600 }}>-{op._totalQty}</td>
-                        <td style={{ color: "var(--text2)", fontSize: 12 }}>
-                          <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
-                            <span style={{ fontWeight: 700, color: "var(--success)" }}>{fmtMoney(op._groupTotal)}</span>
-                            {op.client && <span>{op.client}</span>}
-                            {hasDiscount && <span className="badge badge-gold">remise</span>}
-                          </div>
-                        </td>
+                        {!isViewer && (
+                          <td style={{ color: "var(--text2)", fontSize: 12 }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
+                              <span style={{ fontWeight: 700, color: "var(--success)" }}>{fmtMoney(op._groupTotal)}</span>
+                              {op.client && <span>{op.client}</span>}
+                              {hasDiscount && <span className="badge badge-gold">remise</span>}
+                            </div>
+                          </td>
+                        )}
                       </tr>
                     );
                   }
@@ -315,7 +317,7 @@ const Dashboard = memo(function Dashboard({ data, isViewer = false }) {
                       </td>
                       <td>{prod.model} — {prod.design}</td>
                       <td style={{ fontWeight: 600 }}>{op.type === "in" ? `+${op.qty}` : `-${op.qty}`}</td>
-                      <td style={{ color: "var(--text2)", fontSize: 12 }}>{op.reason || "—"}</td>
+                      {!isViewer && <td style={{ color: "var(--text2)", fontSize: 12 }}>{op.reason || "—"}</td>}
                     </tr>
                   );
                 })}
