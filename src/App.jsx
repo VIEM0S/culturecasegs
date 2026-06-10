@@ -15,6 +15,7 @@ const HistoryPage  = lazy(() => import("./HistoryPage.jsx"));
 const Reports      = lazy(() => import("./Reports.jsx"));
 const SettingsPage = lazy(() => import("./SettingsPage.jsx"));
 const BlogPage     = lazy(() => import("./BlogPage.jsx"));
+const ReviewsPage  = lazy(() => import("./ReviewsPage.jsx"));
 
 function App() {
   // ── UI state ────────────────────────────────────────────────────────────
@@ -184,6 +185,7 @@ function App() {
     { id: "history",   label: "Historique clients", icon: "phone"     },
     { id: "reports",   label: "Rapports",           icon: "reports"   },
     { id: "blog",      label: "Blog",               icon: "blog"      },
+    { id: "reviews",   label: "Avis clients",       icon: "star"      },
     { id: "settings",  label: "Paramètres",         icon: "settings"  },
   ];
 
@@ -195,6 +197,7 @@ function App() {
     history:   "Historique clients",
     reports:   "Rapports",
     blog:      "Blog",
+    reviews:   "Avis clients",
     settings:  "Paramètres",
   };
 
@@ -334,6 +337,7 @@ function App() {
               {page === "history"   && <HistoryPage data={data} />}
               {page === "reports"   && <Reports data={data} />}
               {page === "blog"      && <BlogPage />}
+              {page === "reviews"   && <ReviewsPage />}
               {page === "settings"  && <SettingsPage data={data} onSave={saveSettings} onSaveProduct={saveProduct} onPersist={persist} confirm={confirm} />}
             </Suspense>
           </div>
