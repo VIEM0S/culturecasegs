@@ -1,10 +1,113 @@
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { getDB } from "./firebase.js";
 import {
   collection, addDoc, updateDoc, deleteDoc,
   serverTimestamp, query, orderBy, onSnapshot,
   doc as fDoc,
 } from "firebase/firestore";
+
+// ── Upload Cloudinary (unsigned preset) ───────────────────────────────────────
+const CLOUDINARY_CLOUD_NAME = "dknfqd2xp";
+const CLOUDINARY_UPLOAD_PRESET = "blog_unsigned";
+const CLOUDINARY_UPLOAD_URL = `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/upload`;
+
+async function uploadToCloudinary(file, onProgress) {
+  const formData = new FormData();
+  formData.append("file", file);
+  formData.append("upload_preset", CLOUDINARY_UPLOAD_PRESET);
+
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open("POST", CLOUDINARY_UPLOAD_URL);
+
+    xhr.upload.onprogress = (e) => {
+      if (e.lengthComputable && onProgress) {
+        onProgress(Math.round((e.loaded / e.total) * 100));
+      }
+    };
+
+    xhr.onload = () => {
+      if (xhr.status >= 200 && xhr.status < 300) {
+        try {
+          const data = JSON.parse(xhr.responseText);
+          resolve(data.secure_url);
+        } catch {
+          reject(new Error("Réponse Cloudinary invalide"));
+        }
+      } else {
+        reject(new Error(`Échec de l'upload (${xhr.status})`));
+      }
+    };
+    xhr.onerror = () => reject(new Error("Erreur réseau pendant l'upload"));
+    xhr.send(formData);
+  });
+}
+
+// ── Champ image : saisie URL manuelle OU upload de fichier ────────────────────
+function ImageUploadField({ value, onChange, placeholder, previewHeight = 140 }) {
+  const [uploading, setUploading] = useState(false);
+  const [progress, setProgress]   = useState(0);
+  const [error,     setError]     = useState("");
+  const fileInputRef = useRef(null);
+
+  const handleFileSelect = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      setError("Sélectionne un fichier image (jpg, png, webp…)");
+      return;
+    }
+    setError("");
+    setUploading(true);
+    setProgress(0);
+    try {
+      const url = await uploadToCloudinary(file, setProgress);
+      onChange(url);
+    } catch (err) {
+      setError(err.message || "Échec de l'upload, réessaie.");
+    } finally {
+      setUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  };
+
+  return (
+    <div>
+      <div style={{ display: "flex", gap: 8 }}>
+        <input
+          className="form-input"
+          placeholder={placeholder || "https://res.cloudinary.com/… ou clique sur Uploader"}
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          style={{ flex: 1 }}
+        />
+        <button
+          type="button"
+          className="btn btn-outline btn-sm"
+          onClick={() => fileInputRef.current?.click()}
+          disabled={uploading}
+          style={{ flexShrink: 0, whiteSpace: "nowrap" }}
+        >
+          {uploading ? `${progress}%…` : "📤 Uploader"}
+        </button>
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          onChange={handleFileSelect}
+          style={{ display: "none" }}
+        />
+      </div>
+      {error && <p className="field-error" style={{ marginTop: 4 }}>{error}</p>}
+      {value && !uploading && (
+        <img
+          src={value} alt="aperçu"
+          style={{ marginTop: 8, width: "100%", maxHeight: previewHeight, objectFit: "cover", borderRadius: 8, border: "1px solid var(--border)" }}
+        />
+      )}
+    </div>
+  );
+}
 
 // ── Parser Markdown minimal ───────────────────────────────────────────────────
 // Pas de dépendance externe — couvre les cas réels d'un blog culturel
@@ -313,38 +416,29 @@ function PostEditor({ post, onSave, onCancel }) {
             {/* Image de couverture */}
             <div style={{ gridColumn: "1 / -1" }}>
               <label className="form-label">
-                Image de couverture <span style={{ color: "var(--text2)", fontWeight: 400 }}>(URL Cloudinary)</span>
+                Image de couverture <span style={{ color: "var(--text2)", fontWeight: 400 }}>(uploade un fichier ou colle une URL)</span>
               </label>
-              <input className="form-input" placeholder="https://res.cloudinary.com/…" {...field("cover")} />
-              {form.cover && (
-                <img
-                  src={form.cover} alt="couverture"
-                  style={{ marginTop: 8, width: "100%", maxHeight: 180, objectFit: "cover", borderRadius: 8, border: "1px solid var(--border)" }}
-                />
-              )}
+              <ImageUploadField
+                value={form.cover}
+                onChange={(url) => setForm(f => ({ ...f, cover: url }))}
+                previewHeight={180}
+              />
             </div>
 
             {/* Galerie d'images supplémentaires */}
             <div style={{ gridColumn: "1 / -1" }}>
               <label className="form-label">
-                Autres images <span style={{ color: "var(--text2)", fontWeight: 400 }}>(insérées dans l'article, dans l'ordre)</span>
+                Autres images <span style={{ color: "var(--text2)", fontWeight: 400 }}>(insérées dans l'article via {"{img:1}"}, {"{img:2}"}…)</span>
               </label>
               <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                 {form.images.map((url, i) => (
                   <div key={i} style={{ display: "flex", gap: 8, alignItems: "flex-start" }}>
                     <div style={{ flex: 1 }}>
-                      <input
-                        className="form-input"
-                        placeholder="https://res.cloudinary.com/…"
+                      <ImageUploadField
                         value={url}
-                        onChange={(e) => updateImage(i, e.target.value)}
+                        onChange={(newUrl) => updateImage(i, newUrl)}
+                        previewHeight={140}
                       />
-                      {url && (
-                        <img
-                          src={url} alt={`image ${i + 1}`}
-                          style={{ marginTop: 6, width: "100%", maxHeight: 140, objectFit: "cover", borderRadius: 8, border: "1px solid var(--border)" }}
-                        />
-                      )}
                     </div>
                     <button
                       type="button"
