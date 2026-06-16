@@ -8,7 +8,7 @@ import {
 
 // ── Parser Markdown minimal ───────────────────────────────────────────────────
 // Pas de dépendance externe — couvre les cas réels d'un blog culturel
-function parseMarkdown(md) {
+function parseMarkdown(md, images = []) {
   if (!md) return "";
   let html = md
     // Titres
@@ -28,8 +28,15 @@ function parseMarkdown(md) {
     .replace(/^[*-] (.+)$/gm, "<li>$1</li>")
     // Liens
     .replace(/\[(.+?)\]\((.+?)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>')
-    // Images
+    // Images par URL directe (legacy)
     .replace(/!\[(.+?)\]\((.+?)\)/g, '<img src="$2" alt="$1" style="max-width:100%;border-radius:8px;margin:12px 0">')
+    // Repères de galerie {img:N} → résolus depuis le tableau images
+    .replace(/\{img:(\d+)\}/g, (m, n) => {
+      const url = images[parseInt(n, 10) - 1];
+      return url
+        ? `<img src="${url}" alt="Image ${n}" style="max-width:100%;border-radius:8px;margin:12px 0">`
+        : `<span style="color:#C03A08;font-size:12px">[Image ${n} introuvable]</span>`;
+    })
     // Inline code
     .replace(/`(.+?)`/g, "<code>$1</code>");
 
@@ -90,7 +97,7 @@ function insertMarkdown(textarea, before, after = "", placeholder = "texte") {
   el.dispatchEvent(new Event("input", { bubbles: true }));
 }
 
-function Toolbar({ textareaId }) {
+function Toolbar({ textareaId, images = [] }) {
   const tools = [
     { label: "H2",   title: "Titre",          action: () => insertMarkdown(textareaId, "## ", "", "Titre de section") },
     { label: "H3",   title: "Sous-titre",      action: () => insertMarkdown(textareaId, "### ", "", "Sous-titre") },
@@ -100,7 +107,6 @@ function Toolbar({ textareaId }) {
     { label: "—",    title: "Séparateur",      action: () => insertMarkdown(textareaId, "\n---\n", "", "") },
     { label: "• ",   title: "Liste",           action: () => insertMarkdown(textareaId, "\n- ", "", "élément") },
     { label: "🔗",   title: "Lien",            action: () => insertMarkdown(textareaId, "[", "](https://)", "texte du lien") },
-    { label: "🖼",    title: "Image (URL)",     action: () => insertMarkdown(textareaId, "![", "](https://)", "description") },
   ];
 
   return (
@@ -109,6 +115,7 @@ function Toolbar({ textareaId }) {
       padding: "6px 8px",
       background: "var(--bg2)", borderBottom: "1px solid var(--border)",
       borderRadius: "8px 8px 0 0",
+      alignItems: "center",
     }}>
       {tools.map(t => (
         <button
@@ -127,6 +134,32 @@ function Toolbar({ textareaId }) {
           {t.label}
         </button>
       ))}
+
+      {/* Repères d'images de la galerie — cliquer insère {img:N} à la position du curseur */}
+      {images.length > 0 && (
+        <>
+          <span style={{ width: 1, height: 18, background: "var(--border)", margin: "0 4px" }} />
+          {images.map((url, i) => (
+            <button
+              key={i}
+              type="button"
+              title={url ? `Insérer l'image ${i + 1}` : `Image ${i + 1} (URL vide)`}
+              disabled={!url}
+              onClick={() => insertMarkdown(textareaId, `\n{img:${i + 1}}\n`, "", "")}
+              style={{
+                padding: "4px 9px", borderRadius: 5, border: "1px solid var(--border)",
+                background: url ? "var(--bg)" : "var(--bg3)",
+                cursor: url ? "pointer" : "not-allowed",
+                opacity: url ? 1 : 0.5,
+                fontSize: 12, fontWeight: 600, color: "var(--text1)",
+                lineHeight: 1.4,
+              }}
+            >
+              🖼 {i + 1}
+            </button>
+          ))}
+        </>
+      )}
     </div>
   );
 }
@@ -138,6 +171,7 @@ function PostEditor({ post, onSave, onCancel }) {
     excerpt:   post?.excerpt   || "",
     content:   post?.content   || "",
     cover:     post?.cover     || "",
+    images:    post?.images?.length ? post.images : [],
     tags:      post?.tags?.join(", ") || "",
     published: post?.published ?? false,
   });
@@ -145,7 +179,7 @@ function PostEditor({ post, onSave, onCancel }) {
   const [errors,   setErrors]   = useState({});
   const [preview,  setPreview]  = useState(false); // mobile : toggle write/preview
 
-  const previewHtml = useMemo(() => parseMarkdown(form.content), [form.content]);
+  const previewHtml = useMemo(() => parseMarkdown(form.content, form.images), [form.content, form.images]);
 
   const validate = () => {
     const e = {};
@@ -165,6 +199,7 @@ function PostEditor({ post, onSave, onCancel }) {
         excerpt: form.excerpt.trim(),
         content: form.content.trim(),
         cover:   form.cover.trim(),
+        images:  form.images.map(u => u.trim()).filter(Boolean),
         tags:    form.tags.split(",").map(t => t.trim()).filter(Boolean),
       });
     } finally {
@@ -179,6 +214,13 @@ function PostEditor({ post, onSave, onCancel }) {
       setErrors(er => ({ ...er, [name]: "" }));
     },
   });
+
+  const addImage = () => setForm(f => ({ ...f, images: [...f.images, ""] }));
+  const removeImage = (i) => setForm(f => ({ ...f, images: f.images.filter((_, idx) => idx !== i) }));
+  const updateImage = (i, value) => setForm(f => ({
+    ...f,
+    images: f.images.map((u, idx) => idx === i ? value : u),
+  }));
 
   return (
     <>
@@ -281,6 +323,50 @@ function PostEditor({ post, onSave, onCancel }) {
                 />
               )}
             </div>
+
+            {/* Galerie d'images supplémentaires */}
+            <div style={{ gridColumn: "1 / -1" }}>
+              <label className="form-label">
+                Autres images <span style={{ color: "var(--text2)", fontWeight: 400 }}>(insérées dans l'article, dans l'ordre)</span>
+              </label>
+              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                {form.images.map((url, i) => (
+                  <div key={i} style={{ display: "flex", gap: 8, alignItems: "flex-start" }}>
+                    <div style={{ flex: 1 }}>
+                      <input
+                        className="form-input"
+                        placeholder="https://res.cloudinary.com/…"
+                        value={url}
+                        onChange={(e) => updateImage(i, e.target.value)}
+                      />
+                      {url && (
+                        <img
+                          src={url} alt={`image ${i + 1}`}
+                          style={{ marginTop: 6, width: "100%", maxHeight: 140, objectFit: "cover", borderRadius: 8, border: "1px solid var(--border)" }}
+                        />
+                      )}
+                    </div>
+                    <button
+                      type="button"
+                      className="btn btn-outline btn-sm"
+                      onClick={() => removeImage(i)}
+                      style={{ color: "var(--danger)", flexShrink: 0, marginTop: 2 }}
+                      title="Retirer cette image"
+                    >
+                      🗑
+                    </button>
+                  </div>
+                ))}
+              </div>
+              <button
+                type="button"
+                className="btn btn-outline btn-sm"
+                onClick={addImage}
+                style={{ marginTop: 8 }}
+              >
+                + Ajouter une image
+              </button>
+            </div>
           </div>
         </div>
 
@@ -322,11 +408,11 @@ function PostEditor({ post, onSave, onCancel }) {
             {/* Colonne gauche — écriture */}
             <div style={{ borderRight: "1px solid var(--border)", display: "flex", flexDirection: "column" }}
                  className={preview ? "editor-col-hidden" : ""}>
-              <Toolbar textareaId="blog-content-editor" />
+              <Toolbar textareaId="blog-content-editor" images={form.images} />
               <textarea
                 id="blog-content-editor"
                 className={`form-input${errors.content ? " error" : ""}`}
-                placeholder={`Écris l'article ici en Markdown.\n\n# Grand titre\n## Section\nTexte normal\n**gras** *italique*\n> citation ou proverbe malien`}
+                placeholder={`Écris l'article ici en Markdown.\n\n# Grand titre\n## Section\nTexte normal\n**gras** *italique*\n> citation ou proverbe malien\n{img:1} → insère la 1ère image de la galerie`}
                 {...field("content")}
                 style={{
                   flex: 1, resize: "none",
@@ -376,7 +462,7 @@ function PostEditor({ post, onSave, onCancel }) {
               ["- élément",     "Liste"],
               ["---",           "Séparateur"],
               ["[lien](url)",   "Lien cliquable"],
-              ["![alt](url)",   "Image"],
+              ["{img:1}",       "Insère l'image n°1 de la galerie ci-dessus"],
               ["`code`",        "Code inline"],
             ].map(([syntax, desc]) => (
               <div key={syntax}>

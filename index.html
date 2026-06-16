@@ -2,20 +2,29 @@
 <html lang="fr" dir="ltr">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"
+    />
 
     <!-- AMÉLIORATION : meta description + Open Graph pour les partages de liens -->
-    <meta name="description" content="Culturecase GS — Gestion de stock de coques de téléphone. Application privée." />
+    <meta
+      name="description"
+      content="Culturecase GS — Gestion de stock de coques de téléphone. Application privée."
+    />
     <meta property="og:title" content="Culturecase GS" />
-    <meta property="og:description" content="Gestion de stock — Application privée" />
+    <meta
+      property="og:description"
+      content="Gestion de stock — Application privée"
+    />
     <meta property="og:type" content="website" />
 
-    <!-- PWA / iOS -->
+    <!-- PWA / iOS + Android -->
+    <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black" />
     <meta name="apple-mobile-web-app-title" content="Culturecase" />
     <meta name="theme-color" content="#07070e" />
-
     <!-- Icônes -->
     <link rel="icon" type="image/svg+xml" href="/culturecasegs/icon.svg" />
     <link rel="apple-touch-icon" href="/culturecasegs/icon-192.png" />
@@ -24,22 +33,35 @@
          (l'@import dans le CSS est synchrone et retarde l'affichage de 200-400ms) -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&display=swap" />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&display=swap"
+    />
 
     <title>Culturecase GS</title>
     <!-- Initialisation du thème avant React pour éviter le flash blanc/noir -->
     <script>
-      (function() {
-        var t = localStorage.getItem('cc-theme') || 'dark';
-        document.documentElement.setAttribute('data-theme', t);
+      (function () {
+        var t = localStorage.getItem("cc-theme") || "dark";
+        document.documentElement.setAttribute("data-theme", t);
         document.querySelector('meta[name="theme-color"]') &&
-          document.querySelector('meta[name="theme-color"]').setAttribute('content', t === 'light' ? '#f4f4f8' : '#07070e');
+          document
+            .querySelector('meta[name="theme-color"]')
+            .setAttribute("content", t === "light" ? "#f4f4f8" : "#07070e");
       })();
     </script>
   </head>
   <body>
     <div id="root"></div>
-    <style>body{background:#07070e;margin:0}#root{min-height:100dvh}</style>
+    <style>
+      body {
+        background: #07070e;
+        margin: 0;
+      }
+      #root {
+        min-height: 100dvh;
+      }
+    </style>
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>
