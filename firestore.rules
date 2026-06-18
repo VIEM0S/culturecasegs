@@ -1,21 +1,41 @@
 rules_version = '2';
+
 service cloud.firestore {
   match /databases/{database}/documents {
+
+    // ── Helpers ────────────────────────────────────────────────────────────
+
+    // Admin = authentifié avec un compte email/mot de passe.
+    // Le viewer anonyme n'a pas de claim "email", donc ce check l'exclut naturellement.
     function isAdmin() {
       return request.auth != null && request.auth.token.email != null;
     }
+
+    // Validation du nom de document pour "data/" — seuls "main" et "products_0".."products_N".
+    // Empêche un compte admin compromis d'écrire un document arbitraire sous "data/".
+    function isValidDocId(docId) {
+      return docId == "main" || docId.matches("products_[0-9]+");
+    }
+
+    // ── Données produits / stock — lues par le site public sans authentification ──
     match /data/{docId} {
       allow read: if true;
-      allow write: if isAdmin();
+      allow write: if isAdmin() && isValidDocId(docId);
     }
+
+    // ── Paramètres globaux du site ───────────────────────────────────────────
     match /settings/{docId} {
       allow read: if true;
       allow write: if isAdmin();
     }
+
+    // ── Articles de blog — seuls les articles publiés sont lisibles publiquement ──
     match /blog_posts/{docId} {
-      allow read, write: if isAdmin();
-      allow list, get: if true;
+      allow write: if isAdmin();
+      allow read: if isAdmin() || resource.data.published == true;
     }
+
+    // ── Avis clients — soumission publique, modération admin obligatoire ────────
     match /reviews/{docId} {
       allow read, write: if isAdmin();
       allow read: if resource.data.status == "published";
@@ -32,6 +52,8 @@ service cloud.firestore {
         && request.resource.data.stars <= 5;
       allow update, delete: if false;
     }
+
+    // ── Logs d'erreurs — préparé pour un futur usage, pas encore branché côté client ──
     match /error_logs/{docId} {
       allow read, write: if isAdmin();
       allow create: if request.auth != null
@@ -39,6 +61,8 @@ service cloud.firestore {
         && request.resource.data.message.size() <= 500;
       allow update, delete: if false;
     }
+
+    // ── Liste d'attente app Android — mise en pause, pas encore branchée côté client ──
     match /android_waitlist/{docId} {
       allow read, write: if isAdmin();
       allow create: if request.auth != null
@@ -47,6 +71,8 @@ service cloud.firestore {
         && request.resource.data.tel.size() <= 20;
       allow update, delete: if false;
     }
+
+    // ── Tout le reste est refusé ─────────────────────────────────────────────
     match /{document=**} {
       allow read, write: if false;
     }
