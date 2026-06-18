@@ -1,46 +1,52 @@
 rules_version = '2';
-
 service cloud.firestore {
   match /databases/{database}/documents {
-
-    // ── Helpers ────────────────────────────────────────────────────────────
-
-    // Utilisateur authentifié (email ou anonyme)
-    function isAuthenticated() {
-      return request.auth != null;
-    }
-
-    // Utilisateur email = admin (pas anonyme)
     function isAdmin() {
-      return request.auth != null
-        && request.auth.token.firebase.sign_in_provider == "password";
+      return request.auth != null && request.auth.token.email != null;
     }
-
-    // Viewer = auth anonyme
-    function isViewer() {
-      return request.auth != null
-        && request.auth.token.firebase.sign_in_provider == "anonymous";
-    }
-
-    // ── Validation du nom de document ─────────────────────────────────────
-    // Seuls "main" et "products_0".."products_N" sont autorisés.
-    // Cela empêche un attaquant authentifié d'écrire des documents arbitraires.
-    function isValidDocId(docId) {
-      return docId == "main"
-        || docId.matches("products_[0-9]+");
-    }
-
-    // ── Collection "data" ──────────────────────────────────────────────────
     match /data/{docId} {
-
-      // Lecture : admin ET viewer peuvent lire, uniquement les docs légitimes
-      allow read: if isAuthenticated() && isValidDocId(docId);
-
-      // Écriture (create, update, delete) : admin uniquement, docs légitimes
-      allow write: if isAdmin() && isValidDocId(docId);
+      allow read: if true;
+      allow write: if isAdmin();
     }
-
-    // ── Tout le reste est refusé ───────────────────────────────────────────
+    match /settings/{docId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+    match /blog_posts/{docId} {
+      allow read, write: if isAdmin();
+      allow list, get: if true;
+    }
+    match /reviews/{docId} {
+      allow read, write: if isAdmin();
+      allow read: if resource.data.status == "published";
+      allow create: if
+        request.resource.data.status == "pending"
+        && request.resource.data.txt is string
+        && request.resource.data.txt.size() >= 15
+        && request.resource.data.txt.size() <= 1000
+        && request.resource.data.nom is string
+        && request.resource.data.nom.size() >= 1
+        && request.resource.data.nom.size() <= 100
+        && request.resource.data.stars is int
+        && request.resource.data.stars >= 1
+        && request.resource.data.stars <= 5;
+      allow update, delete: if false;
+    }
+    match /error_logs/{docId} {
+      allow read, write: if isAdmin();
+      allow create: if request.auth != null
+        && request.resource.data.message is string
+        && request.resource.data.message.size() <= 500;
+      allow update, delete: if false;
+    }
+    match /android_waitlist/{docId} {
+      allow read, write: if isAdmin();
+      allow create: if request.auth != null
+        && request.resource.data.tel is string
+        && request.resource.data.tel.size() >= 8
+        && request.resource.data.tel.size() <= 20;
+      allow update, delete: if false;
+    }
     match /{document=**} {
       allow read, write: if false;
     }
