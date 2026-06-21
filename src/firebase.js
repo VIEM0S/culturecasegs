@@ -1,6 +1,7 @@
 import { initializeApp, getApps } from "firebase/app";
 import {
-  getFirestore, doc, getDoc, setDoc, onSnapshot, writeBatch
+  getFirestore, doc, getDoc, setDoc, onSnapshot, writeBatch,
+  addDoc, collection
 } from "firebase/firestore";
 import {
   getAuth,
@@ -63,4 +64,4 @@ export async function getViewerCode() {
   }
 }
 
-export { doc, getDoc, setDoc, onSnapshot, writeBatch };
+export { doc, getDoc, setDoc, onSnapshot, writeBatch, addDoc, collection };
