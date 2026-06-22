@@ -11,11 +11,11 @@ import {
 import { StatCard } from "./components.jsx";
 import { LOW_STOCK } from "./constants.js";
 import { fmtDate, fmtMoney, toDateStr, today } from "./utils.js";
+throw new Error("test error boundary");
 
 // ── Tooltip recharts custom ──────────────────────────────────────────────────
 function ChartTooltip({ active, payload, label, money }) {
   if (!active || !payload?.length) return null;
-  throw new Error("test error boundary");
   return (
     <div
       style={{
