@@ -86,6 +86,10 @@ function App() {
 
   // ── Splash done ──────────────────────────────────────────────────────────
   useEffect(() => {
+    console.log("%c[CultureCase GS] build: livraisons-en-attente v1 (27 juin 2026)", "color:#22c55e;font-weight:bold");
+  }, []);
+
+  useEffect(() => {
     if (authUser !== undefined && !loading) setSplashDone(true);
   }, [authUser, loading]);
 
@@ -332,6 +336,8 @@ function App() {
 
           <div className="content">
             <Suspense fallback={<div style={{ padding: 40, textAlign: "center", color: "var(--text2)", fontSize: 13 }}>Chargement…</div>}>
+              {!data && <div style={{ padding: 40, textAlign: "center", color: "var(--text2)", fontSize: 13 }}>Chargement des données…</div>}
+              {data && <>
               {/* Garde viewer : si page interdite, afficher dashboard */}
               {isViewer && !VIEWER_PAGES.includes(page) && <Dashboard data={data} isViewer={isViewer} />}
               {(!isViewer || VIEWER_PAGES.includes(page)) && page === "dashboard" && <Dashboard data={data} isViewer={isViewer} />}
@@ -344,6 +350,7 @@ function App() {
               {!isViewer && page === "reviews"   && <ReviewsPage />}
               {!isViewer && page === "errors"    && <ErrorLogsPage />}
               {!isViewer && page === "settings"  && <SettingsPage data={data} onSave={saveSettings} onSaveProduct={saveProduct} onPersist={persist} confirm={confirm} />}
+              </>}
             </Suspense>
           </div>
 
