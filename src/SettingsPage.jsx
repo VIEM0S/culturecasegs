@@ -6,6 +6,7 @@ import { useDialog, useToast } from "./hooks.jsx";
 import { uid, sanitize, validateImageUrl, validateProductForm, validateSaleForm, validateMovementForm, getProductImageUrl } from "./utils.js";
 import { DEFAULT_MODELS, DEFAULT_DESIGNS, DEFAULT_PRICE_SETTINGS, LOW_STOCK } from "./constants.js";
 import { exportData, importData } from "./data.js";
+import { getLocalSnapshot } from "./googleSheets.js";
 
 
 // ─── THEME TOGGLE ──────────────────────────────────────────────────────────
@@ -49,6 +50,23 @@ function SettingsPage({ data, onSave, onPersist, onSaveProduct, confirm }) {
   const [tab, setTab] = useState("prices");
   const [backupLoading, setBackupLoading] = useState(false);
   const [backupDone, setBackupDone]       = useState(false);
+  const [snapshot, setSnapshot]           = useState(() => getLocalSnapshot());
+  const [restoring, setRestoring]         = useState(false);
+
+  const handleRestoreSnapshot = async () => {
+    if (!snapshot) return;
+    const ok = await confirm(
+      `Restaurer les données du ${new Date(snapshot.savedAt).toLocaleString("fr-FR")} ? ` +
+      `Cela remplacera TOUTES les données actuelles (produits, ventes, mouvements). Cette action est irréversible.`
+    );
+    if (!ok) return;
+    setRestoring(true);
+    try {
+      onPersist(snapshot.data);
+    } finally {
+      setRestoring(false);
+    }
+  };
 
   const handleExportBackup = () => {
     setBackupLoading(true);
@@ -480,6 +498,30 @@ function SettingsPage({ data, onSave, onPersist, onSaveProduct, confirm }) {
                 </span>
               )}
             </div>
+          </div>
+
+          <div className="card" style={{ marginBottom: 14 }}>
+            <p className="section-label" style={{ marginBottom: 8 }}>Restaurer depuis le snapshot local</p>
+            <p style={{ fontSize: 13, color: "var(--text2)", marginBottom: 16, lineHeight: 1.6 }}>
+              Une copie de tes données est sauvegardée automatiquement sur cet appareil
+              à chaque enregistrement. Utile en dernier recours si une synchronisation a mal tourné.
+            </p>
+            {snapshot ? (
+              <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+                <button className="btn btn-outline" onClick={handleRestoreSnapshot} disabled={restoring}>
+                  <Icon name="download" size={14} />
+                  {restoring ? "Restauration…" : "Restaurer ce snapshot"}
+                </button>
+                <span style={{ fontSize: 12, color: "var(--text2)" }}>
+                  Snapshot du {new Date(snapshot.savedAt).toLocaleString("fr-FR")}
+                  {" — "}{snapshot.data?.products?.length ?? 0} produits, {snapshot.data?.sales?.length ?? 0} ventes
+                </span>
+              </div>
+            ) : (
+              <p style={{ fontSize: 12, color: "var(--text2)" }}>
+                Aucun snapshot disponible pour le moment — il se crée automatiquement à la prochaine sauvegarde.
+              </p>
+            )}
           </div>
 
           <div className="card" style={{ background: "var(--warn2)", border: "1px solid var(--warn)" }}>

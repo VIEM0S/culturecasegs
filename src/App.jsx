@@ -1,5 +1,6 @@
 import { lazy, Suspense, useCallback, useEffect, useState } from "react";
 import { exportData, importData, saveData } from "./data.js";
+import { maybeWeeklyBackup } from "./googleSheets.js";
 import { useDialog, useToast } from "./hooks.jsx";
 import { useAuth } from "./useAuth.js";
 import { useStockActions } from "./useStockActions.js";
@@ -88,6 +89,14 @@ function App() {
   useEffect(() => {
     console.log("%c[CultureCase GS] build: livraisons-en-attente v1 (27 juin 2026)", "color:#22c55e;font-weight:bold");
   }, []);
+
+  // ── Backup hebdomadaire automatique (chaque lundi, admin uniquement) ──────
+  // maybeWeeklyBackup gère lui-même le "déjà fait aujourd'hui ?" en interne,
+  // donc pas de souci à l'appeler à chaque changement de data.
+  useEffect(() => {
+    if (!data || isViewer) return;
+    maybeWeeklyBackup(data);
+  }, [data, isViewer]);
 
   useEffect(() => {
     if (authUser !== undefined && !loading) setSplashDone(true);
