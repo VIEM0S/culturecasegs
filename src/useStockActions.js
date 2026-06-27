@@ -67,7 +67,6 @@ export function useStockActions({ data, persist, confirm }) {
   const addSale = useCallback((sales) => {
     const list = Array.isArray(sales) ? sales : [sales];
     const isDelivery = !!list[0]?.delivery;
-    console.log("[addSale] delivery reçu sur la vente :", list[0]?.delivery, "→ isDelivery =", isDelivery, list);
 
     let products = [...data.products];
     const newMovements = [];
