@@ -60,6 +60,7 @@ function App() {
   const {
     saveProduct, deleteProduct,
     addMovement, addSale, cancelSale,
+    confirmDelivery, cancelPendingDelivery,
     saveSettings,
   } = useStockActions({ data, persist, confirm });
 
@@ -84,6 +85,10 @@ function App() {
   }, []);
 
   // ── Splash done ──────────────────────────────────────────────────────────
+  useEffect(() => {
+    console.log("%c[CultureCase GS] build: livraisons-en-attente v1 (27 juin 2026)", "color:#22c55e;font-weight:bold");
+  }, []);
+
   useEffect(() => {
     if (authUser !== undefined && !loading) setSplashDone(true);
   }, [authUser, loading]);
@@ -152,7 +157,7 @@ function App() {
 
   // 3. Non authentifié → page de login
   if (!authUser && !isViewer)
-    return <LoginPage onViewerAccess={loginAsViewer} />;
+    return <LoginPage onViewerAccess={() => { setPage("dashboard"); loginAsViewer(); }} />;
 
   // 3b. Viewer en chargement
   if (isViewer && (!data || loading))
@@ -272,7 +277,7 @@ function App() {
                 <Icon name="logout" size={15} /> Quitter le mode viewer
               </button>
             ) : (
-              <button className="nav-item" onClick={logout} style={{ width: "100%" }} aria-label="Déconnexion">
+              <button className="nav-item" onClick={() => { setPage("dashboard"); logout(); }} style={{ width: "100%" }} aria-label="Déconnexion">
                 <Icon name="logout" size={15} /> Déconnexion
               </button>
             )}
@@ -331,18 +336,21 @@ function App() {
 
           <div className="content">
             <Suspense fallback={<div style={{ padding: 40, textAlign: "center", color: "var(--text2)", fontSize: 13 }}>Chargement…</div>}>
+              {!data && <div style={{ padding: 40, textAlign: "center", color: "var(--text2)", fontSize: 13 }}>Chargement des données…</div>}
+              {data && <>
               {/* Garde viewer : si page interdite, afficher dashboard */}
               {isViewer && !VIEWER_PAGES.includes(page) && <Dashboard data={data} isViewer={isViewer} />}
               {(!isViewer || VIEWER_PAGES.includes(page)) && page === "dashboard" && <Dashboard data={data} isViewer={isViewer} />}
               {(!isViewer || VIEWER_PAGES.includes(page)) && page === "products"  && <Products data={data} onSale={addSale} onDelete={deleteProduct} isViewer={isViewer} />}
               {!isViewer && page === "stock"     && <StockPage data={data} onMove={addMovement} isViewer={isViewer} />}
-              {page === "sales"     && <SalesPage data={data} onSale={addSale} onCancel={cancelSale} toast={toast} />}
-              {page === "history"   && <HistoryPage data={data} />}
-              {page === "reports"   && <Reports data={data} />}
-              {page === "blog"      && <BlogPage />}
-              {page === "reviews"   && <ReviewsPage />}
-              {page === "errors"    && <ErrorLogsPage />}
-              {page === "settings"  && <SettingsPage data={data} onSave={saveSettings} onSaveProduct={saveProduct} onPersist={persist} confirm={confirm} />}
+              {!isViewer && page === "sales"     && <SalesPage data={data} onSale={addSale} onCancel={cancelSale} onConfirmDelivery={confirmDelivery} onCancelPendingDelivery={cancelPendingDelivery} toast={toast} />}
+              {!isViewer && page === "history"   && <HistoryPage data={data} />}
+              {!isViewer && page === "reports"   && <Reports data={data} />}
+              {!isViewer && page === "blog"      && <BlogPage />}
+              {!isViewer && page === "reviews"   && <ReviewsPage />}
+              {!isViewer && page === "errors"    && <ErrorLogsPage />}
+              {!isViewer && page === "settings"  && <SettingsPage data={data} onSave={saveSettings} onSaveProduct={saveProduct} onPersist={persist} confirm={confirm} />}
+              </>}
             </Suspense>
           </div>
 

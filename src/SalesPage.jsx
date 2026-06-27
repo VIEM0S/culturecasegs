@@ -416,8 +416,9 @@ function Row({ label, value, bold, small, success, warn, accent, large, italic }
 }
 
 // ─── SALES PAGE ─────────────────────────────────────────────────────────────
-function SalesPage({ data, onSale, onCancel, toast }) {
+function SalesPage({ data, onSale, onCancel, onConfirmDelivery, onCancelPendingDelivery, toast }) {
   const { products, sales, settings } = data;
+  const pendingSales = data.pendingSales || [];
   const { priceSettings } = settings;
   const designs = settings?.designs || [];
 
@@ -445,6 +446,7 @@ function SalesPage({ data, onSale, onCancel, toast }) {
   const [filterAmountMin, setFilterAmountMin] = useState("");
   const [filterAmountMax, setFilterAmountMax] = useState("");
   const [cancelTarget, setCancelTarget] = useState(null); // group[] à annuler
+  const [pendingRejectTarget, setPendingRejectTarget] = useState(null); // group[] livraison à rejeter
   const PAGE_SIZE = 50;
 
   const productMap = useMemo(() => {
@@ -526,6 +528,10 @@ function SalesPage({ data, onSale, onCancel, toast }) {
     onSale(newSales);
     setModal(false);
 
+    if (newSales[0]?.delivery) {
+      toast?.("🚚 Vente enregistrée — en attente de confirmation de livraison.", "info");
+    }
+
     // ── Ouvre le ticket après la vente ──────────────────────────────────
     setTicket(newSales);
 
@@ -556,15 +562,20 @@ function SalesPage({ data, onSale, onCancel, toast }) {
   );
 
   // ── Groupement par groupId (un achat multi-produits = une seule ligne) ──────
-  const groupedSales = useMemo(() => {
+  const groupBySaleGroup = (list) => {
     const groups = new Map();
-    filtered.forEach(s => {
+    list.forEach(s => {
       const key = s.groupId || s.id; // rétrocompat : ventes sans groupId = leur propre groupe
       if (!groups.has(key)) groups.set(key, []);
       groups.get(key).push(s);
     });
     return Array.from(groups.values()).sort((a, b) => new Date(b[0].date) - new Date(a[0].date));
-  }, [filtered]);
+  };
+
+  const groupedSales = useMemo(() => groupBySaleGroup(filtered), [filtered]);
+
+  // Livraisons en attente de validation — groupées de la même façon
+  const pendingGroups = useMemo(() => groupBySaleGroup(pendingSales), [pendingSales]);
 
   const totalRev = useMemo(() => filtered.reduce((s, v) => s + (v.totalAfterDiscount ?? v.total), 0), [filtered]);
 
@@ -589,6 +600,62 @@ function SalesPage({ data, onSale, onCancel, toast }) {
           <Icon name="plus" size={14} /> Nouvelle vente
         </button>
       </div>
+
+      {pendingGroups.length > 0 && (
+        <div className="card" style={{ marginBottom: 16, border: "1px solid var(--warn)", background: "rgba(245,158,11,0.06)" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "12px 14px 4px" }}>
+            <Icon name="truck" size={16} />
+            <span style={{ fontWeight: 700, fontSize: 13.5 }}>
+              Livraisons en attente de validation ({pendingGroups.length})
+            </span>
+          </div>
+          <div style={{ padding: "4px 14px 12px", display: "flex", flexDirection: "column", gap: 8 }}>
+            {pendingGroups.map(group => {
+              const s = group[0];
+              const total = group.reduce((sum, v) => sum + (v.totalAfterDiscount ?? v.total), 0);
+              const prodLabel = group.length > 1
+                ? `${group.length} produits`
+                : (() => { const p = productMap[s.productId]; return p ? `${p.model} — ${p.design}` : "—"; })();
+              return (
+                <div
+                  key={s.groupId || s.id}
+                  style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, flexWrap: "wrap", background: "var(--bg3)", borderRadius: 8, padding: "8px 12px" }}
+                >
+                  <div style={{ fontSize: 12.5, lineHeight: 1.5 }}>
+                    <div style={{ fontWeight: 600 }}>
+                      {s.client || "Client sans nom"} {s.quartier ? `— ${s.quartier}` : ""}
+                    </div>
+                    <div style={{ color: "var(--text2)" }}>
+                      {prodLabel} · <span style={{ fontWeight: 700, color: "var(--success)" }}>{fmtMoney(total)}</span> · {fmtDate(s.date)}
+                    </div>
+                  </div>
+                  <div style={{ display: "flex", gap: 6 }}>
+                    <button
+                      className="btn btn-outline btn-sm"
+                      title="Voir le ticket"
+                      onClick={() => setTicket(group)}
+                    >
+                      🧾
+                    </button>
+                    <button
+                      className="btn btn-primary btn-sm"
+                      onClick={() => { onConfirmDelivery?.(group); toast?.("✅ Livraison confirmée — vente enregistrée.", "success"); }}
+                    >
+                      ✅ Livré
+                    </button>
+                    <button
+                      className="btn btn-danger btn-sm"
+                      onClick={() => setPendingRejectTarget(group)}
+                    >
+                      ❌ Non reçu
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       <div className="filter-row">
         <input className="input" placeholder="Rechercher produit, client, quartier..." value={search} onChange={e => { setSearch(e.target.value); resetPage(); }} style={{ flex: 2 }} />
@@ -891,6 +958,48 @@ function SalesPage({ data, onSale, onCancel, toast }) {
             </div>
             <p style={{ color: "var(--warn)", fontSize: 12 }}>
               ⚠️ Le stock sera remis à jour automatiquement. Cette action est irréversible.
+            </p>
+          </div>
+        </Modal>
+      )}
+
+      {/* ── Modale rejet de livraison en attente ── */}
+      {pendingRejectTarget && (
+        <Modal
+          title="❌ Livraison non reçue ?"
+          onClose={() => setPendingRejectTarget(null)}
+          footer={<>
+            <button className="btn btn-outline" onClick={() => setPendingRejectTarget(null)}>Annuler</button>
+            <button
+              className="btn btn-danger"
+              onClick={() => {
+                onCancelPendingDelivery?.(pendingRejectTarget);
+                toast?.("↩️ Livraison rejetée — stock remis à jour.", "info");
+                setPendingRejectTarget(null);
+              }}
+            >
+              Confirmer le rejet
+            </button>
+          </>}
+        >
+          <div style={{ fontSize: 13, color: "var(--text)", lineHeight: 1.7 }}>
+            <p style={{ marginBottom: 12 }}>
+              Le client n'a pas reçu (ou a refusé) la commande du <strong>{fmtDate(pendingRejectTarget[0].date)}</strong>
+              {pendingRejectTarget[0].client ? <> pour <strong>{pendingRejectTarget[0].client}</strong></> : ""}.
+            </p>
+            <div style={{ background: "var(--bg3)", borderRadius: 8, padding: "10px 14px", marginBottom: 12 }}>
+              {pendingRejectTarget.map(s => {
+                const p = productMap[s.productId];
+                return (
+                  <div key={s.id} style={{ display: "flex", justifyContent: "space-between", marginBottom: 4, fontSize: 12 }}>
+                    <span>{p ? `${p.model} — ${p.design}` : "—"} × {s.qty}</span>
+                    <span style={{ fontWeight: 700, color: "var(--success)" }}>{fmtMoney(s.totalAfterDiscount ?? s.total)}</span>
+                  </div>
+                );
+              })}
+            </div>
+            <p style={{ color: "var(--warn)", fontSize: 12 }}>
+              ⚠️ Le stock sera remis à jour automatiquement. Cette vente ne sera jamais comptée dans le CA.
             </p>
           </div>
         </Modal>

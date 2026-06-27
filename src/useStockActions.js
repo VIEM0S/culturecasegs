@@ -55,8 +55,20 @@ export function useStockActions({ data, persist, confirm }) {
   }, [data, persist]);
 
   // ── Ventes ────────────────────────────────────────────────────────────────
+  //
+  // Cas particulier : livraison à domicile.
+  // Le stock part avec le livreur immédiatement (on le déduit tout de suite,
+  // comme avant), mais la vente n'est PAS comptée dans `data.sales` tant que
+  // la livraison n'est pas confirmée — elle attend dans `data.pendingSales`.
+  // → Plus besoin d'annuler après coup si le client refuse à la livraison :
+  //   il suffit de rejeter la livraison en attente (le stock revient).
+  // → Le CA / l'historique / les rapports ne voient la vente qu'une fois
+  //   confirmée, donc aucun autre écran n'a besoin de filtrer un statut.
   const addSale = useCallback((sales) => {
     const list = Array.isArray(sales) ? sales : [sales];
+    const isDelivery = !!list[0]?.delivery;
+    console.log("[addSale] delivery reçu sur la vente :", list[0]?.delivery, "→ isDelivery =", isDelivery, list);
+
     let products = [...data.products];
     const newMovements = [];
     for (const sale of list) {
@@ -68,11 +80,24 @@ export function useStockActions({ data, persist, confirm }) {
         productId: sale.productId,
         type: "out",
         qty: sale.qty,
-        reason: "Vente",
+        reason: isDelivery ? "Vente (livraison en attente)" : "Vente",
         date: sale.date,
         note: sale.client || "",
       });
     }
+
+    if (isDelivery) {
+      // En attente de confirmation du livreur — pas encore une vente "réelle".
+      const pendingSales = [...(data.pendingSales || []), ...list];
+      persist({
+        ...data,
+        products,
+        pendingSales,
+        movements: [...data.movements, ...newMovements],
+      });
+      return;
+    }
+
     const allSales = [...data.sales, ...list];
     persist({
       ...data,
@@ -83,6 +108,58 @@ export function useStockActions({ data, persist, confirm }) {
     sheetAddSales(list);                              // Sync Google Sheets
     sheetSyncProducts(products);
     sheetSyncHistory(allSales, products);
+  }, [data, persist]);
+
+  // ── Livraisons en attente : confirmation / rejet ──────────────────────────
+  //
+  // Confirmer : le livreur a remis la commande → la vente devient réelle
+  // (passe dans data.sales, sync Sheets). Le stock a déjà été déduit à la
+  // création, donc aucun mouvement de stock supplémentaire ici.
+  const confirmDelivery = useCallback((pendingGroup) => {
+    const list = Array.isArray(pendingGroup) ? pendingGroup : [pendingGroup];
+    const confirmedIds = new Set(list.map(s => s.id));
+    const remainingPending = (data.pendingSales || []).filter(s => !confirmedIds.has(s.id));
+    const allSales = [...data.sales, ...list];
+
+    persist({
+      ...data,
+      sales: allSales,
+      pendingSales: remainingPending,
+    });
+    sheetAddSales(list);                              // Sync Google Sheets
+    sheetSyncProducts(data.products);
+    sheetSyncHistory(allSales, data.products);
+  }, [data, persist]);
+
+  // Rejeter : le client n'a pas reçu / a refusé la commande → le stock
+  // revient, et la vente disparaît sans jamais avoir compté nulle part.
+  const cancelPendingDelivery = useCallback((pendingGroup) => {
+    const list = Array.isArray(pendingGroup) ? pendingGroup : [pendingGroup];
+    const cancelledIds = new Set(list.map(s => s.id));
+    let products = [...data.products];
+    const newMovements = [];
+    for (const sale of list) {
+      products = products.map(p =>
+        p.id === sale.productId ? { ...p, stock: p.stock + sale.qty } : p
+      );
+      newMovements.push({
+        id: uid(),
+        productId: sale.productId,
+        type: "in",
+        qty: sale.qty,
+        reason: "Livraison annulée",
+        date: new Date().toISOString(),
+        note: sale.client ? `Non reçu — ${sale.client}` : "Livraison non reçue",
+      });
+    }
+    const remainingPending = (data.pendingSales || []).filter(s => !cancelledIds.has(s.id));
+    persist({
+      ...data,
+      products,
+      pendingSales: remainingPending,
+      movements: [...data.movements, ...newMovements],
+    });
+    sheetSyncProducts(products);
   }, [data, persist]);
 
   const cancelSale = useCallback((saleGroup) => {
@@ -196,5 +273,10 @@ export function useStockActions({ data, persist, confirm }) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [data?.sales?.length, !!data]);
 
-  return { saveProduct, deleteProduct, addMovement, addSale, cancelSale, saveSettings };
+  return {
+    saveProduct, deleteProduct, addMovement,
+    addSale, cancelSale,
+    confirmDelivery, cancelPendingDelivery,
+    saveSettings,
+  };
 }

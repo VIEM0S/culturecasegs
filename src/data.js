@@ -222,10 +222,11 @@ export function importData(file, setData, persist, onMsg) {
         return;
       }
       const sanitized = {
-        products:    parsed.products  || [],
-        sales:       parsed.sales     || [],
-        movements:   parsed.movements || [],
-        settings:    parsed.settings  || {},
+        products:    parsed.products     || [],
+        sales:       parsed.sales        || [],
+        pendingSales: parsed.pendingSales || [],
+        movements:   parsed.movements    || [],
+        settings:    parsed.settings     || {},
         _chunkCount: parsed._chunkCount ?? 0,
       };
       persist(sanitized);

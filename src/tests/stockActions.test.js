@@ -46,6 +46,7 @@ function makeSale(overrides = {}) {
 
 function applyAddSale(data, sales) {
   const list = Array.isArray(sales) ? sales : [sales];
+  const isDelivery = !!list[0]?.delivery;
   let products = [...data.products];
   const newMovements = [];
   for (const sale of list) {
@@ -57,12 +58,57 @@ function applyAddSale(data, sales) {
       productId: sale.productId,
       type: "out",
       qty: sale.qty,
-      reason: "Vente",
+      reason: isDelivery ? "Vente (livraison en attente)" : "Vente",
       date: sale.date,
       note: sale.client || "",
     });
   }
+  if (isDelivery) {
+    return {
+      ...data,
+      products,
+      pendingSales: [...(data.pendingSales || []), ...list],
+      movements: [...data.movements, ...newMovements],
+    };
+  }
   return { ...data, products, sales: [...data.sales, ...list], movements: [...data.movements, ...newMovements] };
+}
+
+function applyConfirmDelivery(data, pendingGroup) {
+  const list = Array.isArray(pendingGroup) ? pendingGroup : [pendingGroup];
+  const confirmedIds = new Set(list.map(s => s.id));
+  return {
+    ...data,
+    sales: [...data.sales, ...list],
+    pendingSales: (data.pendingSales || []).filter(s => !confirmedIds.has(s.id)),
+  };
+}
+
+function applyCancelPendingDelivery(data, pendingGroup) {
+  const list = Array.isArray(pendingGroup) ? pendingGroup : [pendingGroup];
+  const cancelledIds = new Set(list.map(s => s.id));
+  let products = [...data.products];
+  const newMovements = [];
+  for (const sale of list) {
+    products = products.map(p =>
+      p.id === sale.productId ? { ...p, stock: p.stock + sale.qty } : p
+    );
+    newMovements.push({
+      id: "mov-reject-" + sale.id,
+      productId: sale.productId,
+      type: "in",
+      qty: sale.qty,
+      reason: "Livraison annulée",
+      date: new Date().toISOString(),
+      note: sale.client ? `Non reçu — ${sale.client}` : "Livraison non reçue",
+    });
+  }
+  return {
+    ...data,
+    products,
+    pendingSales: (data.pendingSales || []).filter(s => !cancelledIds.has(s.id)),
+    movements: [...data.movements, ...newMovements],
+  };
 }
 
 function applyCancelSale(data, saleGroup) {
@@ -172,6 +218,88 @@ describe("addSale — logique pure", () => {
     expect(result.products.find(p => p.id === "p2").stock).toBe(2);
     expect(result.sales).toHaveLength(2);
     expect(result.movements).toHaveLength(2);
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// addSale — cas livraison à domicile (en attente de validation)
+// ─────────────────────────────────────────────────────────────────────────────
+describe("addSale — livraison en attente", () => {
+  it("ne met pas la vente dans data.sales si delivery=true", () => {
+    const data   = makeData();
+    const sale   = makeSale({ delivery: true });
+    const result = applyAddSale(data, sale);
+    expect(result.sales).toEqual([]); // inchangé — la vente n'y entre pas
+    expect(result.pendingSales).toHaveLength(1);
+  });
+
+  it("déduit quand même le stock immédiatement", () => {
+    const data   = makeData({ products: [makeProduct({ stock: 10 })] });
+    const sale   = makeSale({ delivery: true, qty: 3 });
+    const result = applyAddSale(data, sale);
+    expect(result.products[0].stock).toBe(7);
+  });
+
+  it("tague le mouvement de stock comme 'en attente'", () => {
+    const data   = makeData();
+    const sale   = makeSale({ delivery: true });
+    const result = applyAddSale(data, sale);
+    expect(result.movements[0].reason).toBe("Vente (livraison en attente)");
+  });
+
+  it("une vente sans livraison reste inchangée (pas de pendingSales)", () => {
+    const data   = makeData();
+    const sale   = makeSale({ delivery: false });
+    const result = applyAddSale(data, sale);
+    expect(result.sales).toHaveLength(1);
+    expect(result.pendingSales).toBeUndefined();
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// confirmDelivery / cancelPendingDelivery
+// ─────────────────────────────────────────────────────────────────────────────
+describe("confirmDelivery — logique pure", () => {
+  it("déplace la vente de pendingSales vers sales", () => {
+    const sale = makeSale({ delivery: true });
+    const data = makeData({ pendingSales: [sale] });
+    const result = applyConfirmDelivery(data, sale);
+    expect(result.pendingSales).toHaveLength(0);
+    expect(result.sales).toHaveLength(1);
+    expect(result.sales[0].id).toBe("s1");
+  });
+
+  it("ne touche pas au stock (déjà déduit à la création)", () => {
+    const sale = makeSale({ delivery: true, qty: 2 });
+    const data = makeData({ products: [makeProduct({ stock: 8 })], pendingSales: [sale] });
+    const result = applyConfirmDelivery(data, sale);
+    expect(result.products[0].stock).toBe(8);
+  });
+});
+
+describe("cancelPendingDelivery — logique pure", () => {
+  it("remet le stock à son niveau avant la vente en attente", () => {
+    const sale = makeSale({ delivery: true, qty: 3 });
+    const data = makeData({ products: [makeProduct({ stock: 7 })], pendingSales: [sale] });
+    const result = applyCancelPendingDelivery(data, sale);
+    expect(result.products[0].stock).toBe(10); // 7 + 3
+  });
+
+  it("retire la vente de pendingSales sans jamais la mettre dans sales", () => {
+    const sale = makeSale({ delivery: true });
+    const data = makeData({ pendingSales: [sale] });
+    const result = applyCancelPendingDelivery(data, sale);
+    expect(result.pendingSales).toHaveLength(0);
+    expect(result.sales).toHaveLength(0);
+  });
+
+  it("ajoute un mouvement d'entrée 'Livraison annulée'", () => {
+    const sale = makeSale({ delivery: true, qty: 2, client: "Fatou" });
+    const data = makeData({ pendingSales: [sale] });
+    const result = applyCancelPendingDelivery(data, sale);
+    expect(result.movements[0].type).toBe("in");
+    expect(result.movements[0].reason).toBe("Livraison annulée");
+    expect(result.movements[0].note).toContain("Fatou");
   });
 });
 
