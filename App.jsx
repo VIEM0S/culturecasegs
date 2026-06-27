@@ -153,7 +153,7 @@ function App() {
 
   // 3. Non authentifié → page de login
   if (!authUser && !isViewer)
-    return <LoginPage onViewerAccess={loginAsViewer} />;
+    return <LoginPage onViewerAccess={() => { setPage("dashboard"); loginAsViewer(); }} />;
 
   // 3b. Viewer en chargement
   if (isViewer && (!data || loading))
@@ -273,7 +273,7 @@ function App() {
                 <Icon name="logout" size={15} /> Quitter le mode viewer
               </button>
             ) : (
-              <button className="nav-item" onClick={logout} style={{ width: "100%" }} aria-label="Déconnexion">
+              <button className="nav-item" onClick={() => { setPage("dashboard"); logout(); }} style={{ width: "100%" }} aria-label="Déconnexion">
                 <Icon name="logout" size={15} /> Déconnexion
               </button>
             )}
@@ -337,13 +337,13 @@ function App() {
               {(!isViewer || VIEWER_PAGES.includes(page)) && page === "dashboard" && <Dashboard data={data} isViewer={isViewer} />}
               {(!isViewer || VIEWER_PAGES.includes(page)) && page === "products"  && <Products data={data} onSale={addSale} onDelete={deleteProduct} isViewer={isViewer} />}
               {!isViewer && page === "stock"     && <StockPage data={data} onMove={addMovement} isViewer={isViewer} />}
-              {page === "sales"     && <SalesPage data={data} onSale={addSale} onCancel={cancelSale} onConfirmDelivery={confirmDelivery} onCancelPendingDelivery={cancelPendingDelivery} toast={toast} />}
-              {page === "history"   && <HistoryPage data={data} />}
-              {page === "reports"   && <Reports data={data} />}
-              {page === "blog"      && <BlogPage />}
-              {page === "reviews"   && <ReviewsPage />}
-              {page === "errors"    && <ErrorLogsPage />}
-              {page === "settings"  && <SettingsPage data={data} onSave={saveSettings} onSaveProduct={saveProduct} onPersist={persist} confirm={confirm} />}
+              {!isViewer && page === "sales"     && <SalesPage data={data} onSale={addSale} onCancel={cancelSale} onConfirmDelivery={confirmDelivery} onCancelPendingDelivery={cancelPendingDelivery} toast={toast} />}
+              {!isViewer && page === "history"   && <HistoryPage data={data} />}
+              {!isViewer && page === "reports"   && <Reports data={data} />}
+              {!isViewer && page === "blog"      && <BlogPage />}
+              {!isViewer && page === "reviews"   && <ReviewsPage />}
+              {!isViewer && page === "errors"    && <ErrorLogsPage />}
+              {!isViewer && page === "settings"  && <SettingsPage data={data} onSave={saveSettings} onSaveProduct={saveProduct} onPersist={persist} confirm={confirm} />}
             </Suspense>
           </div>
 
