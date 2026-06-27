@@ -16,6 +16,7 @@ const Reports      = lazy(() => import("./Reports.jsx"));
 const SettingsPage = lazy(() => import("./SettingsPage.jsx"));
 const BlogPage     = lazy(() => import("./BlogPage.jsx"));
 const ReviewsPage  = lazy(() => import("./ReviewsPage.jsx"));
+const ErrorLogsPage = lazy(() => import("./ErrorLogsPage.jsx"));
 
 function App() {
   // ── UI state ────────────────────────────────────────────────────────────
@@ -59,6 +60,7 @@ function App() {
   const {
     saveProduct, deleteProduct,
     addMovement, addSale, cancelSale,
+    confirmDelivery, cancelPendingDelivery,
     saveSettings,
   } = useStockActions({ data, persist, confirm });
 
@@ -186,6 +188,7 @@ function App() {
     { id: "reports",   label: "Rapports",           icon: "reports"   },
     { id: "blog",      label: "Blog",               icon: "blog"      },
     { id: "reviews",   label: "Avis clients",       icon: "star"      },
+    { id: "errors",    label: "Erreurs",            icon: "alert"     },
     { id: "settings",  label: "Paramètres",         icon: "settings"  },
   ];
 
@@ -198,6 +201,7 @@ function App() {
     reports:   "Rapports",
     blog:      "Blog",
     reviews:   "Avis clients",
+    errors:    "Erreurs",
     settings:  "Paramètres",
   };
 
@@ -333,11 +337,12 @@ function App() {
               {(!isViewer || VIEWER_PAGES.includes(page)) && page === "dashboard" && <Dashboard data={data} isViewer={isViewer} />}
               {(!isViewer || VIEWER_PAGES.includes(page)) && page === "products"  && <Products data={data} onSale={addSale} onDelete={deleteProduct} isViewer={isViewer} />}
               {!isViewer && page === "stock"     && <StockPage data={data} onMove={addMovement} isViewer={isViewer} />}
-              {page === "sales"     && <SalesPage data={data} onSale={addSale} onCancel={cancelSale} toast={toast} />}
+              {page === "sales"     && <SalesPage data={data} onSale={addSale} onCancel={cancelSale} onConfirmDelivery={confirmDelivery} onCancelPendingDelivery={cancelPendingDelivery} toast={toast} />}
               {page === "history"   && <HistoryPage data={data} />}
               {page === "reports"   && <Reports data={data} />}
               {page === "blog"      && <BlogPage />}
               {page === "reviews"   && <ReviewsPage />}
+              {page === "errors"    && <ErrorLogsPage />}
               {page === "settings"  && <SettingsPage data={data} onSave={saveSettings} onSaveProduct={saveProduct} onPersist={persist} confirm={confirm} />}
             </Suspense>
           </div>
