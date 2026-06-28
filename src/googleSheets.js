@@ -8,7 +8,7 @@
 //
 // ── Apps Script à coller (copie tout ce bloc) ────────────────────────────────
 //
-// const SHEET_ID = "1kX-rQApHPwv5zKKU4OcJc8etIx6t6pGOFtgYQUa6QJM";
+// const SHEET_ID = "VOTRE_SHEET_ID_ICI"; // ID visible dans l'URL de ton Google Sheet
 //
 // function doPost(e) {
 //   try {

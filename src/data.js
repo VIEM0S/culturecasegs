@@ -40,22 +40,22 @@ export async function saveData(data) {
     chunks.push(slim.products.slice(i, i + CHUNK_SIZE));
   }
 
+  // Un seul batch atomique : écriture des nouveaux chunks + suppression des
+  // anciens chunks orphelins en même temps. Avant, ces deux opérations étaient
+  // deux commits Firestore séparés — une coupure réseau entre les deux pouvait
+  // laisser des chunks "products_N" obsolètes en orphelins.
   const batch = fbWriteBatch(db);
   batch.set(doc(db, "data", "main"), { ...slim, products: [], _chunkCount: chunks.length });
   chunks.forEach((chunk, i) => {
     batch.set(doc(db, "data", `products_${i}`), { items: chunk });
   });
-  await batch.commit();
 
-  // Supprimer anciens chunks orphelins
   const prevCount = data._chunkCount ?? 10;
-  if (prevCount > chunks.length) {
-    const delBatch = fbWriteBatch(db);
-    for (let i = chunks.length; i < prevCount; i++) {
-      delBatch.delete(doc(db, "data", `products_${i}`));
-    }
-    await delBatch.commit();
+  for (let i = chunks.length; i < prevCount; i++) {
+    batch.delete(doc(db, "data", `products_${i}`));
   }
+
+  await batch.commit();
 }
 
 // ── Souscription temps réel optimisée ────────────────────────────────────────

@@ -1,0 +1,19 @@
+#!/bin/sh
+# ── Garde-fou : bloque le push s'il reste des changements non commités ──────
+# Le problème vécu : des fichiers modifiés sur le disque, jamais "git add +
+# commit", poussés "à blanc" → l'Action GitHub tourne, est verte, mais ne
+# déploie rien de nouveau.
+
+if ! git diff --quiet || ! git diff --cached --quiet; then
+  echo ""
+  echo "⛔  PUSH BLOQUÉ — des changements ne sont pas commités :"
+  echo ""
+  git status --short
+  echo ""
+  echo "→ git add . && git commit -m \"...\"   puis repousse."
+  echo "→ Pour pousser quand même (ignorer ce contrôle) : git push --no-verify"
+  echo ""
+  exit 1
+fi
+
+exit 0
