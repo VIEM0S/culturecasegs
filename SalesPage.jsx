@@ -416,7 +416,7 @@ function Row({ label, value, bold, small, success, warn, accent, large, italic }
 }
 
 // ─── SALES PAGE ─────────────────────────────────────────────────────────────
-function SalesPage({ data, onSale, onCancel, onConfirmDelivery, onCancelPendingDelivery, toast }) {
+function SalesPage({ data, onSale, onCancel, onConfirmDelivery, onCancelPendingDelivery, toast, webOrders, webOrderProcessing, onValidateWebOrder, onRejectWebOrder }) {
   const { products, sales, settings } = data;
   const pendingSales = data.pendingSales || [];
   const { priceSettings } = settings;
@@ -447,6 +447,7 @@ function SalesPage({ data, onSale, onCancel, onConfirmDelivery, onCancelPendingD
   const [filterAmountMax, setFilterAmountMax] = useState("");
   const [cancelTarget, setCancelTarget] = useState(null); // group[] à annuler
   const [pendingRejectTarget, setPendingRejectTarget] = useState(null); // group[] livraison à rejeter
+  const [webOrderRejectTarget, setWebOrderRejectTarget] = useState(null); // commande site à rejeter
   const PAGE_SIZE = 50;
 
   const productMap = useMemo(() => {
@@ -600,6 +601,58 @@ function SalesPage({ data, onSale, onCancel, onConfirmDelivery, onCancelPendingD
           <Icon name="plus" size={14} /> Nouvelle vente
         </button>
       </div>
+
+      {webOrders && webOrders.length > 0 && (
+        <div className="card" style={{ marginBottom: 16, border: "1px solid var(--accent2)", background: "rgba(59,130,246,0.06)" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "12px 14px 4px" }}>
+            <Icon name="products" size={16} />
+            <span style={{ fontWeight: 700, fontSize: 13.5 }}>
+              Commandes du site en attente de validation ({webOrders.length})
+            </span>
+          </div>
+          <div style={{ padding: "4px 14px 12px", display: "flex", flexDirection: "column", gap: 8 }}>
+            {webOrders.map(order => {
+              const busy = !!webOrderProcessing?.[order.id];
+              const itemsLabel = (order.items || [])
+                .map(it => `${it.designName} — ${it.model} ×${it.qty}`)
+                .join(", ");
+              return (
+                <div
+                  key={order.id}
+                  style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, flexWrap: "wrap", background: "var(--bg3)", borderRadius: 8, padding: "8px 12px" }}
+                >
+                  <div style={{ fontSize: 12.5, lineHeight: 1.5 }}>
+                    <div style={{ fontWeight: 600 }}>
+                      {order.client?.nom || "Client sans nom"} — {order.client?.tel || "—"}
+                      {order.client?.quartier ? ` — ${order.client.quartier}` : ""}
+                      {order.delivery && <span style={{ marginLeft: 6, fontSize: 10.5, color: "var(--accent2)" }}>🛵 livraison</span>}
+                    </div>
+                    <div style={{ color: "var(--text2)" }}>
+                      {itemsLabel} · <span style={{ fontWeight: 700, color: "var(--success)" }}>{fmtMoney(order.total || 0)}</span>
+                    </div>
+                  </div>
+                  <div style={{ display: "flex", gap: 6 }}>
+                    <button
+                      className="btn btn-primary btn-sm"
+                      disabled={busy}
+                      onClick={() => onValidateWebOrder?.(order)}
+                    >
+                      ✅ Valider
+                    </button>
+                    <button
+                      className="btn btn-danger btn-sm"
+                      disabled={busy}
+                      onClick={() => setWebOrderRejectTarget(order)}
+                    >
+                      ❌ Rejeter
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {pendingGroups.length > 0 && (
         <div className="card" style={{ marginBottom: 16, border: "1px solid var(--warn)", background: "rgba(245,158,11,0.06)" }}>
@@ -1000,6 +1053,43 @@ function SalesPage({ data, onSale, onCancel, onConfirmDelivery, onCancelPendingD
             </div>
             <p style={{ color: "var(--warn)", fontSize: 12 }}>
               ⚠️ Le stock sera remis à jour automatiquement. Cette vente ne sera jamais comptée dans le CA.
+            </p>
+          </div>
+        </Modal>
+      )}
+      {/* ── Modale rejet de commande site en attente ── */}
+      {webOrderRejectTarget && (
+        <Modal
+          title="❌ Rejeter cette commande ?"
+          onClose={() => setWebOrderRejectTarget(null)}
+          footer={<>
+            <button className="btn btn-outline" onClick={() => setWebOrderRejectTarget(null)}>Annuler</button>
+            <button
+              className="btn btn-danger"
+              onClick={() => {
+                onRejectWebOrder?.(webOrderRejectTarget);
+                setWebOrderRejectTarget(null);
+              }}
+            >
+              Confirmer le rejet
+            </button>
+          </>}
+        >
+          <div style={{ fontSize: 13, color: "var(--text)", lineHeight: 1.7 }}>
+            <p style={{ marginBottom: 12 }}>
+              Commande de <strong>{webOrderRejectTarget.client?.nom || "client sans nom"}</strong>
+              {webOrderRejectTarget.client?.tel ? <> ({webOrderRejectTarget.client.tel})</> : ""}.
+            </p>
+            <div style={{ background: "var(--bg3)", borderRadius: 8, padding: "10px 14px", marginBottom: 12 }}>
+              {(webOrderRejectTarget.items || []).map((it, i) => (
+                <div key={i} style={{ display: "flex", justifyContent: "space-between", marginBottom: 4, fontSize: 12 }}>
+                  <span>{it.designName} — {it.model} × {it.qty}</span>
+                  <span style={{ fontWeight: 700, color: "var(--success)" }}>{fmtMoney(it.total)}</span>
+                </div>
+              ))}
+            </div>
+            <p style={{ color: "var(--text2)", fontSize: 12 }}>
+              Aucun stock n'a été touché — cette commande n'était pas encore une vente. Elle sera simplement supprimée.
             </p>
           </div>
         </Modal>
