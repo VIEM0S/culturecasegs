@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://viem0s.github.io/culturecase-site/sitemap.xml

@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Page introuvable — CultureCase</title>
+    <meta name="robots" content="noindex" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&display=swap"
+    />
+    <style>
+      *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+      :root {
+        --ink: #0f0700;
+        --ember: #d94e15;
+        --sand: #f4ead0;
+        --warm: #fbf6ed;
+        --cream: #fdfaf3;
+        --muted: #9a7848;
+        --border: #e2ceaa;
+      }
+      html, body {
+        height: 100%;
+        background: var(--cream);
+        color: var(--ink);
+        font-family: "DM Sans", sans-serif;
+        -webkit-font-smoothing: antialiased;
+      }
+      body {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        min-height: 100vh;
+        padding: 2rem 1.5rem;
+        text-align: center;
+      }
+      .logo {
+        width: 48px;
+        height: 48px;
+        border-radius: 12px;
+        margin-bottom: 2rem;
+      }
+      .code {
+        font-family: "Bebas Neue", sans-serif;
+        font-size: clamp(5rem, 20vw, 9rem);
+        line-height: 1;
+        color: var(--sand);
+        letter-spacing: 4px;
+        user-select: none;
+      }
+      h1 {
+        font-family: "Bebas Neue", sans-serif;
+        font-size: clamp(1.4rem, 5vw, 2.2rem);
+        letter-spacing: 2px;
+        margin-top: 0.5rem;
+        color: var(--ink);
+      }
+      p {
+        margin-top: 0.75rem;
+        font-size: 15px;
+        color: var(--muted);
+        line-height: 1.6;
+        max-width: 320px;
+      }
+      .actions {
+        display: flex;
+        gap: 12px;
+        margin-top: 2rem;
+        flex-wrap: wrap;
+        justify-content: center;
+      }
+      .btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 11px 22px;
+        border-radius: 6px;
+        font-size: 14px;
+        font-weight: 500;
+        font-family: "DM Sans", sans-serif;
+        cursor: pointer;
+        text-decoration: none;
+        transition: opacity .15s;
+      }
+      .btn:hover { opacity: .85; }
+      .btn-primary {
+        background: var(--ember);
+        color: #fff;
+        border: none;
+      }
+      .btn-secondary {
+        background: transparent;
+        color: var(--ink);
+        border: 1.5px solid var(--border);
+      }
+      .divider {
+        width: 40px;
+        height: 2px;
+        background: var(--sand);
+        border-radius: 1px;
+        margin: 2rem auto 0;
+      }
+    </style>
+  </head>
+  <body>
+    <img
+      class="logo"
+      src="https://res.cloudinary.com/dknfqd2xp/image/upload/w_96,h_96,c_fit,f_auto,q_auto/v1781131928/logo_jpg4ml.png"
+      alt="CultureCase"
+    />
+    <div class="code">404</div>
+    <h1>Page introuvable</h1>
+    <p>Ce lien n'existe pas ou a été déplacé. Retourne à l'accueil pour explorer les designs.</p>
+    <div class="actions">
+      <a class="btn btn-primary" href="/">Retour à l'accueil</a>
+      <a class="btn btn-secondary" href="/#catalogue">Voir le catalogue</a>
+    </div>
+    <div class="divider"></div>
+  </body>
+</html>
