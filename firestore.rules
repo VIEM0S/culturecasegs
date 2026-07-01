@@ -72,6 +72,30 @@ service cloud.firestore {
       allow update, delete: if false;
     }
 
+    // ── Commandes directes du site — écrites par le visiteur (auth anonyme),
+    // validées ou rejetées uniquement par l'admin. Aucune modification
+    // possible après création : soit l'admin la supprime après avoir créé
+    // la vente (validation), soit il la supprime directement (rejet).
+    match /webOrders/{docId} {
+      allow read, delete: if isAdmin();
+      allow create: if request.auth != null
+        && request.resource.data.status == "pending"
+        && request.resource.data.source == "site"
+        && request.resource.data.client is map
+        && request.resource.data.client.nom is string
+        && request.resource.data.client.nom.size() >= 1
+        && request.resource.data.client.nom.size() <= 100
+        && request.resource.data.client.tel is string
+        && request.resource.data.client.tel.size() >= 6
+        && request.resource.data.client.tel.size() <= 30
+        && request.resource.data.items is list
+        && request.resource.data.items.size() >= 1
+        && request.resource.data.items.size() <= 30
+        && request.resource.data.total is number
+        && request.resource.data.total > 0;
+      allow update: if false;
+    }
+
     // ── Tout le reste est refusé ─────────────────────────────────────────────
     match /{document=**} {
       allow read, write: if false;
