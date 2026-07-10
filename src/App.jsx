@@ -4,7 +4,6 @@ import { maybeWeeklyBackup } from "./googleSheets.js";
 import { useDialog, useToast } from "./hooks.jsx";
 import { useAuth } from "./useAuth.js";
 import { useStockActions } from "./useStockActions.js";
-import { useWebOrders } from "./useWebOrders.js";
 import Icon from "./Icon.jsx";
 import LoginPage from "./LoginPage.jsx";
 import { todayDisplay } from "./utils.js";
@@ -66,10 +65,6 @@ function App() {
     saveSettings,
   } = useStockActions({ data, persist, confirm });
 
-  // ── Commandes du site en attente de validation ───────────────────────────
-  const { webOrders, processing: webOrderProcessing, validateWebOrder, rejectWebOrder } =
-    useWebOrders({ data, addSale, toast });
-
   // ── PWA : install prompt ─────────────────────────────────────────────────
   useEffect(() => {
     const handler = (e) => {
@@ -118,7 +113,7 @@ function App() {
   const [loadingTooLong, setLoadingTooLong] = useState(false);
   useEffect(() => {
     if (!loading) { setLoadingTooLong(false); return; }
-    const t = setTimeout(() => setLoadingTooLong(true), 8000);
+    const t = setTimeout(() => setLoadingTooLong(true), 20000);
     return () => clearTimeout(t);
   }, [loading]);
 
@@ -278,11 +273,6 @@ function App() {
                 onClick={() => safePage(item.id)}
               >
                 <Icon name={item.icon} size={15} /> {item.label}
-                {item.id === "sales" && webOrders.length > 0 && (
-                  <span style={{ marginLeft: "auto", background: "var(--accent2)", color: "#fff", fontSize: 10.5, fontWeight: 700, borderRadius: 10, padding: "1px 7px" }}>
-                    {webOrders.length}
-                  </span>
-                )}
               </button>
             ))}
           </nav>
@@ -362,7 +352,7 @@ function App() {
               {(!isViewer || VIEWER_PAGES.includes(page)) && page === "dashboard" && <Dashboard data={data} isViewer={isViewer} />}
               {(!isViewer || VIEWER_PAGES.includes(page)) && page === "products"  && <Products data={data} onSale={addSale} onDelete={deleteProduct} isViewer={isViewer} />}
               {!isViewer && page === "stock"     && <StockPage data={data} onMove={addMovement} isViewer={isViewer} />}
-              {!isViewer && page === "sales"     && <SalesPage data={data} onSale={addSale} onCancel={cancelSale} onConfirmDelivery={confirmDelivery} onCancelPendingDelivery={cancelPendingDelivery} toast={toast} webOrders={webOrders} webOrderProcessing={webOrderProcessing} onValidateWebOrder={validateWebOrder} onRejectWebOrder={rejectWebOrder} />}
+              {!isViewer && page === "sales"     && <SalesPage data={data} onSale={addSale} onCancel={cancelSale} onConfirmDelivery={confirmDelivery} onCancelPendingDelivery={cancelPendingDelivery} toast={toast} />}
               {!isViewer && page === "history"   && <HistoryPage data={data} />}
               {!isViewer && page === "reports"   && <Reports data={data} />}
               {!isViewer && page === "blog"      && <BlogPage />}
@@ -389,16 +379,10 @@ function App() {
                   key={item.id}
                   className={`bottom-nav-item ${page === item.id ? "active" : ""}`}
                   onClick={() => safePage(item.id)}
-                  style={{ position: "relative" }}
                 >
                   <div className="bn-pip" />
                   <Icon name={item.icon} size={20} />
                   {item.label}
-                  {item.id === "sales" && webOrders.length > 0 && (
-                    <span style={{ position: "absolute", top: 2, right: "18%", background: "var(--accent2)", color: "#fff", fontSize: 9.5, fontWeight: 700, borderRadius: 8, padding: "0 5px", lineHeight: "14px" }}>
-                      {webOrders.length}
-                    </span>
-                  )}
                 </button>
               ))}
             </div>

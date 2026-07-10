@@ -1,7 +1,8 @@
 import { initializeApp, getApps } from "firebase/app";
 import {
-  getFirestore, doc, getDoc, setDoc, onSnapshot, writeBatch,
-  addDoc, collection
+  initializeFirestore, persistentLocalCache,
+  doc, getDoc, setDoc, onSnapshot, writeBatch,
+  addDoc, collection,
 } from "firebase/firestore";
 import {
   getAuth,
@@ -27,7 +28,14 @@ const FIREBASE_CONFIG = {
 
 const app  = getApps().length ? getApps()[0] : initializeApp(FIREBASE_CONFIG);
 const auth = getAuth(app);
-const _db  = getFirestore(app);
+
+// ── Persistance offline (IndexedDB) ─────────────────────────────────────────
+// Firestore sert les données depuis le cache local dès l'ouverture de l'app,
+// sans attendre le réseau. La sync s'effectue ensuite en arrière-plan.
+// → Élimine l'écran "La connexion prend trop longtemps" sur mobile.
+const _db = initializeFirestore(app, {
+  localCache: persistentLocalCache(),
+});
 
 const _rc = getRemoteConfig(app);
 _rc.settings.minimumFetchIntervalMillis =
