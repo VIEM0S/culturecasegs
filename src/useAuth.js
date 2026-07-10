@@ -54,7 +54,11 @@ export function useAuth({ toast, setSyncStatus, setData, setLoading }) {
     );
 
     const goOffline      = () => { if (mounted) setSyncStatus("offline"); };
-    const goOnline       = () => { if (mounted) setSyncStatus("ok"); };
+    const goOnline       = () => {
+      if (!mounted) return;
+      setSyncStatus("ok");
+      toast("✅ Connexion rétablie — données synchronisées.", "info");
+    };
     const goUpdate       = () => { if (mounted) window.dispatchEvent(new Event("sw-update-available-internal")); };
     const goOfflineReady = () => { if (mounted) toast("✅ Application prête à fonctionner hors ligne.", "info"); };
 

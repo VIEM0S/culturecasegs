@@ -43,12 +43,17 @@ function App() {
   } = useAuth({ toast, setSyncStatus, setData, setLoading });
 
   // ── Persist : sauvegarde optimiste + sync Firestore ──────────────────────
+  // Avec persistentLocalCache(), batch.commit() résout immédiatement même
+  // hors ligne (écriture mise en file d'attente localement). On inspecte
+  // navigator.onLine pour afficher le bon statut dans l'UI.
   const persist = useCallback((newData) => {
     _localUpdate.current = true;
     setData(newData);
-    setSyncStatus("syncing");
+    setSyncStatus(navigator.onLine ? "syncing" : "offline");
     saveData(newData)
-      .then(() => setSyncStatus("ok"))
+      .then(() => {
+        setSyncStatus(navigator.onLine ? "ok" : "offline");
+      })
       .catch(() => {
         _localUpdate.current = false;
         setSyncStatus("offline");
@@ -320,7 +325,7 @@ function App() {
                 }}
               >
                 <span style={{ width: 6, height: 6, borderRadius: "50%", background: "currentColor", display: "inline-block" }} />
-                {syncStatus === "ok" ? "Sync" : syncStatus === "offline" ? "Hors ligne" : "…"}
+                {syncStatus === "ok" ? "Sync" : syncStatus === "offline" ? "En attente" : "…"}
               </span>
 
               <span style={{ fontSize: 11.5, color: "var(--text2)" }}>{todayDisplay()}</span>
