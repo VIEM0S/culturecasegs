@@ -10,8 +10,30 @@ import { uid, today } from "./utils.js";
 // Le catalogue CultureCaseGS stocke product.design comme nom libre.
 // On matche d'abord par nom normalisé + modèle (le site n'a pas connaissance
 // du productId interne — c'est volontaire, ça découple les deux systèmes).
-const normalize = (s) =>
+export const normalize = (s) =>
   (s || "").toUpperCase().trim().replace(/['’]/g, "'").replace(/\s+/g, " ");
+
+// ── Résolution pure (testable indépendamment du hook React) ─────────────────
+// Résout chaque item de la commande site (designId/designName + model)
+// vers un produit réel du catalogue. Retourne { error } si un item ne matche
+// pas ou si le stock est insuffisant (la commande reste en attente —
+// rien n'est modifié), sinon { items: [{ prod, qty }] }.
+export function resolveOrderItems(order, products) {
+  const resolved = [];
+  for (const item of order.items || []) {
+    const prod = products.find((p) =>
+      normalize(p.design) === normalize(item.designName) && p.model === item.model
+    );
+    if (!prod) {
+      return { error: `Produit introuvable au catalogue : "${item.designName} — ${item.model}". Vérifie que le design/modèle existe toujours, puis réessaie.` };
+    }
+    if (prod.stock < item.qty) {
+      return { error: `Stock insuffisant pour "${prod.model} — ${prod.design}" (${prod.stock} dispo, ${item.qty} demandé). Réapprovisionne ou ajuste avant de valider.` };
+    }
+    resolved.push({ prod, qty: item.qty });
+  }
+  return { items: resolved };
+}
 
 // ── Commandes du site en attente de validation ───────────────────────────────
 //
@@ -124,26 +146,10 @@ export function useWebOrders({ data, addSale, toast }) {
   // vers un produit réel du catalogue. Retourne null si un item ne matche
   // pas ou si le stock est insuffisant (la commande reste en attente —
   // rien n'est modifié).
-  const resolveOrderItems = useCallback((order) => {
-    const products = data?.products || [];
-    const resolved = [];
-    for (const item of order.items || []) {
-      const prod = products.find((p) =>
-        normalize(p.design) === normalize(item.designName) && p.model === item.model
-      );
-      if (!prod) {
-        return { error: `Produit introuvable au catalogue : "${item.designName} — ${item.model}". Vérifie que le design/modèle existe toujours, puis réessaie.` };
-      }
-      if (prod.stock < item.qty) {
-        return { error: `Stock insuffisant pour "${prod.model} — ${prod.design}" (${prod.stock} dispo, ${item.qty} demandé). Réapprovisionne ou ajuste avant de valider.` };
-      }
-      resolved.push({ prod, qty: item.qty });
-    }
-    return { items: resolved };
-  }, [data]);
+  const resolveOrder = useCallback((order) => resolveOrderItems(order, data?.products || []), [data]);
 
   const validateWebOrder = useCallback(async (order) => {
-    const { items, error } = resolveOrderItems(order);
+    const { items, error } = resolveOrder(order);
     if (error) {
       toast?.("❌ " + error, "error");
       return false;
@@ -182,7 +188,7 @@ export function useWebOrders({ data, addSale, toast }) {
     } finally {
       setProcessing((p) => { const np = { ...p }; delete np[order.id]; return np; });
     }
-  }, [addSale, resolveOrderItems, toast]);
+  }, [addSale, resolveOrder, toast]);
 
   return { webOrders, processing, validateWebOrder, rejectWebOrder };
 }

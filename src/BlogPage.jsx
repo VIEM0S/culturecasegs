@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
+import DOMPurify from "dompurify";
 import { getDB } from "./firebase.js";
 import {
   collection, addDoc, updateDoc, deleteDoc,
@@ -157,7 +158,15 @@ function parseMarkdown(md, images = []) {
     })
     .join("\n");
 
-  return html;
+  // Assainissement : ce HTML est stocké dans Firestore (blog_posts) et rendu
+  // publiquement pour les articles publiés. On limite strictement les balises/
+  // attributs autorisés pour éviter toute injection de script si jamais le
+  // compte admin était un jour compromis (défense en profondeur — les règles
+  // Firestore protègent déjà l'écriture, ceci protège la lecture/le rendu).
+  return DOMPurify.sanitize(html, {
+    ALLOWED_TAGS: ["h1", "h2", "h3", "h4", "p", "strong", "em", "blockquote", "hr", "ul", "li", "a", "img", "code", "span"],
+    ALLOWED_ATTR: ["href", "target", "rel", "src", "alt", "style"],
+  });
 }
 
 // ── Utilitaires ───────────────────────────────────────────────────────────────
