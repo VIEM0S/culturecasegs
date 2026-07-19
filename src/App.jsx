@@ -1,5 +1,5 @@
 import { lazy, Suspense, useCallback, useEffect, useState } from "react";
-import { exportData, importData, saveData } from "./data.js";
+import { exportData, importData, saveData, ConcurrentWriteError } from "./data.js";
 import { maybeWeeklyBackup } from "./googleSheets.js";
 import { useDialog, useToast } from "./hooks.jsx";
 import { useAuth } from "./useAuth.js";
@@ -54,10 +54,14 @@ function App() {
       .then(() => {
         setSyncStatus(navigator.onLine ? "ok" : "offline");
       })
-      .catch(() => {
+      .catch((err) => {
         _localUpdate.current = false;
         setSyncStatus("offline");
-        toast("❌ Erreur de synchronisation — données sauvegardées localement.", "error");
+        if (err instanceof ConcurrentWriteError) {
+          toast("⚠️ Quelqu'un d'autre a modifié les données pendant votre action. Vérifiez avant de continuer — la version à jour va se recharger automatiquement.", "error");
+        } else {
+          toast("❌ Erreur de synchronisation — données sauvegardées localement.", "error");
+        }
       })
       .finally(() => { setTimeout(() => { _localUpdate.current = false; }, 2000); });
   }, [setSyncStatus, toast, _localUpdate]);

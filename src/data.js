@@ -1,6 +1,30 @@
-import { getDB, doc, onSnapshot, writeBatch as fbWriteBatch } from "./firebase.js";
+import { getDB, doc, getDoc, onSnapshot, writeBatch as fbWriteBatch } from "./firebase.js";
 import { CHUNK_SIZE } from "./constants.js";
 import { saveLocalSnapshot } from "./googleSheets.js";
+
+// ── Détection de conflit d'écriture (léger, compatible hors-ligne) ───────────
+// L'app utilise persistentLocalCache() pour marcher sans réseau à Bamako —
+// on ne peut donc pas utiliser de vraies transactions Firestore pour chaque
+// sauvegarde sans casser ce mode hors-ligne (une transaction exige un aller-
+// retour serveur). À la place : un compteur de version sur le document
+// principal, vérifié seulement quand on a une connexion active. Si un autre
+// appareil/onglet a écrit une version plus récente que celle qu'on a vue en
+// dernier, on bloque et on prévient l'utilisateur au lieu d'écraser
+// silencieusement ses changements. Hors-ligne, impossible à vérifier — on
+// laisse passer (compromis assumé : priorité au fonctionnement hors-ligne).
+export class ConcurrentWriteError extends Error {
+  constructor(serverVersion) {
+    super("Des changements plus récents existent sur le serveur — rechargez avant de continuer.");
+    this.name = "ConcurrentWriteError";
+    this.serverVersion = serverVersion;
+  }
+}
+
+// Pure — testable indépendamment de Firestore.
+export function shouldBlockForConflict({ localVersion, serverVersion, fromCache }) {
+  if (fromCache) return false; // hors-ligne : on ne peut pas vérifier, on laisse passer
+  return serverVersion !== localVersion;
+}
 
 // ── Logique images ────────────────────────────────────────────────────────────
 // "https://res.cloudinary.com/..." → URL Cloudinary → visible partout ✅
@@ -34,6 +58,21 @@ export async function saveData(data) {
   const slim = await stripImages(data);
   delete slim.auth;
   const db = getDB();
+  const localVersion = data._version ?? 0;
+
+  // Garde-fou anti-écrasement silencieux (voir commentaire plus haut) —
+  // uniquement si on peut joindre le serveur.
+  try {
+    const mainSnap = await getDoc(doc(db, "data", "main"));
+    const serverVersion = mainSnap.exists() ? (mainSnap.data()._version ?? 0) : 0;
+    if (shouldBlockForConflict({ localVersion, serverVersion, fromCache: mainSnap.metadata.fromCache })) {
+      throw new ConcurrentWriteError(serverVersion);
+    }
+  } catch (err) {
+    if (err instanceof ConcurrentWriteError) throw err;
+    // Erreur réseau/lecture (probablement hors-ligne) → on ne bloque pas,
+    // cohérent avec le fonctionnement hors-ligne assumé plus haut.
+  }
 
   const chunks = [];
   for (let i = 0; i < slim.products.length; i += CHUNK_SIZE) {
@@ -45,7 +84,7 @@ export async function saveData(data) {
   // deux commits Firestore séparés — une coupure réseau entre les deux pouvait
   // laisser des chunks "products_N" obsolètes en orphelins.
   const batch = fbWriteBatch(db);
-  batch.set(doc(db, "data", "main"), { ...slim, products: [], _chunkCount: chunks.length });
+  batch.set(doc(db, "data", "main"), { ...slim, products: [], _chunkCount: chunks.length, _version: localVersion + 1 });
   chunks.forEach((chunk, i) => {
     batch.set(doc(db, "data", `products_${i}`), { items: chunk });
   });

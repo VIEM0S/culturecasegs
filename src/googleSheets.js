@@ -4,15 +4,31 @@
 // 1. Ouvre le Google Sheet → Extensions → Apps Script
 // 2. Colle le script "doPost" ci-dessous → Déployer → Nouvelle application web
 //    → Accès : "Tout le monde" → Copie l'URL de déploiement
-// 3. Mets l'URL dans VITE_SHEETS_WEBHOOK_URL dans ton .env
+// 3. Génère un jeton secret long (ex: openssl rand -hex 24) → dans l'éditeur
+//    Apps Script : Paramètres du projet → Propriétés du script → ajoute
+//    "WEBHOOK_SECRET" avec cette valeur.
+// 4. Mets l'URL dans VITE_SHEETS_WEBHOOK_URL et le même jeton dans
+//    VITE_SHEETS_WEBHOOK_SECRET dans ton .env (et dans les secrets GitHub
+//    Actions utilisés par le build de prod).
 //
 // ── Apps Script à coller (copie tout ce bloc) ────────────────────────────────
 //
 // const SHEET_ID = "VOTRE_SHEET_ID_ICI"; // ID visible dans l'URL de ton Google Sheet
 //
+// // Jeton partagé — génère une chaîne aléatoire longue (ex: openssl rand -hex 24)
+// // et enregistre-la dans Extensions → Apps Script → Paramètres du projet →
+// // Propriétés du script → Ajouter "WEBHOOK_SECRET" = ta valeur.
+// // Ne la mets JAMAIS en dur dans le code du script (elle serait visible par
+// // quiconque a accès à l'éditeur Apps Script partagé).
+//
 // function doPost(e) {
 //   try {
 //     const payload = JSON.parse(e.postData.contents);
+//     const expected = PropertiesService.getScriptProperties().getProperty("WEBHOOK_SECRET");
+//     if (!expected || payload.secret !== expected) {
+//       return ContentService.createTextOutput(JSON.stringify({ error: "unauthorized" }))
+//         .setMimeType(ContentService.MimeType.JSON);
+//     }
 //     const ss = SpreadsheetApp.openById(SHEET_ID);
 //     const action = payload.action;
 //
@@ -118,6 +134,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 const WEBHOOK_URL = import.meta.env.VITE_SHEETS_WEBHOOK_URL || "";
+const WEBHOOK_SECRET = import.meta.env.VITE_SHEETS_WEBHOOK_SECRET || "";
 
 // File produits pour enrichir les données de vente/mouvement
 let _productsCache = [];
@@ -136,7 +153,7 @@ async function post(action, data) {
     await fetch(WEBHOOK_URL, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action, data }),
+      body: JSON.stringify({ action, data, secret: WEBHOOK_SECRET }),
       mode: "no-cors", // Apps Script n'envoie pas les headers CORS
     });
   } catch (err) {
