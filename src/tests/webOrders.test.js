@@ -129,4 +129,29 @@ describe("resolveOrderItems", () => {
     const result = resolveOrderItems(order, []);
     expect(result.error).toMatch(/introuvable au catalogue/);
   });
+
+  // ── Fallback renommage (previousNames) ───────────────────────────────────
+  it("matche via previousNames si le design a été renommé depuis la commande", () => {
+    const products = [makeProduct({ design: "Reine du Sahel" })]; // nouveau nom
+    const designs = [{ id: "d1", name: "Reine du Sahel", previousNames: ["Afro Queen"] }];
+    const order = makeOrder([{ designName: "Afro Queen", model: "iPhone 12", qty: 1 }]); // ancien nom envoyé par le site
+    const result = resolveOrderItems(order, products, designs);
+    expect(result.error).toBeUndefined();
+    expect(result.items[0].prod.design).toBe("Reine du Sahel");
+  });
+
+  it("ignore le fallback si aucun design ne référence ce previousName", () => {
+    const products = [makeProduct({ design: "Reine du Sahel" })];
+    const designs = [{ id: "d1", name: "Reine du Sahel", previousNames: ["Autre Ancien Nom"] }];
+    const order = makeOrder([{ designName: "Afro Queen", model: "iPhone 12", qty: 1 }]);
+    const result = resolveOrderItems(order, products, designs);
+    expect(result.error).toMatch(/introuvable au catalogue/);
+  });
+
+  it("fonctionne sans argument designs (rétrocompatibilité)", () => {
+    const products = [makeProduct()];
+    const order = makeOrder([{ designName: "Afro Queen", model: "iPhone 12", qty: 1 }]);
+    const result = resolveOrderItems(order, products);
+    expect(result.error).toBeUndefined();
+  });
 });

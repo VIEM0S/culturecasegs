@@ -18,12 +18,30 @@ export const normalize = (s) =>
 // vers un produit réel du catalogue. Retourne { error } si un item ne matche
 // pas ou si le stock est insuffisant (la commande reste en attente —
 // rien n'est modifié), sinon { items: [{ prod, qty }] }.
-export function resolveOrderItems(order, products) {
+//
+// `designs` (optionnel) : liste settings.designs, utilisée en repli quand le
+// nom envoyé par le site ne matche plus aucun produit — cas d'un design
+// renommé côté catalogue après que la commande a été passée sur le site.
+// Chaque design peut porter un historique `previousNames` (voir
+// SettingsPage.jsx confirmEditDesign) permettant de retrouver son nom actuel.
+export function resolveOrderItems(order, products, designs = []) {
   const resolved = [];
   for (const item of order.items || []) {
-    const prod = products.find((p) =>
+    let prod = products.find((p) =>
       normalize(p.design) === normalize(item.designName) && p.model === item.model
     );
+
+    if (!prod) {
+      const renamedDesign = designs.find((d) =>
+        (d.previousNames || []).some((n) => normalize(n) === normalize(item.designName))
+      );
+      if (renamedDesign) {
+        prod = products.find((p) =>
+          normalize(p.design) === normalize(renamedDesign.name) && p.model === item.model
+        );
+      }
+    }
+
     if (!prod) {
       return { error: `Produit introuvable au catalogue : "${item.designName} — ${item.model}". Vérifie que le design/modèle existe toujours, puis réessaie.` };
     }
@@ -146,7 +164,7 @@ export function useWebOrders({ data, addSale, toast }) {
   // vers un produit réel du catalogue. Retourne null si un item ne matche
   // pas ou si le stock est insuffisant (la commande reste en attente —
   // rien n'est modifié).
-  const resolveOrder = useCallback((order) => resolveOrderItems(order, data?.products || []), [data]);
+  const resolveOrder = useCallback((order) => resolveOrderItems(order, data?.products || [], data?.settings?.designs || []), [data]);
 
   const validateWebOrder = useCallback(async (order) => {
     const { items, error } = resolveOrder(order);

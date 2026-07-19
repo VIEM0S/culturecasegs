@@ -202,7 +202,34 @@ function SettingsPage({ data, onSave, onPersist, onSaveProduct, confirm }) {
 
   const confirmEditDesign = () => {
     if (!editingDesign) return;
-    setLocalSettings(s => ({ ...s, designs: s.designs.map(d => d.id === editingDesign.id ? { ...editingDesign, name: editingDesign.name.trim() || d.name } : d) }));
+    const oldDesign = localSettings.designs.find(d => d.id === editingDesign.id);
+    const oldName = oldDesign?.name;
+    const finalName = editingDesign.name.trim() || oldName;
+    const renamed = !!oldName && finalName !== oldName;
+
+    // On garde une trace des anciens noms (previousNames) : une commande
+    // passée depuis le site avant le renommage référence encore l'ancien
+    // nom de design — sans cet historique, sa résolution échouerait dès
+    // que le design est renommé côté catalogue (cf. useWebOrders.js).
+    const previousNames = renamed
+      ? Array.from(new Set([...(oldDesign.previousNames || []), oldName])).slice(-5)
+      : (oldDesign?.previousNames || []);
+
+    setLocalSettings(s => ({
+      ...s,
+      designs: s.designs.map(d => d.id === editingDesign.id
+        ? { ...editingDesign, name: finalName, previousNames }
+        : d),
+    }));
+
+    if (renamed) {
+      // Propager aux produits existants — product.design est une copie du
+      // nom (pas une référence live), sans ça les produits déjà créés
+      // garderaient l'ancien nom affiché indéfiniment.
+      const affected = data.products.filter(p => p.design === oldName);
+      if (affected.length) onSaveProduct(affected.map(p => ({ ...p, design: finalName })));
+    }
+
     setEditingDesign(null);
     setSaveDesignsNow(true);
   };
