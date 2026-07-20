@@ -1,0 +1,324 @@
+diff --git a/.nvmrc b/.nvmrc
+new file mode 100644
+index 0000000..209e3ef
+--- /dev/null
++++ b/.nvmrc
+@@ -0,0 +1 @@
++20
+diff --git a/app/api/contact/route.ts b/app/api/contact/route.ts
+new file mode 100644
+index 0000000..84e1d26
+--- /dev/null
++++ b/app/api/contact/route.ts
+@@ -0,0 +1,63 @@
++import { NextRequest, NextResponse } from 'next/server';
++import { sendEmail } from '@/lib/email/send';
++
++// Endpoint public (pas d'auth) pour le formulaire de contact de la landing
++// page. Envoie un email via SendGrid à l'adresse configurée dans
++// CONTACT_FORM_TO_EMAIL (à défaut, SENDGRID_FROM_EMAIL). Tant qu'aucune de
++// ces deux variables n'est renseignée, sendEmail() renvoie { sent: false }
++// sans lever d'erreur — on répond alors 503 pour que le formulaire affiche
++// clairement "indisponible pour le moment" plutôt qu'un faux succès.
++export async function POST(request: NextRequest) {
++  try {
++    const { name, email, message }: { name?: string; email?: string; message?: string } =
++      await request.json();
++
++    if (!name?.trim() || !email?.trim() || !message?.trim()) {
++      return NextResponse.json({ error: 'Nom, email et message sont requis' }, { status: 400 });
++    }
++    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
++    if (!emailRegex.test(email.trim())) {
++      return NextResponse.json({ error: 'Adresse email invalide' }, { status: 400 });
++    }
++
++    const toEmail = process.env.CONTACT_FORM_TO_EMAIL || process.env.SENDGRID_FROM_EMAIL;
++    if (!toEmail) {
++      return NextResponse.json(
++        { error: "Le formulaire de contact n'est pas encore configuré (CONTACT_FORM_TO_EMAIL manquant)." },
++        { status: 503 }
++      );
++    }
++
++    const result = await sendEmail({
++      to: toEmail,
++      subject: `[ProAlpha ERP] Nouveau message de contact — ${name.trim()}`,
++      html: `
++        <p><strong>Nom :</strong> ${escapeHtml(name.trim())}</p>
++        <p><strong>Email :</strong> ${escapeHtml(email.trim())}</p>
++        <p><strong>Message :</strong></p>
++        <p>${escapeHtml(message.trim()).replace(/\n/g, '<br/>')}</p>
++      `,
++    });
++
++    if (!result.sent) {
++      console.error('Contact form email error:', result.error);
++      return NextResponse.json({ error: "Échec de l'envoi, réessayez plus tard." }, { status: 502 });
++    }
++
++    return NextResponse.json({ success: true });
++  } catch (error) {
++    console.error('Contact form route error:', error);
++    return NextResponse.json({ error: 'Erreur interne' }, { status: 500 });
++  }
++}
++
++// Échappement HTML minimal (pas de dépendance ajoutée) pour éviter toute
++// injection dans l'email HTML envoyé à partir d'un input public non authentifié.
++function escapeHtml(input: string): string {
++  return input
++    .replace(/&/g, '&amp;')
++    .replace(/</g, '&lt;')
++    .replace(/>/g, '&gt;')
++    .replace(/"/g, '&quot;')
++    .replace(/'/g, '&#39;');
++}
+diff --git a/app/page.tsx b/app/page.tsx
+index 81345ec..37b5c6a 100644
+--- a/app/page.tsx
++++ b/app/page.tsx
+@@ -5,6 +5,7 @@ import { useEffect } from 'react';
+ import { Store, ArrowRight, Package, ShoppingCart, BarChart3, Shield, Zap } from 'lucide-react';
+ import { Button } from '@/components/ui/button';
+ import { LandingLayout } from '@/components/landing/landing-layout';
++import { ContactSection } from '@/components/landing/contact-section';
+ import { PLAN_DISPLAY_LIST } from '@/lib/utils/plan-display';
+ 
+ export default function HomePage() {
+@@ -46,7 +47,7 @@ export default function HomePage() {
+               <Button
+                 size="lg"
+                 variant="outline"
+-                className="border-white/30 text-white hover:bg-white/10 h-14 px-8 text-lg"
++                className="bg-transparent border-white/30 text-white hover:bg-white/10 h-14 px-8 text-lg"
+                 onClick={() => router.push('/login')}
+               >
+                 Se connecter
+@@ -72,7 +73,7 @@ export default function HomePage() {
+       </section>
+ 
+       {/* Features Section */}
+-      <section className="py-20 bg-white">
++      <section id="features" className="py-20 bg-white">
+         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+           <div className="text-center mb-16">
+             <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
+@@ -134,7 +135,7 @@ export default function HomePage() {
+       </section>
+ 
+       {/* Pricing Section */}
+-      <section className="py-20 bg-gray-50">
++      <section id="pricing" className="py-20 bg-gray-50">
+         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+           <div className="text-center mb-16">
+             <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
+@@ -149,10 +150,10 @@ export default function HomePage() {
+             {PLAN_DISPLAY_LIST.map((plan) => (
+               <div
+                 key={plan.name}
+-                className={`rounded-2xl p-8 ${
++                className={`rounded-2xl p-8 transition-all ${
+                   plan.popular
+-                    ? 'bg-primary-600 text-white ring-4 ring-primary-600 ring-offset-4'
+-                    : 'bg-white border border-gray-200'
++                    ? 'bg-primary-600 text-white ring-4 ring-primary-600 ring-offset-4 hover:shadow-xl'
++                    : 'bg-white border border-gray-200 hover:border-gray-300 hover:shadow-lg'
+                 }`}
+               >
+                 {plan.popular && (
+@@ -189,7 +190,13 @@ export default function HomePage() {
+                       ? 'bg-white text-primary-600 hover:bg-gray-100'
+                       : 'bg-primary-600 text-white hover:bg-primary-700'
+                   }`}
+-                  onClick={() => router.push('/setup')}
++                  onClick={() => {
++                    if (plan.id === 'ENTERPRISE') {
++                      document.getElementById('contact')?.scrollIntoView({ behavior: 'smooth' });
++                    } else {
++                      router.push('/setup');
++                    }
++                  }}
+                 >
+                   {plan.cta}
+                 </Button>
+@@ -219,6 +226,9 @@ export default function HomePage() {
+         </div>
+       </section>
+ 
++      {/* Contact Section */}
++      <ContactSection />
++
+       {/* Footer */}
+       <footer className="bg-gray-900 py-12">
+         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+diff --git a/components/landing/contact-section.tsx b/components/landing/contact-section.tsx
+new file mode 100644
+index 0000000..f2f8f85
+--- /dev/null
++++ b/components/landing/contact-section.tsx
+@@ -0,0 +1,116 @@
++'use client';
++
++import { useState } from 'react';
++import { Phone } from 'lucide-react';
++import { Button } from '@/components/ui/button';
++
++type Status = 'idle' | 'submitting' | 'success' | 'error';
++
++export function ContactSection() {
++  const [name, setName] = useState('');
++  const [email, setEmail] = useState('');
++  const [message, setMessage] = useState('');
++  const [status, setStatus] = useState<Status>('idle');
++  const [errorMsg, setErrorMsg] = useState('');
++
++  async function handleSubmit(e: React.FormEvent) {
++    e.preventDefault();
++    setStatus('submitting');
++    setErrorMsg('');
++    try {
++      const res = await fetch('/api/contact', {
++        method: 'POST',
++        headers: { 'Content-Type': 'application/json' },
++        body: JSON.stringify({ name, email, message }),
++      });
++      const data = await res.json();
++      if (!res.ok) {
++        setErrorMsg(data.error || "Échec de l'envoi, réessayez plus tard.");
++        setStatus('error');
++        return;
++      }
++      setStatus('success');
++      setName('');
++      setEmail('');
++      setMessage('');
++    } catch {
++      setErrorMsg('Connexion impossible, réessayez plus tard.');
++      setStatus('error');
++    }
++  }
++
++  return (
++    <section id="contact" className="py-20 bg-white">
++      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
++        <div className="text-center mb-16">
++          <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">Contactez-nous</h2>
++          <p className="text-xl text-gray-500">Une question ? Notre équipe vous répond rapidement</p>
++        </div>
++
++        <div className="grid md:grid-cols-2 gap-12">
++          <div>
++            <h3 className="text-lg font-semibold text-gray-900 mb-4">Par téléphone</h3>
++            <a
++              href="tel:+22375992482"
++              className="inline-flex items-center gap-3 text-lg text-primary-600 hover:text-primary-700"
++            >
++              <Phone className="h-5 w-5" />
++              +223 75 99 24 82
++            </a>
++          </div>
++
++          <form onSubmit={handleSubmit} className="space-y-4">
++            <div>
++              <label htmlFor="contact-name" className="block text-sm font-medium text-gray-700 mb-1">
++                Nom
++              </label>
++              <input
++                id="contact-name"
++                type="text"
++                required
++                value={name}
++                onChange={(e) => setName(e.target.value)}
++                className="input-field"
++              />
++            </div>
++            <div>
++              <label htmlFor="contact-email" className="block text-sm font-medium text-gray-700 mb-1">
++                Email
++              </label>
++              <input
++                id="contact-email"
++                type="email"
++                required
++                value={email}
++                onChange={(e) => setEmail(e.target.value)}
++                className="input-field"
++              />
++            </div>
++            <div>
++              <label htmlFor="contact-message" className="block text-sm font-medium text-gray-700 mb-1">
++                Message
++              </label>
++              <textarea
++                id="contact-message"
++                required
++                rows={4}
++                value={message}
++                onChange={(e) => setMessage(e.target.value)}
++                className="input-field resize-none"
++              />
++            </div>
++
++            {status === 'success' && (
++              <p className="text-sm text-success-600">Message envoyé, merci ! Nous revenons vers vous rapidement.</p>
++            )}
++            {status === 'error' && <p className="text-sm text-danger-600">{errorMsg}</p>}
++
++            <Button type="submit" disabled={status === 'submitting'} className="w-full">
++              {status === 'submitting' ? 'Envoi...' : 'Envoyer'}
++            </Button>
++          </form>
++        </div>
++      </div>
++    </section>
++  );
++}
+diff --git a/components/landing/landing-layout.tsx b/components/landing/landing-layout.tsx
+index 52db480..33e8313 100644
+--- a/components/landing/landing-layout.tsx
++++ b/components/landing/landing-layout.tsx
+@@ -57,13 +57,13 @@ export function LandingLayout({ children }: { children: React.ReactNode }) {
+         {mobileMenuOpen && (
+           <div className="md:hidden bg-white border-b border-gray-100">
+             <div className="px-4 py-4 space-y-3">
+-              <a href="#features" className="block text-sm font-medium text-gray-600 hover:text-gray-900">
++              <a href="#features" onClick={() => setMobileMenuOpen(false)} className="block text-sm font-medium text-gray-600 hover:text-gray-900">
+                 Fonctionnalités
+               </a>
+-              <a href="#pricing" className="block text-sm font-medium text-gray-600 hover:text-gray-900">
++              <a href="#pricing" onClick={() => setMobileMenuOpen(false)} className="block text-sm font-medium text-gray-600 hover:text-gray-900">
+                 Tarifs
+               </a>
+-              <a href="#contact" className="block text-sm font-medium text-gray-600 hover:text-gray-900">
++              <a href="#contact" onClick={() => setMobileMenuOpen(false)} className="block text-sm font-medium text-gray-600 hover:text-gray-900">
+                 Contact
+               </a>
+               <div className="pt-3 border-t border-gray-100 space-y-2">
+diff --git a/netlify.toml b/netlify.toml
+index 4dca0ca..4f9a3bb 100644
+--- a/netlify.toml
++++ b/netlify.toml
+@@ -2,5 +2,8 @@
+ command = "npx next build"
+ publish = ".next"
+ 
++[build.environment]
++NODE_VERSION = "20"
++
+ [[plugins]]
+ package = "@netlify/plugin-nextjs"
+diff --git a/package.json b/package.json
+index 7a21d76..c2b11fe 100644
+--- a/package.json
++++ b/package.json
+@@ -2,6 +2,9 @@
+   "name": "nextjs",
+   "version": "0.1.0",
+   "private": true,
++  "engines": {
++    "node": ">=20 <21"
++  },
+   "scripts": {
+     "dev": "next dev",
+     "build": "next build",
