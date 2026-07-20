@@ -1,6 +1,6 @@
 import { initializeApp, getApps } from "firebase/app";
 import {
-  initializeFirestore, persistentLocalCache,
+  initializeFirestore, persistentLocalCache, persistentMultipleTabManager,
   doc, getDoc, setDoc, onSnapshot, writeBatch,
   addDoc, collection,
 } from "firebase/firestore";
@@ -33,8 +33,14 @@ const auth = getAuth(app);
 // Firestore sert les données depuis le cache local dès l'ouverture de l'app,
 // sans attendre le réseau. La sync s'effectue ensuite en arrière-plan.
 // → Élimine l'écran "La connexion prend trop longtemps" sur mobile.
+//
+// persistentMultipleTabManager (au lieu du mode single-tab par défaut) :
+// sans ça, dès que l'app est ouverte dans un 2e onglet/fenêtre (PWA installée
+// + onglet navigateur, ou deux onglets ouverts par erreur), ce 2e onglet ne
+// peut jamais obtenir le bail sur IndexedDB — son onSnapshot ne répond
+// jamais, et au bout de 20s on tombe sur "La connexion prend trop longtemps".
 const _db = initializeFirestore(app, {
-  localCache: persistentLocalCache(),
+  localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() }),
 });
 
 const _rc = getRemoteConfig(app);

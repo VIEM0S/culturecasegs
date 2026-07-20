@@ -83,8 +83,9 @@ export async function saveData(data) {
   // anciens chunks orphelins en même temps. Avant, ces deux opérations étaient
   // deux commits Firestore séparés — une coupure réseau entre les deux pouvait
   // laisser des chunks "products_N" obsolètes en orphelins.
+  const newVersion = localVersion + 1;
   const batch = fbWriteBatch(db);
-  batch.set(doc(db, "data", "main"), { ...slim, products: [], _chunkCount: chunks.length, _version: localVersion + 1 });
+  batch.set(doc(db, "data", "main"), { ...slim, products: [], _chunkCount: chunks.length, _version: newVersion });
   chunks.forEach((chunk, i) => {
     batch.set(doc(db, "data", `products_${i}`), { items: chunk });
   });
@@ -95,6 +96,13 @@ export async function saveData(data) {
   }
 
   await batch.commit();
+
+  // On retourne la nouvelle version pour que l'appelant (App.jsx) puisse la
+  // synchroniser immédiatement dans le state local — sans ça, une deuxième
+  // sauvegarde rapprochée relit encore l'ancien _version côté client (le
+  // onSnapshot temps réel n'a pas encore eu le temps de revenir) et déclenche
+  // un ConcurrentWriteError alors qu'il n'y a qu'un seul utilisateur.
+  return newVersion;
 }
 
 // ── Souscription temps réel optimisée ────────────────────────────────────────

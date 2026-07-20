@@ -51,8 +51,11 @@ function App() {
     setData(newData);
     setSyncStatus(navigator.onLine ? "syncing" : "offline");
     saveData(newData)
-      .then(() => {
+      .then((newVersion) => {
         setSyncStatus(navigator.onLine ? "ok" : "offline");
+        // Resynchronise immédiatement le _version local (voir data.js) : sinon
+        // une deuxième sauvegarde rapide déclenche un faux ConcurrentWriteError.
+        setData(prev => (prev ? { ...prev, _version: newVersion } : prev));
       })
       .catch((err) => {
         _localUpdate.current = false;
