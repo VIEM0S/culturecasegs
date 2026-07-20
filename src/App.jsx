@@ -1,5 +1,5 @@
 import { lazy, Suspense, useCallback, useEffect, useState } from "react";
-import { exportData, importData, saveData, ConcurrentWriteError } from "./data.js";
+import { exportData, importData, saveData } from "./data.js";
 import { maybeWeeklyBackup } from "./googleSheets.js";
 import { useDialog, useToast } from "./hooks.jsx";
 import { useAuth } from "./useAuth.js";
@@ -51,20 +51,13 @@ function App() {
     setData(newData);
     setSyncStatus(navigator.onLine ? "syncing" : "offline");
     saveData(newData)
-      .then((newVersion) => {
+      .then(() => {
         setSyncStatus(navigator.onLine ? "ok" : "offline");
-        // Resynchronise immédiatement le _version local (voir data.js) : sinon
-        // une deuxième sauvegarde rapide déclenche un faux ConcurrentWriteError.
-        setData(prev => (prev ? { ...prev, _version: newVersion } : prev));
       })
-      .catch((err) => {
+      .catch(() => {
         _localUpdate.current = false;
         setSyncStatus("offline");
-        if (err instanceof ConcurrentWriteError) {
-          toast("⚠️ Quelqu'un d'autre a modifié les données pendant votre action. Vérifiez avant de continuer — la version à jour va se recharger automatiquement.", "error");
-        } else {
-          toast("❌ Erreur de synchronisation — données sauvegardées localement.", "error");
-        }
+        toast("❌ Erreur de synchronisation — données sauvegardées localement.", "error");
       })
       .finally(() => { setTimeout(() => { _localUpdate.current = false; }, 2000); });
   }, [setSyncStatus, toast, _localUpdate]);
