@@ -157,26 +157,26 @@ const Dashboard = memo(function Dashboard({ data, isViewer = false }) {
           label="Stock total"
           value={stats.totalStock}
           sub="unités en stock"
-          color="purple"
+          color="var(--accent2)"
         />
         <StatCard
           label="Rupture"
           value={stats.outOfStock}
           sub="produits épuisés"
-          color="red"
+          color="var(--danger)"
         />
         <StatCard
           label="Stock faible"
           value={stats.lowStock}
           sub={`≤ ${LOW_STOCK} unités`}
-          color="amber"
+          color="var(--warn)"
         />
         {!isViewer && (
           <StatCard
             label="CA du jour"
             value={fmtMoney(stats.revenueToday)}
             sub={`${stats.salesToday.length} vente(s)`}
-            color="green"
+            color="var(--success)"
           />
         )}
       </div>

@@ -223,19 +223,19 @@ function ReportsInner({
             <StatCard
               label="CA net total"
               value={fmtMoney(totalRevenue)}
-              color="green"
+              color="var(--success)"
             />
             <StatCard
               label="Remises accordées"
               value={fmtMoney(totalDiscounts)}
-              color="amber"
+              color="var(--warn)"
             />
             <StatCard
               label="Unités vendues"
               value={totalUnits}
-              color="purple"
+              color="var(--accent2)"
             />
-            <StatCard label="Nb ventes" value={sales.length} color="blue" />
+            <StatCard label="Nb ventes" value={sales.length} color="var(--info)" />
           </div>
           <div className="card">
             <p className="section-label" style={{ marginBottom: 12 }}>
