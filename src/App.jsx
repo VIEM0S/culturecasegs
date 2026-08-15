@@ -8,16 +8,40 @@ import Icon from "./Icon.jsx";
 import LoginPage from "./LoginPage.jsx";
 import { todayDisplay } from "./utils.js";
 
-const Dashboard    = lazy(() => import("./Dashboard.jsx"));
-const Products     = lazy(() => import("./Products.jsx"));
-const StockPage    = lazy(() => import("./StockPage.jsx"));
-const SalesPage    = lazy(() => import("./SalesPage.jsx"));
-const HistoryPage  = lazy(() => import("./HistoryPage.jsx"));
-const Reports      = lazy(() => import("./Reports.jsx"));
-const SettingsPage = lazy(() => import("./SettingsPage.jsx"));
-const BlogPage     = lazy(() => import("./BlogPage.jsx"));
-const ReviewsPage  = lazy(() => import("./ReviewsPage.jsx"));
-const ErrorLogsPage = lazy(() => import("./ErrorLogsPage.jsx"));
+// ── Chargement paresseux résilient aux déploiements ──────────────────────────
+// Après un nouveau déploiement, les anciens fichiers de chunk (hashés) ne sont
+// plus servis. Un utilisateur ayant gardé l'app ouverte (PWA ou onglet) obtient
+// alors "Importing a module script failed" au clic sur une page — l'app entière
+// plantait. On retente une fois via un rechargement complet (qui récupère le
+// nouvel index.html pointant vers les bons chunks) avant de laisser l'erreur
+// remonter à l'ErrorBoundary.
+function lazyWithRetry(importer) {
+  return lazy(async () => {
+    try {
+      const mod = await importer();
+      sessionStorage.removeItem("cc-chunk-reload");
+      return mod;
+    } catch (error) {
+      if (!sessionStorage.getItem("cc-chunk-reload")) {
+        sessionStorage.setItem("cc-chunk-reload", "1");
+        window.location.reload();
+        return new Promise(() => {}); // le reload prend le relais
+      }
+      throw error;
+    }
+  });
+}
+
+const Dashboard    = lazyWithRetry(() => import("./Dashboard.jsx"));
+const Products     = lazyWithRetry(() => import("./Products.jsx"));
+const StockPage    = lazyWithRetry(() => import("./StockPage.jsx"));
+const SalesPage    = lazyWithRetry(() => import("./SalesPage.jsx"));
+const HistoryPage  = lazyWithRetry(() => import("./HistoryPage.jsx"));
+const Reports      = lazyWithRetry(() => import("./Reports.jsx"));
+const SettingsPage = lazyWithRetry(() => import("./SettingsPage.jsx"));
+const BlogPage     = lazyWithRetry(() => import("./BlogPage.jsx"));
+const ReviewsPage  = lazyWithRetry(() => import("./ReviewsPage.jsx"));
+const ErrorLogsPage = lazyWithRetry(() => import("./ErrorLogsPage.jsx"));
 
 function App() {
   // ── UI state ────────────────────────────────────────────────────────────
