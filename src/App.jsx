@@ -131,6 +131,16 @@ function App() {
     if (authUser !== undefined && !loading) setSplashDone(true);
   }, [authUser, loading]);
 
+  // ── Reset du scroll au changement de page ────────────────────────────────
+  // Les "pages" sont un simple swap de composant dans .content, pas une vraie
+  // navigation — le scroll du body (seul conteneur scrollable de l'app) était
+  // donc conservé d'une page à l'autre : arriver sur Ventes déjà scrollé à la
+  // position laissée sur Produits, ce qui donne l'impression que les pages
+  // défilent ensemble.
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [page]);
+
   const handleInstall = async () => {
     if (!installPrompt) return;
     installPrompt.prompt();
