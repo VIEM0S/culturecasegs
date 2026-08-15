@@ -238,7 +238,16 @@ function App() {
       {!splashDone && (
         <div className="splash" aria-hidden="true">
           <div className="splash-logo" style={{ display:"flex", flexDirection:"column", alignItems:"center", gap:10 }}>
-            <img src="/culturecasegs/logo.png" alt="logo" style={{ width:64, height:"auto", filter:"brightness(0) invert(1)" }}/>
+            <span
+              role="img" aria-label="logo"
+              style={{
+                display: "block", width: 64, height: 40, background: "var(--accent)",
+                WebkitMaskImage: "url(/culturecasegs/logo.png)", maskImage: "url(/culturecasegs/logo.png)",
+                WebkitMaskSize: "contain", maskSize: "contain",
+                WebkitMaskRepeat: "no-repeat", maskRepeat: "no-repeat",
+                WebkitMaskPosition: "center", maskPosition: "center",
+              }}
+            />
             <span>Culture<span style={{color:"var(--accent)"}}>case</span></span>
           </div>
           <div className="splash-sub">Gestion de stock</div>
@@ -276,7 +285,16 @@ function App() {
 
         <aside className={`sidebar ${sidebarOpen ? "open" : ""}`} aria-label="Menu latéral">
           <div className="sidebar-logo">
-            <img src="/culturecasegs/logo.png" alt="Culturecase logo" style={{ width:48, height:"auto", filter:"brightness(0) invert(1)", marginBottom:6 }}/>
+            <span
+              role="img" aria-label="Culturecase logo"
+              style={{
+                display: "block", width: 48, height: 30, background: "var(--accent)", marginBottom: 6,
+                WebkitMaskImage: "url(/culturecasegs/logo.png)", maskImage: "url(/culturecasegs/logo.png)",
+                WebkitMaskSize: "contain", maskSize: "contain",
+                WebkitMaskRepeat: "no-repeat", maskRepeat: "no-repeat",
+                WebkitMaskPosition: "center", maskPosition: "center",
+              }}
+            />
             <h1>Culturecase</h1>
             <p>{isViewer ? "👁️ Iya Choua — lecture seule" : "Gestion de stock"}</p>
           </div>
