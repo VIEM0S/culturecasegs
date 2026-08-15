@@ -168,7 +168,7 @@ function StockPage({ data, onMove, isViewer = false }) {
                         const checked = (line._checkedDesigns || []).includes(p.id);
                         const qty = line._designQtys?.[p.id] || "1";
                         return (
-                          <div key={p.id} style={{ display: "flex", alignItems: "center", gap: 8, padding: "5px 8px", borderRadius: 7, background: checked ? "rgba(124,58,237,0.1)" : "transparent", border: `1px solid ${checked ? "var(--accent2)" : "var(--border)"}`, transition: "all 0.12s" }}>
+                          <div key={p.id} style={{ display: "flex", alignItems: "center", gap: 8, padding: "5px 8px", borderRadius: 7, background: checked ? "color-mix(in srgb, var(--accent) 10%, transparent)" : "transparent", border: `1px solid ${checked ? "var(--accent2)" : "var(--border)"}`, transition: "all 0.12s" }}>
                             <input type="checkbox" checked={checked} style={{ accentColor: "var(--accent)", width: 14, height: 14, flexShrink: 0 }}
                               onChange={e => {
                                 const cur = line._checkedDesigns || [];

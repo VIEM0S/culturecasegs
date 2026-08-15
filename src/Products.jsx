@@ -103,7 +103,7 @@ function QuickSaleModal({ product, onConfirm, onClose }) {
           {/* Livraison toggle */}
           <div
             onClick={() => setDelivery(d => !d)}
-            style={{ display: "flex", alignItems: "center", justifyContent: "space-between", background: delivery ? "rgba(124,58,237,0.1)" : "var(--bg3)", border: `1px solid ${delivery ? "var(--accent2)" : "var(--border)"}`, borderRadius: 10, padding: "12px 14px", marginBottom: 18, cursor: "pointer", transition: "all 0.15s" }}
+            style={{ display: "flex", alignItems: "center", justifyContent: "space-between", background: delivery ? "color-mix(in srgb, var(--accent) 10%, transparent)" : "var(--bg3)", border: `1px solid ${delivery ? "var(--accent2)" : "var(--border)"}`, borderRadius: 10, padding: "12px 14px", marginBottom: 18, cursor: "pointer", transition: "all 0.15s" }}
           >
             <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
               <span style={{ fontSize: 18 }}>🛵</span>

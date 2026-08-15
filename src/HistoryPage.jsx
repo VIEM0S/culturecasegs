@@ -178,10 +178,10 @@ function HistoryPage({ data }) {
             <div key={key} className="card" style={{ padding: 0, overflow: "hidden" }}>
               {/* Client header row */}
               <div
-                style={{ display: "flex", alignItems: "center", gap: 12, padding: "14px 18px", cursor: "pointer", background: isOpen ? "rgba(124,58,237,0.08)" : "transparent", transition: "background 0.15s" }}
+                style={{ display: "flex", alignItems: "center", gap: 12, padding: "14px 18px", cursor: "pointer", background: isOpen ? "color-mix(in srgb, var(--accent) 8%, transparent)" : "transparent", transition: "background 0.15s" }}
                 onClick={() => toggleExpand(key)}
               >
-                <div style={{ width: 38, height: 38, borderRadius: "50%", background: isAnon ? "var(--bg3)" : "rgba(124,58,237,0.2)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                <div style={{ width: 38, height: 38, borderRadius: "50%", background: isAnon ? "var(--bg3)" : "color-mix(in srgb, var(--accent) 20%, transparent)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                   <span style={{ fontSize: 16, fontWeight: 800, color: isAnon ? "var(--text2)" : "var(--accent2)" }}>
                     {isAnon ? "?" : g.name.charAt(0).toUpperCase()}
                   </span>

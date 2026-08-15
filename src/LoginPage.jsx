@@ -117,7 +117,7 @@ function LoginPage({ onViewerAccess }) {
           ) : (
             <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
               <div style={{
-                background: "rgba(124,58,237,0.08)", borderRadius: 8,
+                background: "color-mix(in srgb, var(--accent) 8%, transparent)", borderRadius: 8,
                 padding: "10px 14px", fontSize: 12, color: "var(--text2)", lineHeight: 1.6,
               }}>
                 👁️ Mode <strong>Iya Choua</strong> — accès lecture seule pour consulter les produits et stocks disponibles.

@@ -99,7 +99,7 @@ export function StockView({
               {/* En-tête cliquable */}
               <div
                 onClick={() => toggle(model)}
-                style={{ display: "flex", alignItems: "center", gap: 12, padding: "13px 18px", cursor: "pointer", flexWrap: "wrap", background: isOpen ? "rgba(124,58,237,0.06)" : "transparent", transition: "background 0.15s" }}
+                style={{ display: "flex", alignItems: "center", gap: 12, padding: "13px 18px", cursor: "pointer", flexWrap: "wrap", background: isOpen ? "color-mix(in srgb, var(--accent) 6%, transparent)" : "transparent", transition: "background 0.15s" }}
               >
                 <div style={{ width: 10, height: 10, borderRadius: "50%", background: color, flexShrink: 0 }} />
                 <span style={{ fontWeight: 700, fontSize: 14, flex: 1, minWidth: 110 }}>{model}</span>

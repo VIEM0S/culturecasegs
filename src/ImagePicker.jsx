@@ -87,7 +87,7 @@ function ImagePicker({ value, onChange, label = "Image du design" }) {
           borderRadius: 10,
           cursor: isLoading ? "wait" : "pointer",
           transition: "border 0.15s",
-          background: dragOver ? "rgba(124,58,237,0.07)" : "var(--bg3)",
+          background: dragOver ? "color-mix(in srgb, var(--accent) 7%, transparent)" : "var(--bg3)",
           display: "flex", flexDirection: "column", alignItems: "center",
           justifyContent: "center", gap: 6, minHeight: 90, padding: 10,
           overflow: "hidden", position: "relative",
