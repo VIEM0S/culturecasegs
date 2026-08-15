@@ -32,6 +32,7 @@ body { font-family: 'Syne', sans-serif; }
   --info:     #3b82f6;
   --info2:    #1e3a5f;
   --error:    #ef4444;
+  --scroll-shadow: rgba(255,255,255,0.14);
 }
 
 /* ── LIGHT MODE ─────────────────────────────────────────────────────────────
@@ -59,6 +60,7 @@ body { font-family: 'Syne', sans-serif; }
   --info:     #2563eb;
   --info2:    #dbeafe;
   --error:    #dc2626;
+  --scroll-shadow: rgba(0,0,0,0.18);
 }
 
 [data-theme="light"] .sidebar              { background: #ffffff; box-shadow: 2px 0 12px rgba(0,0,0,0.06); }
@@ -162,7 +164,24 @@ input[type="date"] { -webkit-appearance: none; appearance: none; }
 .image-preview-placeholder { height: 52px; width: 52px; border-radius: 8px; background: var(--bg3); border: 1px dashed var(--border2); display: flex; align-items: center; justify-content: center; color: var(--text2); flex-shrink: 0; }
 
 /* ── TABLE ── */
-.table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+/* Ombre de scroll horizontal : signale qu'il reste du contenu à droite/gauche
+   sans JS, via le "background-attachment: local vs scroll" trick — les deux
+   dégradés "cache" collés au contenu (local) masquent l'ombre correspondante
+   (scroll, fixe dans le conteneur) tant qu'on est au bord ; l'ombre n'apparaît
+   qu'une fois qu'il y a effectivement plus de contenu de ce côté. */
+.table-wrap, .history-table-wrap {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  background:
+    linear-gradient(to right, var(--bg2) 30%, rgba(0,0,0,0)),
+    linear-gradient(to left,  var(--bg2) 30%, rgba(0,0,0,0)) 100% 0,
+    linear-gradient(to right, var(--scroll-shadow), rgba(0,0,0,0)),
+    linear-gradient(to left,  var(--scroll-shadow), rgba(0,0,0,0)) 100% 0;
+  background-repeat: no-repeat;
+  background-color: var(--bg2);
+  background-size: 24px 100%, 24px 100%, 10px 100%, 10px 100%;
+  background-attachment: local, local, scroll, scroll;
+}
 .table-wrap table { min-width: 100%; white-space: nowrap; }
 table { width: 100%; border-collapse: collapse; font-size: 13px; }
 th { padding: 10px 14px; text-align: left; font-size: 10.5px; color: var(--text2); font-weight: 700; text-transform: uppercase; letter-spacing: 0.7px; border-bottom: 1px solid var(--border); white-space: nowrap; }

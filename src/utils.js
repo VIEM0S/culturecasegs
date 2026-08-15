@@ -1,6 +1,32 @@
+import { lazy } from "react";
+
 // ── ID unique cryptographiquement sûr (CRITIQUE : remplace Math.random) ──────
 export function uid() {
   return crypto.randomUUID();
+}
+
+// ── Chargement paresseux résilient aux déploiements ──────────────────────────
+// Après un nouveau déploiement, les anciens fichiers de chunk (hashés) ne sont
+// plus servis. Un utilisateur ayant gardé l'app ouverte (PWA ou onglet) obtient
+// alors "Importing a module script failed" au clic sur une page — l'app entière
+// plantait. On retente une fois via un rechargement complet (qui récupère le
+// nouvel index.html pointant vers les bons chunks) avant de laisser l'erreur
+// remonter à l'ErrorBoundary.
+export function lazyWithRetry(importer) {
+  return lazy(async () => {
+    try {
+      const mod = await importer();
+      sessionStorage.removeItem("cc-chunk-reload");
+      return mod;
+    } catch (error) {
+      if (!sessionStorage.getItem("cc-chunk-reload")) {
+        sessionStorage.setItem("cc-chunk-reload", "1");
+        window.location.reload();
+        return new Promise(() => {}); // le reload prend le relais
+      }
+      throw error;
+    }
+  });
 }
 
 export function sanitize(str, maxLen = 200) {

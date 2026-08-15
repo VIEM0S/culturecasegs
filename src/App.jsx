@@ -1,4 +1,4 @@
-import { lazy, Suspense, useCallback, useEffect, useState } from "react";
+import { Suspense, useCallback, useEffect, useState } from "react";
 import { exportData, importData, saveData } from "./data.js";
 import { maybeWeeklyBackup } from "./googleSheets.js";
 import { useDialog, useToast } from "./hooks.jsx";
@@ -6,31 +6,7 @@ import { useAuth } from "./useAuth.js";
 import { useStockActions } from "./useStockActions.js";
 import Icon from "./Icon.jsx";
 import LoginPage from "./LoginPage.jsx";
-import { todayDisplay } from "./utils.js";
-
-// ── Chargement paresseux résilient aux déploiements ──────────────────────────
-// Après un nouveau déploiement, les anciens fichiers de chunk (hashés) ne sont
-// plus servis. Un utilisateur ayant gardé l'app ouverte (PWA ou onglet) obtient
-// alors "Importing a module script failed" au clic sur une page — l'app entière
-// plantait. On retente une fois via un rechargement complet (qui récupère le
-// nouvel index.html pointant vers les bons chunks) avant de laisser l'erreur
-// remonter à l'ErrorBoundary.
-function lazyWithRetry(importer) {
-  return lazy(async () => {
-    try {
-      const mod = await importer();
-      sessionStorage.removeItem("cc-chunk-reload");
-      return mod;
-    } catch (error) {
-      if (!sessionStorage.getItem("cc-chunk-reload")) {
-        sessionStorage.setItem("cc-chunk-reload", "1");
-        window.location.reload();
-        return new Promise(() => {}); // le reload prend le relais
-      }
-      throw error;
-    }
-  });
-}
+import { todayDisplay, lazyWithRetry } from "./utils.js";
 
 const Dashboard    = lazyWithRetry(() => import("./Dashboard.jsx"));
 const Products     = lazyWithRetry(() => import("./Products.jsx"));

@@ -63,14 +63,16 @@ function HistoryPage({ data }) {
       // ── Segmentation — 2 gammes : 3 500 FCFA (≤ iPhone 13 PM) et 5 000 FCFA (14→17 PM) ──
       // VIP       : ≥5 achats OU ≥25 000 FCFA (5 coques à 5 000 ou 6 à 3 500)
       // Fidèle    : ≥3 achats, actif dans les 45 derniers jours
-      // Inactif   : absent depuis >45 jours avec 2+ achats
-      // Nouveau   : 1 seul achat
+      // Inactif   : absent depuis >45 jours, quel que soit le nombre d'achats
+      //             (avant : nbPurchases>=2 requis → un client à 1 seul achat
+      //             restait "Nouveau" pour toujours, même acheté 6 mois plus tôt)
+      // Nouveau   : 1 seul achat, dans les 45 derniers jours
       let segment;
       if (nbPurchases >= 5 || totalSpent >= 25000) {
         segment = "vip";
       } else if (nbPurchases >= 3 && daysSince <= 45) {
         segment = "fidele";
-      } else if (daysSince > 45 && nbPurchases >= 2) {
+      } else if (daysSince > 45 && nbPurchases >= 1) {
         segment = "inactif";
       } else if (nbPurchases === 1) {
         segment = "nouveau";
