@@ -397,8 +397,8 @@ function App() {
           </div>
 
           <nav className="bottom-nav" aria-label="Navigation principale">
-            <div className="bottom-nav-inner">
-              {(isViewer ? [
+            {(() => {
+              const bottomNavItems = isViewer ? [
                 { id: "dashboard", label: "Accueil",  icon: "dashboard" },
                 { id: "products",  label: "Produits", icon: "products"  },
               ] : [
@@ -407,18 +407,33 @@ function App() {
                 { id: "sales",     label: "Ventes",   icon: "sales"     },
                 { id: "stock",     label: "Stock",    icon: "stock"     },
                 { id: "settings",  label: "Réglages", icon: "settings"  },
-              ]).map((item) => (
-                <button
-                  key={item.id}
-                  className={`bottom-nav-item ${page === item.id ? "active" : ""}`}
-                  onClick={() => safePage(item.id)}
-                >
-                  <div className="bn-pip" />
-                  <Icon name={item.icon} size={20} />
-                  {item.label}
-                </button>
-              ))}
-            </div>
+              ];
+              const activeIndex = bottomNavItems.findIndex(i => i.id === page);
+              return (
+                <div className="bottom-nav-inner">
+                  {/* ── Perle unique qui glisse d'un onglet à l'autre (au lieu d'un
+                      indicateur par bouton qui apparaît/disparaît sur place) ── */}
+                  <div
+                    className="bn-bead"
+                    style={{
+                      width: `${100 / bottomNavItems.length}%`,
+                      left: `${(Math.max(activeIndex, 0) / bottomNavItems.length) * 100}%`,
+                      opacity: activeIndex === -1 ? 0 : 1,
+                    }}
+                  />
+                  {bottomNavItems.map((item) => (
+                    <button
+                      key={item.id}
+                      className={`bottom-nav-item ${page === item.id ? "active" : ""}`}
+                      onClick={() => safePage(item.id)}
+                    >
+                      <Icon name={item.icon} size={20} />
+                      {item.label}
+                    </button>
+                  ))}
+                </div>
+              );
+            })()}
           </nav>
         </main>
       </div>

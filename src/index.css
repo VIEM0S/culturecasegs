@@ -341,6 +341,30 @@ tr:hover td { background: color-mix(in srgb, var(--accent) 4%, transparent); }
   justify-content: space-around;
   align-items: stretch;
   height: 56px;
+  position: relative;
+}
+/* ── Perle qui glisse ── un seul élément, positionné en % de la largeur de
+   la barre (une largeur de "slot" par onglet), qui se déplace vers l'onglet
+   actif au lieu qu'un indicateur apparaisse/disparaisse dans chaque bouton.
+   cubic-bezier avec léger dépassement (overshoot) pour une sensation
+   physique, comme une perle qui glisse et se pose. */
+.bn-bead {
+  position: absolute;
+  top: 6px;
+  height: 3px;
+  border-radius: 2px;
+  transition: left 0.32s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.15s;
+  pointer-events: none;
+}
+.bn-bead::after {
+  content: "";
+  display: block;
+  width: 28px;
+  height: 100%;
+  margin: 0 auto;
+  border-radius: inherit;
+  background: var(--accent2);
+  box-shadow: 0 0 8px 0 color-mix(in srgb, var(--accent) 60%, transparent);
 }
 /* WARN FIX : suppression de la déclaration dupliquée de .bottom-nav-item */
 .bottom-nav-item {
@@ -367,16 +391,6 @@ tr:hover td { background: color-mix(in srgb, var(--accent) 4%, transparent); }
   position: relative;
 }
 .bottom-nav-item.active { color: var(--accent2); }
-.bottom-nav-item .bn-pip {
-  position: absolute;
-  top: 6px;
-  width: 32px; height: 2px;
-  border-radius: 2px;
-  background: var(--accent2);
-  opacity: 0;
-  transition: opacity 0.15s;
-}
-.bottom-nav-item.active .bn-pip { opacity: 1; }
 .bottom-nav-item svg { transition: transform 0.15s; }
 .bottom-nav-item.active svg { transform: translateY(-1px); }
 
