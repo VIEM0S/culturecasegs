@@ -22,10 +22,10 @@ body { font-family: 'Syne', sans-serif; }
   --border:   rgba(255,232,204,0.11);
   --border2:  rgba(255,232,204,0.20);
   --text:     #f6ede0;
-  /* --text2 (libellés type "STOCK TOTAL") éclairci sans aller jusqu'au blanc
-     pur — un blanc pur froid aurait détonné dans une interface entièrement
-     chaude ; ça reste de la famille crème du titre, juste plus doux. */
-  --text2:    #d8c6ab;
+  /* --text2 (libellés type "STOCK TOTAL") en blanc, distinct du titre par
+     l'opacité (moins opaque + plus froid) plutôt que par la teinte — la
+     hiérarchie titre/libellé reste portée par la taille et les MAJUSCULES. */
+  --text2:    rgba(255,255,255,0.78);
   /* accent/accent2/accent3 = une seule teinte (ember) en 3 clartés — même
      identité que la landing page publique (style.css : --ember/--dusk).
      Réservé à la marque/nav — --btn (ci-dessous) porte l'action. */
