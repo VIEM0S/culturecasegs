@@ -19,8 +19,8 @@ export default defineConfig({
         start_url: "/culturecasegs/",
         scope: "/culturecasegs/",
         display: "standalone",
-        background_color: "#0d0805",
-        theme_color: "#0d0805",
+        background_color: "#0a0603",
+        theme_color: "#0a0603",
         lang: "fr",
         categories: ["business", "productivity"],
         icons: [

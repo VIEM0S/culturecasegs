@@ -142,7 +142,7 @@ function LoginPage({ onViewerAccess }) {
               </div>
               <button
                 className="btn btn-primary"
-                style={{ width: "100%", justifyContent: "center", background: "var(--accent)", opacity: loading ? 0.7 : 1 }}
+                style={{ width: "100%", justifyContent: "center", opacity: loading ? 0.7 : 1 }}
                 onClick={handleViewer}
                 disabled={loading}
                 aria-busy={loading}
