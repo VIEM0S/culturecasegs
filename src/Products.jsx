@@ -287,7 +287,7 @@ function Products({ data, onSale, onDelete, isViewer = false }) {
                           : <div style={{ width: 44, height: 44, borderRadius: 6, background: "var(--bg3)", display: "flex", alignItems: "center", justifyContent: "center" }}><Icon name="image" size={14} /></div>}
                       </td>
                       <td style={{ fontWeight: 600 }}>{p.model}</td>
-                      <td style={{ color: "var(--accent2)" }}>{p.design}</td>
+                      <td style={{ color: "var(--text2)" }}>{p.design}</td>
                       <td style={{ color: "var(--gold)", fontWeight: 700 }}>{fmtMoney(p.price)}</td>
                       <td>{stockBadge(p.stock)}</td>
                       <td>

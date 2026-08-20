@@ -256,7 +256,7 @@ function ReportsInner({
                   {products.map((p) => (
                     <tr key={p.id}>
                       <td>{p.model}</td>
-                      <td style={{ color: "var(--accent2)" }}>{p.design}</td>
+                      <td style={{ color: "var(--text2)" }}>{p.design}</td>
                       <td>{fmtMoney(p.price)}</td>
                       <td>
                         {p.stock === 0 ? (

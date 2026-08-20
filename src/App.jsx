@@ -152,7 +152,7 @@ function App() {
             </div>
             <button
               onClick={() => window.location.reload()}
-              style={{ padding: "10px 24px", background: "var(--accent2)", color: "#fff", border: "none", borderRadius: 8, fontWeight: 700, fontSize: 14, cursor: "pointer" }}
+              style={{ padding: "10px 24px", background: "var(--btn)", color: "#fff", border: "none", borderRadius: 8, fontWeight: 700, fontSize: 14, cursor: "pointer" }}
             >
               Réessayer
             </button>
