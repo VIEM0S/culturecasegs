@@ -157,7 +157,7 @@ const Dashboard = memo(function Dashboard({ data, isViewer = false }) {
           label="Stock total"
           value={stats.totalStock}
           sub="unités en stock"
-          color="var(--accent2)"
+          color="var(--text)"
         />
         <StatCard
           label="Rupture"
