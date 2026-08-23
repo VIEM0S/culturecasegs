@@ -416,7 +416,7 @@ function Row({ label, value, bold, small, success, warn, accent, large, italic }
 }
 
 // ─── SALES PAGE ─────────────────────────────────────────────────────────────
-function SalesPage({ data, onSale, onCancel, onConfirmDelivery, onCancelPendingDelivery, toast, webOrders, webOrderProcessing, onValidateWebOrder, onRejectWebOrder }) {
+function SalesPage({ data, onSale, onCancel, onConfirmDelivery, onCancelPendingDelivery, onEditPendingDelivery, toast, webOrders, webOrderProcessing, onValidateWebOrder, onRejectWebOrder }) {
   const { products, sales, settings } = data;
   const pendingSales = data.pendingSales || [];
   const { priceSettings } = settings;
@@ -448,6 +448,9 @@ function SalesPage({ data, onSale, onCancel, onConfirmDelivery, onCancelPendingD
   const [cancelTarget, setCancelTarget] = useState(null); // group[] à annuler
   const [pendingRejectTarget, setPendingRejectTarget] = useState(null); // group[] livraison à rejeter
   const [webOrderRejectTarget, setWebOrderRejectTarget] = useState(null); // commande site à rejeter
+  const [editDeliveryTarget, setEditDeliveryTarget] = useState(null); // group[] livraison en cours de modification
+  const [editLines, setEditLines] = useState([]); // copie éditable des lignes de editDeliveryTarget
+  const [editSubmitting, setEditSubmitting] = useState(false);
   const PAGE_SIZE = 50;
 
   const productMap = useMemo(() => {
@@ -461,6 +464,35 @@ function SalesPage({ data, onSale, onCancel, onConfirmDelivery, onCancelPendingD
   const updateCartLine = (id, field, val) => {
     setCartLines(l => l.map(x => x.id === id ? { ...x, [field]: val } : x));
     setErrors(e => { const ne = { ...e }; delete ne[`${id}_${field}`]; return ne; });
+  };
+
+  // ── Modifier une livraison en attente ────────────────────────────────────
+  const openEditDelivery = (group) => {
+    setEditDeliveryTarget(group);
+    setEditLines(group.map(s => ({
+      id: uid(), productId: s.productId, qty: String(s.qty),
+      _model: productMap[s.productId]?.model || "",
+    })));
+  };
+  const closeEditDelivery = () => { setEditDeliveryTarget(null); setEditLines([]); };
+  const addEditLine    = () => setEditLines(l => [...l, { id: uid(), productId: "", qty: "1", _model: "" }]);
+  const removeEditLine = (id) => setEditLines(l => l.filter(x => x.id !== id));
+  const updateEditLine = (id, field, val) => setEditLines(l => l.map(x => x.id === id ? { ...x, [field]: val } : x));
+
+  const handleSaveEditDelivery = () => {
+    if (editLines.length === 0) { toast?.("⚠️ Il faut au moins un produit.", "error"); return; }
+    for (const line of editLines) {
+      if (!line.productId) { toast?.("⚠️ Choisis un design pour chaque ligne.", "error"); return; }
+      const qty = parseInt(line.qty);
+      if (!qty || qty < 1) { toast?.("⚠️ Quantité invalide.", "error"); return; }
+    }
+    setEditSubmitting(true);
+    const parsed = editLines.map(l => ({ productId: l.productId, qty: parseInt(l.qty) }));
+    const { error } = onEditPendingDelivery?.(editDeliveryTarget, parsed) || {};
+    setEditSubmitting(false);
+    if (error) { toast?.("❌ " + error, "error"); return; }
+    toast?.("✅ Livraison modifiée.", "success");
+    closeEditDelivery();
   };
 
   const lineCalcs = useMemo(() => cartLines.map(line => {
@@ -689,6 +721,13 @@ function SalesPage({ data, onSale, onCancel, onConfirmDelivery, onCancelPendingD
                       onClick={() => setTicket(group)}
                     >
                       🧾
+                    </button>
+                    <button
+                      className="btn btn-outline btn-sm"
+                      title="Modifier les produits de cette livraison"
+                      onClick={() => openEditDelivery(group)}
+                    >
+                      ✏️ Modifier
                     </button>
                     <button
                       className="btn btn-primary btn-sm"
@@ -1055,6 +1094,81 @@ function SalesPage({ data, onSale, onCancel, onConfirmDelivery, onCancelPendingD
               ⚠️ Le stock sera remis à jour automatiquement. Cette vente ne sera jamais comptée dans le CA.
             </p>
           </div>
+        </Modal>
+      )}
+      {/* ── Modale modification d'une livraison en attente ── */}
+      {editDeliveryTarget && (
+        <Modal
+          title="✏️ Modifier la livraison"
+          onClose={closeEditDelivery}
+          wide
+          footer={<>
+            <button className="btn btn-outline" onClick={closeEditDelivery}>Annuler</button>
+            <button className="btn btn-primary" onClick={handleSaveEditDelivery} disabled={editSubmitting}>
+              {editSubmitting ? "Enregistrement..." : "Enregistrer les modifications"}
+            </button>
+          </>}
+        >
+          <p style={{ fontSize: 12.5, color: "var(--text2)", marginBottom: 12 }}>
+            {editDeliveryTarget[0].client || "Client sans nom"}
+            {editDeliveryTarget[0].quartier ? ` — ${editDeliveryTarget[0].quartier}` : ""}
+            {" · "}livraison du {fmtDate(editDeliveryTarget[0].date)}
+          </p>
+          {editLines.map(line => {
+            const lineModel = line._model || "";
+            const designsForModel = lineModel
+              ? products.filter(p => p.model === lineModel && (p.stock > 0 || p.id === line.productId))
+              : [];
+            return (
+              <div key={line.id} style={{ display: "flex", gap: 8, alignItems: "flex-start", marginBottom: 10 }}>
+                <div style={{ flex: 2 }}>
+                  <select
+                    className="input"
+                    value={lineModel}
+                    onChange={e => { const m = e.target.value; setEditLines(l => l.map(x => x.id === line.id ? { ...x, _model: m, productId: "" } : x)); }}
+                    style={{ fontSize: 12 }}
+                  >
+                    <option value="">① Modèle</option>
+                    {[...new Set(products.map(p => p.model))].map(m => <option key={m} value={m}>{m}</option>)}
+                  </select>
+                </div>
+                <div style={{ flex: 2 }}>
+                  <select
+                    className="input"
+                    value={line.productId}
+                    onChange={e => updateEditLine(line.id, "productId", e.target.value)}
+                    disabled={!lineModel}
+                    style={{ fontSize: 12 }}
+                  >
+                    <option value="">② Design</option>
+                    {designsForModel.map(p => (
+                      <option key={p.id} value={p.id}>
+                        {p.design} — {p.id === line.productId ? p.stock + parseInt(editDeliveryTarget.find(s => s.productId === p.id)?.qty || 0) : p.stock} dispo — {fmtMoney(p.price)}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div style={{ flex: 1 }}>
+                  <input
+                    className="input" type="number" min="1"
+                    value={line.qty}
+                    onChange={e => updateEditLine(line.id, "qty", e.target.value)}
+                    placeholder="Qté"
+                    style={{ fontSize: 12 }}
+                  />
+                </div>
+                {editLines.length > 1 && (
+                  <button className="btn btn-danger btn-sm btn-icon" onClick={() => removeEditLine(line.id)}><Icon name="trash" size={13} /></button>
+                )}
+              </div>
+            );
+          })}
+          <button className="btn btn-outline btn-sm" onClick={addEditLine}>
+            <Icon name="plus" size={13} /> Ajouter un produit
+          </button>
+          <p style={{ fontSize: 11.5, color: "var(--text2)", marginTop: 12 }}>
+            Le stock des anciens articles est remis, puis déduit à nouveau pour les nouveaux — vérifie la disponibilité avant d'enregistrer.
+          </p>
         </Modal>
       )}
       {/* ── Modale rejet de commande site en attente ── */}

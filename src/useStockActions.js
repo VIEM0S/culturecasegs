@@ -161,6 +161,73 @@ export function useStockActions({ data, persist, confirm }) {
     sheetSyncProducts(products);
   }, [data, persist]);
 
+  // Modifier une livraison en attente : le client a pris plusieurs produits et
+  // en change un (ou la quantité) avant la livraison. On redonne le stock de
+  // TOUS les anciens articles du groupe, on vérifie la dispo pour les
+  // nouveaux, puis on déduit — jamais de persist() si la dispo manque, pour
+  // ne jamais laisser le stock dans un état intermédiaire incohérent.
+  const editPendingDelivery = useCallback((oldGroup, newLines) => {
+    let products = [...data.products];
+    for (const old of oldGroup) {
+      products = products.map(p =>
+        p.id === old.productId ? { ...p, stock: p.stock + old.qty } : p
+      );
+    }
+    for (const line of newLines) {
+      const prod = products.find(p => p.id === line.productId);
+      if (!prod) return { error: "Produit introuvable." };
+      if (prod.stock < line.qty) {
+        return { error: `Stock insuffisant pour ${prod.model} — ${prod.design} (${prod.stock} dispo, ${line.qty} demandé).` };
+      }
+    }
+
+    const newMovements = [];
+    for (const old of oldGroup) {
+      newMovements.push({
+        id: uid(), productId: old.productId, type: "in", qty: old.qty,
+        reason: "Modification livraison en attente",
+        date: new Date().toISOString(), note: oldGroup[0]?.client || "",
+      });
+    }
+    for (const line of newLines) {
+      products = products.map(p =>
+        p.id === line.productId ? { ...p, stock: p.stock - line.qty } : p
+      );
+      newMovements.push({
+        id: uid(), productId: line.productId, type: "out", qty: line.qty,
+        reason: "Vente (livraison en attente, modifiée)",
+        date: oldGroup[0]?.date, note: oldGroup[0]?.client || "",
+      });
+    }
+
+    const groupId = oldGroup[0]?.groupId || oldGroup[0]?.id;
+    const newGroupItems = newLines.map(line => {
+      const prod = products.find(p => p.id === line.productId);
+      const total = prod.price * line.qty;
+      return {
+        id: uid(), groupId, date: oldGroup[0]?.date,
+        productId: line.productId, qty: line.qty,
+        price: prod.price, total,
+        discountType: "none", discountPercent: 0, discountAmount: 0,
+        totalAfterDiscount: total, discountReason: "",
+        client: oldGroup[0]?.client || "", phone: oldGroup[0]?.phone || "",
+        quartier: oldGroup[0]?.quartier || "", delivery: true,
+        remarque: oldGroup[0]?.remarque || "",
+      };
+    });
+
+    const oldIds = new Set(oldGroup.map(s => s.id));
+    const remainingPending = (data.pendingSales || []).filter(s => !oldIds.has(s.id));
+    persist({
+      ...data,
+      products,
+      pendingSales: [...remainingPending, ...newGroupItems],
+      movements: [...data.movements, ...newMovements],
+    });
+    sheetSyncProducts(products);
+    return { error: null };
+  }, [data, persist]);
+
   const cancelSale = useCallback((saleGroup) => {
     const list = Array.isArray(saleGroup) ? saleGroup : [saleGroup];
     const cancelledIds = new Set(list.map(s => s.id));
@@ -275,7 +342,7 @@ export function useStockActions({ data, persist, confirm }) {
   return {
     saveProduct, deleteProduct, addMovement,
     addSale, cancelSale,
-    confirmDelivery, cancelPendingDelivery,
+    confirmDelivery, cancelPendingDelivery, editPendingDelivery,
     saveSettings,
   };
 }
