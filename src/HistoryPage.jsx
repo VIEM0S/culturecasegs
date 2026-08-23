@@ -1,10 +1,6 @@
-import { useState, useEffect, useMemo, useCallback, memo, useRef } from "react";
+import { useState, useEffect, useMemo } from "react";
 import Icon from "./Icon.jsx";
-import { Modal, StatCard, FieldError, DesignThumb } from "./components.jsx";
-import { useDialog, useToast } from "./hooks.jsx";
-import { uid, sanitize, validateImageUrl, validateProductForm, validateSaleForm, validateMovementForm, getProductImageUrl, toDateStr, fmtMoney, fmtDate, fmtDateTime } from "./utils.js";
-import { DEFAULT_MODELS, DEFAULT_DESIGNS, DEFAULT_PRICE_SETTINGS, LOW_STOCK } from "./constants.js";
-import { exportData, importData } from "./data.js";
+import { toDateStr, fmtMoney, fmtDate, fmtDateTime } from "./utils.js";
 
 function HistoryPage({ data }) {
   const { sales, products } = data;
