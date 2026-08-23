@@ -233,7 +233,7 @@ function ReportsInner({
             <StatCard
               label="Unités vendues"
               value={totalUnits}
-              color="var(--accent2)"
+              color="var(--text)"
             />
             <StatCard label="Nb ventes" value={sales.length} color="var(--info)" />
           </div>

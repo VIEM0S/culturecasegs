@@ -64,7 +64,7 @@ export function StockView({
       {/* ── 4 chiffres globaux ── */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(130px,1fr))", gap: 10, marginBottom: 16 }}>
         {[
-          { label: "Total unités",       value: totalUnits,                color: "var(--accent2)" },
+          { label: "Total unités",       value: totalUnits,                color: "var(--text)" },
           { label: "Modèles actifs",     value: modelsWithProducts.length, color: "var(--success)" },
           { label: "Designs en rupture", value: totalEmpty,                color: "var(--danger)"  },
           { label: "Designs en stock",   value: totalFull,                 color: "var(--gold)"    },
@@ -111,7 +111,7 @@ export function StockView({
                 </div>
                 <div style={{ display: "flex", gap: 16, alignItems: "center", flexShrink: 0 }}>
                   <div style={{ textAlign: "center" }}>
-                    <div style={{ fontSize: 20, fontWeight: 800, color: "var(--accent2)", lineHeight: 1.1 }}>{st.total}</div>
+                    <div style={{ fontSize: 20, fontWeight: 800, color: "var(--text)", lineHeight: 1.1 }}>{st.total}</div>
                     <div style={{ fontSize: 10, color: "var(--text2)" }}>unités</div>
                   </div>
                   <div style={{ textAlign: "center" }}>
@@ -130,7 +130,7 @@ export function StockView({
                   <div style={{ display: "flex", gap: 18, padding: "8px 18px", background: "var(--bg3)", fontSize: 12, color: "var(--text2)", flexWrap: "wrap" }}>
                     <span>✅ En stock : <strong style={{ color: "var(--success)" }}>{st.designs - st.empty}</strong></span>
                     <span>❌ Vides : <strong style={{ color: "var(--danger)" }}>{st.empty}</strong></span>
-                    <span>📦 Total : <strong style={{ color: "var(--accent2)" }}>{st.total}</strong> unités</span>
+                    <span>📦 Total : <strong style={{ color: "var(--text)" }}>{st.total}</strong> unités</span>
                   </div>
                   <div className="table-wrap">
                     <table>

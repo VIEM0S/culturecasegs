@@ -1,4 +1,4 @@
-import { Suspense, useCallback, useEffect, useState } from "react";
+import { Suspense, useCallback, useEffect, useRef, useState } from "react";
 import { exportData, importData, saveData } from "./data.js";
 import { maybeWeeklyBackup } from "./googleSheets.js";
 import { useDialog, useToast } from "./hooks.jsx";
@@ -233,6 +233,48 @@ function App() {
     settings:  "Paramètres",
   };
 
+  // Sous-ensemble de pages accessibles depuis la barre du bas (mobile) —
+  // partagé entre la perle glissante et le swipe gauche/droite ci-dessous,
+  // pour que les deux suivent le même ordre.
+  const bottomNavItems = isViewer ? [
+    { id: "dashboard", label: "Accueil",  icon: "dashboard" },
+    { id: "products",  label: "Produits", icon: "products"  },
+  ] : [
+    { id: "dashboard", label: "Accueil",  icon: "dashboard" },
+    { id: "products",  label: "Produits", icon: "products"  },
+    { id: "sales",     label: "Ventes",   icon: "sales"     },
+    { id: "stock",     label: "Stock",    icon: "stock"     },
+    { id: "settings",  label: "Réglages", icon: "settings"  },
+  ];
+
+  // ── Swipe gauche/droite entre pages (mobile uniquement, sous 769px comme
+  // la barre du bas) ── glisser à gauche avance à la page suivante de
+  // bottomNavItems, à droite revient à la précédente. Ignoré si le geste
+  // démarre dans un conteneur à défilement horizontal (tableaux, onglets)
+  // pour ne pas voler leur scroll natif.
+  const touchStartRef = useRef(null);
+  const handleContentTouchStart = (e) => {
+    if (window.innerWidth > 768) return;
+    if (e.target.closest(".table-wrap, .history-table-wrap, .tabs")) return;
+    const t = e.touches[0];
+    touchStartRef.current = { x: t.clientX, y: t.clientY, time: Date.now() };
+  };
+  const handleContentTouchEnd = (e) => {
+    const start = touchStartRef.current;
+    touchStartRef.current = null;
+    if (!start) return;
+    const t = e.changedTouches[0];
+    const dx = t.clientX - start.x;
+    const dy = t.clientY - start.y;
+    const dt = Date.now() - start.time;
+    const isHorizontal = Math.abs(dx) > Math.abs(dy) * 1.5;
+    if (!isHorizontal || Math.abs(dx) < 60 || dt > 600) return;
+    const idx = bottomNavItems.findIndex(i => i.id === page);
+    if (idx === -1) return;
+    if (dx < 0 && idx < bottomNavItems.length - 1) safePage(bottomNavItems[idx + 1].id);
+    else if (dx > 0 && idx > 0) safePage(bottomNavItems[idx - 1].id);
+  };
+
   return (
     <>
       {!splashDone && (
@@ -376,7 +418,7 @@ function App() {
             </div>
           </div>
 
-          <div className="content">
+          <div className="content" onTouchStart={handleContentTouchStart} onTouchEnd={handleContentTouchEnd}>
             <Suspense fallback={<div style={{ padding: 40, textAlign: "center", color: "var(--text2)", fontSize: 13 }}>Chargement…</div>}>
               {!data && <div style={{ padding: 40, textAlign: "center", color: "var(--text2)", fontSize: 13 }}>Chargement des données…</div>}
               {data && <>
@@ -398,16 +440,6 @@ function App() {
 
           <nav className="bottom-nav" aria-label="Navigation principale">
             {(() => {
-              const bottomNavItems = isViewer ? [
-                { id: "dashboard", label: "Accueil",  icon: "dashboard" },
-                { id: "products",  label: "Produits", icon: "products"  },
-              ] : [
-                { id: "dashboard", label: "Accueil",  icon: "dashboard" },
-                { id: "products",  label: "Produits", icon: "products"  },
-                { id: "sales",     label: "Ventes",   icon: "sales"     },
-                { id: "stock",     label: "Stock",    icon: "stock"     },
-                { id: "settings",  label: "Réglages", icon: "settings"  },
-              ];
               const activeIndex = bottomNavItems.findIndex(i => i.id === page);
               return (
                 <div className="bottom-nav-inner">

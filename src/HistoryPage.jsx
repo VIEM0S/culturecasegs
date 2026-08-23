@@ -190,7 +190,7 @@ function HistoryPage({ data }) {
                   <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
                     <span style={{ fontWeight: 700, fontSize: 14 }}>{isAnon ? "Client anonyme" : g.name}</span>
                     {g.phone && <span style={{ fontSize: 12, color: "var(--text2)", display: "flex", alignItems: "center", gap: 3 }}><Icon name="phone" size={11} />{g.phone}</span>}
-                    {g.quartier && <span className="badge badge-purple" style={{ fontSize: 10 }}>{g.quartier}</span>}
+                    {g.quartier && <span className="badge badge-neutral" style={{ fontSize: 10 }}>{g.quartier}</span>}
                     {g.segment === "vip"     && <span style={{ fontSize: 11, padding: "2px 8px", borderRadius: 20, background: "#FAEEDA", color: "#854F0B", fontWeight: 700 }}>⭐ VIP</span>}
                     {g.segment === "fidele"  && <span style={{ fontSize: 11, padding: "2px 8px", borderRadius: 20, background: "#EAF3DE", color: "#3B6D11", fontWeight: 700 }}>💚 Fidèle</span>}
                     {g.segment === "nouveau" && <span style={{ fontSize: 11, padding: "2px 8px", borderRadius: 20, background: "#E6F1FB", color: "#185FA5", fontWeight: 700 }}>🆕 Nouveau</span>}

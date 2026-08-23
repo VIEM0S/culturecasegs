@@ -141,7 +141,6 @@ body { font-family: 'Syne', sans-serif; }
 .badge-warn    { background: var(--warn2);    color: var(--warn);    }
 .badge-info    { background: var(--info2);    color: var(--info);    }
 .badge-gold    { background: rgba(245,158,11,0.15); color: var(--gold);    border: 1px solid rgba(245,158,11,0.3); }
-.badge-purple  { background: color-mix(in srgb, var(--accent) 15%, transparent); color: var(--accent2); border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent); }
 .badge-neutral { background: var(--bg3); color: var(--text2); }
 
 /* ── BUTTONS ── */
