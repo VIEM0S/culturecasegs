@@ -30,6 +30,9 @@ function App() {
   const [splashDone,    setSplashDone]    = useState(false);
   const [loading,       setLoading]       = useState(true);
   const [syncStatus,    setSyncStatus]    = useState("syncing");
+  // Swipe gauche/droite (voir plus bas) — doit être appelé sans condition,
+  // avant les "return" anticipés de l'écran de connexion/splash/erreur.
+  const touchStartRef = useRef(null);
 
   const { confirm, Dialog } = useDialog();
   const { toast, Toasts }   = useToast();
@@ -252,7 +255,6 @@ function App() {
   // bottomNavItems, à droite revient à la précédente. Ignoré si le geste
   // démarre dans un conteneur à défilement horizontal (tableaux, onglets)
   // pour ne pas voler leur scroll natif.
-  const touchStartRef = useRef(null);
   const handleContentTouchStart = (e) => {
     if (window.innerWidth > 768) return;
     if (e.target.closest(".table-wrap, .history-table-wrap, .tabs")) return;
