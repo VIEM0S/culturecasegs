@@ -308,9 +308,13 @@ function App() {
 
       {showUpdate && (
         <div className="update-banner">
-          <span style={{ flex: 1 }}>🔄 Nouvelle version disponible</span>
+          {/* Pas de bouton "Ignorer" : travailler sans le savoir sur une
+              version périmée peut casser des actions critiques (ex. un
+              rejet de commande site qui redevient une suppression au lieu
+              d'un changement de statut). La bannière reste donc affichée
+              jusqu'à l'actualisation. */}
+          <span style={{ flex: 1 }}>🔄 Nouvelle version disponible — actualise pour continuer en toute sécurité</span>
           <button className="btn btn-primary btn-sm" onClick={() => window.location.reload()}>Actualiser</button>
-          <button className="btn btn-outline btn-sm" onClick={() => setShowUpdate(false)}>Ignorer</button>
         </div>
       )}
 

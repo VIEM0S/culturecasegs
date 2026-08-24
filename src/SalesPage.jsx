@@ -692,23 +692,26 @@ function SalesPage({ data, onSale, onCancel, onConfirmDelivery, onCancelPendingD
                   </div>
                   <div style={{ display: "flex", gap: 6 }}>
                     <button
-                      className="btn btn-outline btn-sm"
-                      title="Notifier le client sur WhatsApp"
-                      disabled={!order.client?.tel}
+                      className="btn btn-primary btn-sm"
+                      disabled={busy}
+                      title="Notifie le client sur WhatsApp puis valide la commande"
                       onClick={() => {
                         const prenom = (order.client?.nom || "").split(" ")[0] || "";
                         const msg = `Bonjour ${prenom}, ta commande CultureCase (${itemsLabel}) est acceptée ! ${order.delivery ? "Livraison prévue sous peu." : "Tu peux venir la récupérer en boutique."} Merci 🙏`;
-                        if (!openWhatsApp(order.client?.tel, msg)) toast?.("⚠️ Numéro de téléphone manquant ou invalide.", "error");
+                        const sent = openWhatsApp(order.client?.tel, msg);
+                        if (!sent) toast?.("⚠️ Numéro de téléphone manquant ou invalide — validation sans notification.", "error");
+                        onValidateWebOrder?.(order);
                       }}
                     >
-                      💬 WhatsApp
+                      ✅ Valider et notifier
                     </button>
                     <button
-                      className="btn btn-primary btn-sm"
+                      className="btn btn-outline btn-sm"
                       disabled={busy}
+                      title="Valider sans notifier le client"
                       onClick={() => onValidateWebOrder?.(order)}
                     >
-                      ✅ Valider
+                      Valider
                     </button>
                     <button
                       className="btn btn-danger btn-sm"
