@@ -73,11 +73,23 @@ service cloud.firestore {
     }
 
     // ── Commandes directes du site — écrites par le visiteur (auth anonyme),
-    // validées ou rejetées uniquement par l'admin. Aucune modification
-    // possible après création : soit l'admin la supprime après avoir créé
-    // la vente (validation), soit il la supprime directement (rejet).
+    // validées ou rejetées par l'admin (statut changé, jamais supprimé — le
+    // document doit survivre pour que le suivi client reste consultable).
+    //
+    // Suivi client : l'ID du document sert de jeton de suivi (affiché une
+    // fois au client après sa commande). Pas de recherche par téléphone —
+    // trop facile à deviner/forcer. Ici : lecture d'UN document précis
+    // ouverte à tous (allow get), mais lister/parcourir la collection reste
+    // interdit sans être admin (allow list) — sans le lien exact, une
+    // commande est invisible.
+    //
+    // Tant que la commande est "pending", son propriétaire (jeton en main)
+    // peut l'annuler ou modifier ses articles — rien n'a encore été déduit
+    // du stock. Une fois traitée (accepted/rejected), plus aucune
+    // modification côté client : direction WhatsApp pour tout changement.
     match /webOrders/{docId} {
-      allow read, delete: if isAdmin();
+      allow get: if true;
+      allow list, delete: if isAdmin();
       allow create: if request.auth != null
         && request.resource.data.status == "pending"
         && request.resource.data.source == "site"
@@ -93,7 +105,19 @@ service cloud.firestore {
         && request.resource.data.items.size() <= 30
         && request.resource.data.total is number
         && request.resource.data.total > 0;
-      allow update: if false;
+      allow update: if isAdmin() || (
+        resource.data.status == "pending"
+        && request.resource.data.source == resource.data.source
+        && request.resource.data.createdAt == resource.data.createdAt
+        && request.resource.data.client == resource.data.client
+        && request.resource.data.delivery == resource.data.delivery
+        && request.resource.data.status in ["pending", "cancelled"]
+        && request.resource.data.items is list
+        && request.resource.data.items.size() >= 1
+        && request.resource.data.items.size() <= 30
+        && request.resource.data.total is number
+        && request.resource.data.total > 0
+      );
     }
 
     // ── Tout le reste est refusé ─────────────────────────────────────────────

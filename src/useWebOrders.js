@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import {
-  collection, query, where, orderBy, onSnapshot, deleteDoc, doc,
+  collection, query, where, orderBy, onSnapshot, updateDoc, doc, serverTimestamp,
 } from "firebase/firestore";
 import { getDB } from "./firebase.js";
 import { uid, today } from "./utils.js";
@@ -147,10 +147,18 @@ export function useWebOrders({ data, addSale, toast }) {
     return unsub;
   }, [playBeep, toast]);
 
-  const rejectWebOrder = useCallback(async (order) => {
+  // Le document n'est plus supprimé (delete) mais conservé avec son statut
+  // changé — nécessaire pour que la page de suivi client continue de
+  // fonctionner après la décision de l'admin (le jeton de suivi pointe
+  // toujours vers ce document).
+  const rejectWebOrder = useCallback(async (order, reason) => {
     setProcessing((p) => ({ ...p, [order.id]: true }));
     try {
-      await deleteDoc(doc(getDB(), "webOrders", order.id));
+      await updateDoc(doc(getDB(), "webOrders", order.id), {
+        status: "rejected",
+        rejectReason: reason || "",
+        rejectedAt: serverTimestamp(),
+      });
       toast?.("↩️ Commande site rejetée.", "info");
     } catch (e) {
       console.error("[CultureCase] Erreur rejet commande site:", e);
@@ -196,7 +204,10 @@ export function useWebOrders({ data, addSale, toast }) {
 
     try {
       addSale(newSales);
-      await deleteDoc(doc(getDB(), "webOrders", order.id));
+      await updateDoc(doc(getDB(), "webOrders", order.id), {
+        status: "accepted",
+        acceptedAt: serverTimestamp(),
+      });
       toast?.(
         order.delivery
           ? "✅ Commande validée — en attente de confirmation de livraison."

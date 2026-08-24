@@ -1222,7 +1222,7 @@ function SalesPage({ data, onSale, onCancel, onConfirmDelivery, onCancelPendingD
           .map(it => `${it.designName} — ${it.model} ×${it.qty}`)
           .join(", ");
         const doReject = () => {
-          onRejectWebOrder?.(webOrderRejectTarget);
+          onRejectWebOrder?.(webOrderRejectTarget, reasonText);
           setWebOrderRejectTarget(null);
         };
         return (
