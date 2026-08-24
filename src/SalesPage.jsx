@@ -4,6 +4,31 @@ import { Modal, StatCard, FieldError, DesignThumb } from "./components.jsx";
 import { uid, sanitize, getProductImageUrl, today, toDateStr, fmtMoney, fmtDate, fmtDateTime } from "./utils.js";
 import { LOW_STOCK } from "./constants.js";
 
+// ─── WhatsApp — lien "wa.me" pré-rempli (gratuit, l'admin clique Envoyer
+// lui-même) ───────────────────────────────────────────────────────────────
+// Pas d'API WhatsApp Business ici (payante au-delà d'un petit quota) —
+// juste un lien qui ouvre l'appli avec le message déjà écrit.
+function waPhoneDigits(raw) {
+  let d = (raw || "").replace(/\D/g, "");
+  if (d.startsWith("00223")) d = d.slice(2);
+  else if (!d.startsWith("223") && d.length === 8) d = "223" + d;
+  return d;
+}
+function openWhatsApp(phone, message) {
+  const digits = waPhoneDigits(phone);
+  if (!digits) return false;
+  window.open(`https://wa.me/${digits}?text=${encodeURIComponent(message)}`, "_blank");
+  return true;
+}
+
+const REJECT_REASONS = [
+  { value: "rupture", label: "Rupture de stock", text: "le produit demandé est en rupture de stock" },
+  { value: "invalide", label: "Infos invalides", text: "les informations fournies (téléphone/adresse) semblent incorrectes" },
+  { value: "zone", label: "Zone non desservie", text: "ta zone de livraison n'est malheureusement pas desservie" },
+  { value: "double", label: "Commande en double", text: "il s'agit d'une commande en double" },
+  { value: "autre", label: "Autre", text: "" },
+];
+
 // ─── TICKET DE CAISSE ───────────────────────────────────────────────────────
 function TicketModal({ sales, productMap, onClose }) {
   const [imgLoading, setImgLoading] = useState(false);
@@ -448,6 +473,8 @@ function SalesPage({ data, onSale, onCancel, onConfirmDelivery, onCancelPendingD
   const [cancelTarget, setCancelTarget] = useState(null); // group[] à annuler
   const [pendingRejectTarget, setPendingRejectTarget] = useState(null); // group[] livraison à rejeter
   const [webOrderRejectTarget, setWebOrderRejectTarget] = useState(null); // commande site à rejeter
+  const [rejectReason, setRejectReason] = useState("rupture");
+  const [rejectReasonCustom, setRejectReasonCustom] = useState("");
   const [editDeliveryTarget, setEditDeliveryTarget] = useState(null); // group[] livraison en cours de modification
   const [editLines, setEditLines] = useState([]); // copie éditable des lignes de editDeliveryTarget
   const [editSubmitting, setEditSubmitting] = useState(false);
@@ -665,6 +692,18 @@ function SalesPage({ data, onSale, onCancel, onConfirmDelivery, onCancelPendingD
                   </div>
                   <div style={{ display: "flex", gap: 6 }}>
                     <button
+                      className="btn btn-outline btn-sm"
+                      title="Notifier le client sur WhatsApp"
+                      disabled={!order.client?.tel}
+                      onClick={() => {
+                        const prenom = (order.client?.nom || "").split(" ")[0] || "";
+                        const msg = `Bonjour ${prenom}, ta commande CultureCase (${itemsLabel}) est acceptée ! ${order.delivery ? "Livraison prévue sous peu." : "Tu peux venir la récupérer en boutique."} Merci 🙏`;
+                        if (!openWhatsApp(order.client?.tel, msg)) toast?.("⚠️ Numéro de téléphone manquant ou invalide.", "error");
+                      }}
+                    >
+                      💬 WhatsApp
+                    </button>
+                    <button
                       className="btn btn-primary btn-sm"
                       disabled={busy}
                       onClick={() => onValidateWebOrder?.(order)}
@@ -674,7 +713,7 @@ function SalesPage({ data, onSale, onCancel, onConfirmDelivery, onCancelPendingD
                     <button
                       className="btn btn-danger btn-sm"
                       disabled={busy}
-                      onClick={() => setWebOrderRejectTarget(order)}
+                      onClick={() => { setRejectReason("rupture"); setRejectReasonCustom(""); setWebOrderRejectTarget(order); }}
                     >
                       ❌ Rejeter
                     </button>
@@ -1176,42 +1215,83 @@ function SalesPage({ data, onSale, onCancel, onConfirmDelivery, onCancelPendingD
         </Modal>
       )}
       {/* ── Modale rejet de commande site en attente ── */}
-      {webOrderRejectTarget && (
-        <Modal
-          title="❌ Rejeter cette commande ?"
-          onClose={() => setWebOrderRejectTarget(null)}
-          footer={<>
-            <button className="btn btn-outline" onClick={() => setWebOrderRejectTarget(null)}>Annuler</button>
-            <button
-              className="btn btn-danger"
-              onClick={() => {
-                onRejectWebOrder?.(webOrderRejectTarget);
-                setWebOrderRejectTarget(null);
-              }}
-            >
-              Confirmer le rejet
-            </button>
-          </>}
-        >
-          <div style={{ fontSize: 13, color: "var(--text)", lineHeight: 1.7 }}>
-            <p style={{ marginBottom: 12 }}>
-              Commande de <strong>{webOrderRejectTarget.client?.nom || "client sans nom"}</strong>
-              {webOrderRejectTarget.client?.tel ? <> ({webOrderRejectTarget.client.tel})</> : ""}.
-            </p>
-            <div style={{ background: "var(--bg3)", borderRadius: 8, padding: "10px 14px", marginBottom: 12 }}>
-              {(webOrderRejectTarget.items || []).map((it, i) => (
-                <div key={i} style={{ display: "flex", justifyContent: "space-between", marginBottom: 4, fontSize: 12 }}>
-                  <span>{it.designName} — {it.model} × {it.qty}</span>
-                  <span style={{ fontWeight: 700, color: "var(--success)" }}>{fmtMoney(it.total)}</span>
-                </div>
-              ))}
+      {webOrderRejectTarget && (() => {
+        const reasonObj = REJECT_REASONS.find(r => r.value === rejectReason);
+        const reasonText = rejectReason === "autre" ? rejectReasonCustom.trim() : (reasonObj?.text || "");
+        const itemsLabel = (webOrderRejectTarget.items || [])
+          .map(it => `${it.designName} — ${it.model} ×${it.qty}`)
+          .join(", ");
+        const doReject = () => {
+          onRejectWebOrder?.(webOrderRejectTarget);
+          setWebOrderRejectTarget(null);
+        };
+        return (
+          <Modal
+            title="❌ Rejeter cette commande ?"
+            onClose={() => setWebOrderRejectTarget(null)}
+            footer={<>
+              <button className="btn btn-outline" onClick={() => setWebOrderRejectTarget(null)}>Annuler</button>
+              <button className="btn btn-danger" onClick={doReject}>
+                Rejeter sans notifier
+              </button>
+              <button
+                className="btn btn-primary"
+                disabled={rejectReason === "autre" && !reasonText}
+                onClick={() => {
+                  const prenom = (webOrderRejectTarget.client?.nom || "").split(" ")[0] || "";
+                  const msg = `Bonjour ${prenom}, désolé, ta commande CultureCase (${itemsLabel}) ne peut pas être traitée : ${reasonText}. N'hésite pas à repasser commande. Merci de ta compréhension 🙏`;
+                  const sent = openWhatsApp(webOrderRejectTarget.client?.tel, msg);
+                  if (!sent) toast?.("⚠️ Numéro de téléphone manquant ou invalide — rejet sans notification.", "error");
+                  doReject();
+                }}
+              >
+                💬 Rejeter et notifier
+              </button>
+            </>}
+          >
+            <div style={{ fontSize: 13, color: "var(--text)", lineHeight: 1.7 }}>
+              <p style={{ marginBottom: 12 }}>
+                Commande de <strong>{webOrderRejectTarget.client?.nom || "client sans nom"}</strong>
+                {webOrderRejectTarget.client?.tel ? <> ({webOrderRejectTarget.client.tel})</> : ""}.
+              </p>
+              <div style={{ background: "var(--bg3)", borderRadius: 8, padding: "10px 14px", marginBottom: 12 }}>
+                {(webOrderRejectTarget.items || []).map((it, i) => (
+                  <div key={i} style={{ display: "flex", justifyContent: "space-between", marginBottom: 4, fontSize: 12 }}>
+                    <span>{it.designName} — {it.model} × {it.qty}</span>
+                    <span style={{ fontWeight: 700, color: "var(--success)" }}>{fmtMoney(it.total)}</span>
+                  </div>
+                ))}
+              </div>
+
+              <p className="section-label" style={{ marginBottom: 6 }}>Motif du refus</p>
+              <div className="tabs" style={{ flexWrap: "wrap", marginBottom: 8 }}>
+                {REJECT_REASONS.map(r => (
+                  <button
+                    key={r.value}
+                    className={`tab ${rejectReason === r.value ? "active" : ""}`}
+                    onClick={() => setRejectReason(r.value)}
+                  >
+                    {r.label}
+                  </button>
+                ))}
+              </div>
+              {rejectReason === "autre" && (
+                <input
+                  className="input"
+                  placeholder="Précise le motif..."
+                  value={rejectReasonCustom}
+                  onChange={e => setRejectReasonCustom(e.target.value)}
+                  style={{ marginBottom: 8 }}
+                />
+              )}
+
+              <p style={{ color: "var(--text2)", fontSize: 12 }}>
+                Aucun stock n'a été touché — cette commande n'était pas encore une vente. Elle sera simplement supprimée.
+              </p>
             </div>
-            <p style={{ color: "var(--text2)", fontSize: 12 }}>
-              Aucun stock n'a été touché — cette commande n'était pas encore une vente. Elle sera simplement supprimée.
-            </p>
-          </div>
-        </Modal>
-      )}
+          </Modal>
+        );
+      })()}
     </div>
   );
 }
