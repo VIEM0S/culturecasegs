@@ -18,3 +18,9 @@ dist/
 # Logs
 *.log
 npm-debug.log*
+
+# Local Netlify folder
+.netlify
+
+# Claude Code — config locale, jamais partagée
+.claude/settings.local.json
