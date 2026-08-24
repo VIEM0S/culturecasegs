@@ -10,6 +10,8 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
+import { collection, getDocs } from "firebase/firestore";
+import { getDB } from "./firebase.js";
 import Icon from "./Icon.jsx";
 import { StatCard } from "./components.jsx";
 import { LOW_STOCK } from "./constants.js";
@@ -153,6 +155,45 @@ const Reports = memo(function Reports({ data }) {
     a.click();
   }, [sales, productMap]);
 
+  // ── Historique commandes site (webOrdersArchive) — résumé sans le nom du
+  // client, gardé après suppression du webOrders d'origine (voir
+  // runWebOrdersCleanup dans useWebOrders.js). Utile pour repérer les
+  // quartiers les plus/moins actifs avant une campagne pub.
+  const [exportingArchive, setExportingArchive] = useState(false);
+  const exportArchiveCSV = useCallback(async () => {
+    setExportingArchive(true);
+    try {
+      const snap = await getDocs(collection(getDB(), "webOrdersArchive"));
+      const rows = [
+        ["Date", "Quartier", "Téléphone", "Mode", "Désigns commandés", "Total", "Statut"],
+      ];
+      snap.docs.forEach((d) => {
+        const o = d.data();
+        const itemsLabel = (o.items || [])
+          .map((it) => `${it.designName} ${it.model} ×${it.qty}`)
+          .join(", ");
+        rows.push([
+          o.date || "",
+          o.quartier || "",
+          o.tel || "",
+          o.delivery ? "Livraison" : "Retrait",
+          itemsLabel,
+          o.total || "",
+          o.status === "accepted" ? "Acceptée" : o.status === "rejected" ? "Rejetée" : "Annulée",
+        ]);
+      });
+      const csv = rows.map((r) => r.join(";")).join("\n");
+      const a = document.createElement("a");
+      a.href = "data:text/csv;charset=utf-8,%EF%BB%BF" + encodeURIComponent(csv);
+      a.download = `historique_commandes_site_${today()}.csv`;
+      a.click();
+    } catch (e) {
+      console.error("[CultureCase] Erreur export historique commandes site:", e);
+    } finally {
+      setExportingArchive(false);
+    }
+  }, []);
+
   // Recharts ne fonctionne pas avec window.__reportsTab — on utilise useState proprement
   return (
     <ReportsInner
@@ -166,6 +207,8 @@ const Reports = memo(function Reports({ data }) {
       totalDiscounts={totalDiscounts}
       totalUnits={totalUnits}
       exportCSV={exportCSV}
+      exportArchiveCSV={exportArchiveCSV}
+      exportingArchive={exportingArchive}
     />
   );
 });
@@ -183,6 +226,8 @@ function ReportsInner({
   totalDiscounts,
   totalUnits,
   exportCSV,
+  exportArchiveCSV,
+  exportingArchive,
 }) {
   const [tab, setTab] = useState("stats");
 
@@ -190,9 +235,19 @@ function ReportsInner({
     <div>
       <div className="section-header">
         <span className="section-title">Rapports & Statistiques</span>
-        <button className="btn btn-outline btn-sm" onClick={exportCSV}>
-          <Icon name="download" size={13} /> Export CSV
-        </button>
+        <div style={{ display: "flex", gap: 8 }}>
+          <button className="btn btn-outline btn-sm" onClick={exportCSV}>
+            <Icon name="download" size={13} /> Export CSV
+          </button>
+          <button
+            className="btn btn-outline btn-sm"
+            disabled={exportingArchive}
+            title="Historique des commandes site traitées (sans le nom du client) — utile pour repérer tes zones fortes/faibles avant une campagne pub"
+            onClick={exportArchiveCSV}
+          >
+            <Icon name="download" size={13} /> Historique commandes site
+          </button>
+        </div>
       </div>
 
       <div className="tabs">

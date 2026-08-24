@@ -120,6 +120,16 @@ service cloud.firestore {
       );
     }
 
+    // ── Archive légère des commandes site traitées (accepted/rejected/
+    // cancelled depuis 30j+) — créée par le nettoyage auto du backoffice
+    // juste avant de supprimer le document webOrders correspondant.
+    // Volontairement sans le nom du client (utile pour les stats de zone /
+    // ciblage pub, pas pour ré-identifier qui a commandé quoi). Admin only —
+    // jamais exposée au site public.
+    match /webOrdersArchive/{docId} {
+      allow read, write: if isAdmin();
+    }
+
     // ── Tout le reste est refusé ─────────────────────────────────────────────
     match /{document=**} {
       allow read, write: if false;

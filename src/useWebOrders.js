@@ -1,9 +1,62 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import {
   collection, query, where, orderBy, onSnapshot, updateDoc, doc, serverTimestamp,
+  getDocs, addDoc, deleteDoc,
 } from "firebase/firestore";
 import { getDB } from "./firebase.js";
 import { uid, today } from "./utils.js";
+
+const ARCHIVE_AFTER_DAYS = 30;
+const CLEANUP_THROTTLE_KEY = "cc_admin_last_web_order_cleanup";
+
+// ── Nettoyage auto des commandes site traitées (accepted/rejected/
+// cancelled) depuis 30j+ ────────────────────────────────────────────────────
+// Objectif : ne pas garder indéfiniment les coordonnées client (nom,
+// téléphone) dans webOrders une fois la commande traitée et le lien de
+// suivi devenu sans intérêt. Avant suppression, un résumé léger (sans le
+// nom) part dans webOrdersArchive — utile pour repérer les zones fortes/
+// faibles avant une campagne pub, sans garder l'identité complète.
+// Se déclenche une seule fois par jour et par appareil admin (throttle
+// localStorage) à l'ouverture du backoffice — pas de Cloud Function, pas
+// de config Firebase externe, donc gratuit.
+async function runWebOrdersCleanup() {
+  try {
+    const lastRun = localStorage.getItem(CLEANUP_THROTTLE_KEY);
+    const todayStr = new Date().toISOString().slice(0, 10);
+    if (lastRun === todayStr) return;
+    localStorage.setItem(CLEANUP_THROTTLE_KEY, todayStr);
+
+    const db = getDB();
+    const q = query(
+      collection(db, "webOrders"),
+      where("status", "in", ["accepted", "rejected", "cancelled"]),
+    );
+    const snap = await getDocs(q);
+    const cutoff = Date.now() - ARCHIVE_AFTER_DAYS * 24 * 60 * 60 * 1000;
+
+    for (const d of snap.docs) {
+      const order = d.data();
+      const resolvedAt = (order.cancelledAt || order.rejectedAt || order.acceptedAt)?.toDate?.();
+      if (!resolvedAt || resolvedAt.getTime() > cutoff) continue;
+
+      await addDoc(collection(db, "webOrdersArchive"), {
+        date: order.createdAt || null,
+        quartier: order.client?.quartier || "",
+        tel: order.client?.tel || "",
+        delivery: !!order.delivery,
+        items: (order.items || []).map((it) => ({
+          designName: it.designName || "", model: it.model || "", qty: it.qty || 0,
+        })),
+        total: order.total || 0,
+        status: order.status,
+        archivedAt: serverTimestamp(),
+      });
+      await deleteDoc(d.ref);
+    }
+  } catch (e) {
+    console.error("[CultureCase] Erreur nettoyage webOrders:", e);
+  }
+}
 
 // ── Normalisation pour matcher design du site ↔ design du catalogue ─────────
 // Le site envoie designId + designName (en MAJUSCULES, cf. firebase-init.js).
@@ -75,6 +128,10 @@ export function useWebOrders({ data, addSale, toast }) {
     if (typeof Notification !== "undefined" && Notification.permission === "default") {
       Notification.requestPermission().catch(() => {});
     }
+  }, []);
+
+  useEffect(() => {
+    runWebOrdersCleanup();
   }, []);
 
   const playBeep = useCallback(() => {
