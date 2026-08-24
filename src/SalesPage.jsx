@@ -441,7 +441,7 @@ function Row({ label, value, bold, small, success, warn, accent, large, italic }
 }
 
 // ─── SALES PAGE ─────────────────────────────────────────────────────────────
-function SalesPage({ data, onSale, onCancel, onConfirmDelivery, onCancelPendingDelivery, onEditPendingDelivery, toast, webOrders, webOrderProcessing, onValidateWebOrder, onRejectWebOrder }) {
+function SalesPage({ data, onSale, onCancel, onConfirmDelivery, onCancelPendingDelivery, onEditPendingDelivery, toast, webOrders, webOrderProcessing, onValidateWebOrder, onRejectWebOrder, onCancelWebOrderStatus }) {
   const { products, sales, settings } = data;
   const pendingSales = data.pendingSales || [];
   const { priceSettings } = settings;
@@ -1110,6 +1110,7 @@ function SalesPage({ data, onSale, onCancel, onConfirmDelivery, onCancelPendingD
               className="btn btn-danger"
               onClick={() => {
                 onCancelPendingDelivery?.(pendingRejectTarget);
+                if (pendingRejectTarget[0].webOrderId) onCancelWebOrderStatus?.(pendingRejectTarget[0].webOrderId);
                 toast?.(pendingRejectTarget[0].delivery ? "↩️ Livraison rejetée — stock remis à jour." : "↩️ Retrait rejeté — stock remis à jour.", "info");
                 setPendingRejectTarget(null);
               }}

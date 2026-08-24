@@ -210,6 +210,10 @@ export function useStockActions({ data, persist, confirm }) {
       const total = prod.price * line.qty;
       return {
         id: uid(), groupId, date: oldGroup[0]?.date,
+        webOrderId: oldGroup[0]?.webOrderId, // préserve le lien vers la commande
+        // site d'origine (voir cancelWebOrderStatus dans useWebOrders.js) —
+        // sinon une livraison modifiée puis annulée ne reporterait plus
+        // l'annulation sur le suivi client.
         productId: line.productId, qty: line.qty,
         price: prod.price, total,
         discountType: "none", discountPercent: 0, discountAmount: 0,

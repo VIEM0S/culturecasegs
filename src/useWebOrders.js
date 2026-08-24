@@ -186,6 +186,9 @@ export function useWebOrders({ data, addSale, toast }) {
     const saleDate = today();
     const newSales = items.map(({ prod, qty }) => ({
       id: uid(), groupId, date: saleDate,
+      webOrderId: order.id, // relie la vente à sa commande site d'origine —
+      // permet de reporter une annulation faite après coup (ex. livraison
+      // annulée) sur le statut du suivi client, voir cancelWebOrderStatus.
       productId: prod.id, qty,
       price: prod.price, total: prod.price * qty,
       discountType: "none", discountPercent: 0, discountAmount: 0,
@@ -224,5 +227,24 @@ export function useWebOrders({ data, addSale, toast }) {
     }
   }, [addSale, resolveOrder, toast]);
 
-  return { webOrders, processing, validateWebOrder, rejectWebOrder };
+  // Une commande site déjà acceptée devient une vente normale, déconnectée
+  // du webOrders d'origine dans le flux habituel — donc si cette livraison
+  // est ensuite annulée (client non venu / livraison non reçue), le suivi
+  // client resterait bloqué sur "Confirmée" pour toujours sans ce pont.
+  // Silencieux si ça échoue : l'annulation de la livraison elle-même a déjà
+  // réussi et ne doit pas être bloquée par ce report côté suivi.
+  const cancelWebOrderStatus = useCallback(async (webOrderId) => {
+    if (!webOrderId) return;
+    try {
+      await updateDoc(doc(getDB(), "webOrders", webOrderId), {
+        status: "cancelled",
+        cancelledAt: serverTimestamp(),
+        cancelledBy: "admin",
+      });
+    } catch (e) {
+      console.error("[CultureCase] Erreur report annulation sur webOrders:", e);
+    }
+  }, []);
+
+  return { webOrders, processing, validateWebOrder, rejectWebOrder, cancelWebOrderStatus };
 }

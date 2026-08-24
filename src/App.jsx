@@ -77,7 +77,7 @@ function App() {
   // ── Commandes passées sur le site public, en attente de validation ───────
   const {
     webOrders, processing: webOrderProcessing,
-    validateWebOrder, rejectWebOrder,
+    validateWebOrder, rejectWebOrder, cancelWebOrderStatus,
   } = useWebOrders({ data, addSale, toast });
 
   // ── PWA : install prompt ─────────────────────────────────────────────────
@@ -440,7 +440,7 @@ function App() {
               {(!isViewer || VIEWER_PAGES.includes(page)) && page === "dashboard" && <Dashboard data={data} isViewer={isViewer} />}
               {(!isViewer || VIEWER_PAGES.includes(page)) && page === "products"  && <Products data={data} onSale={addSale} onDelete={deleteProduct} isViewer={isViewer} />}
               {!isViewer && page === "stock"     && <StockPage data={data} onMove={addMovement} isViewer={isViewer} />}
-              {!isViewer && page === "sales"     && <SalesPage data={data} onSale={addSale} onCancel={cancelSale} onConfirmDelivery={confirmDelivery} onCancelPendingDelivery={cancelPendingDelivery} onEditPendingDelivery={editPendingDelivery} toast={toast} webOrders={webOrders} webOrderProcessing={webOrderProcessing} onValidateWebOrder={validateWebOrder} onRejectWebOrder={rejectWebOrder} />}
+              {!isViewer && page === "sales"     && <SalesPage data={data} onSale={addSale} onCancel={cancelSale} onConfirmDelivery={confirmDelivery} onCancelPendingDelivery={cancelPendingDelivery} onEditPendingDelivery={editPendingDelivery} toast={toast} webOrders={webOrders} webOrderProcessing={webOrderProcessing} onValidateWebOrder={validateWebOrder} onRejectWebOrder={rejectWebOrder} onCancelWebOrderStatus={cancelWebOrderStatus} />}
               {!isViewer && page === "history"   && <HistoryPage data={data} />}
               {!isViewer && page === "reports"   && <Reports data={data} />}
               {!isViewer && page === "blog"      && <BlogPage />}
