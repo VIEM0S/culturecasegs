@@ -186,6 +186,11 @@ export function useWebOrders({ data, addSale, toast }) {
       client: order.client?.nom || "", phone: order.client?.tel || "",
       quartier: order.client?.quartier || "",
       delivery: !!order.delivery,
+      // Une commande du site n'est jamais payée à l'acceptation — que ce
+      // soit une livraison (payée à la remise) ou un retrait en magasin
+      // (payé à la venue du client) — donc toujours en attente, pas une
+      // vente confirmée tant que l'argent n'est pas réellement encaissé.
+      pendingPayment: true,
       remarque: "Commande passée depuis le site",
     }));
 

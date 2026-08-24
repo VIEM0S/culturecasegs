@@ -657,7 +657,7 @@ function SalesPage({ data, onSale, onCancel, onConfirmDelivery, onCancelPendingD
                     <div style={{ fontWeight: 600 }}>
                       {order.client?.nom || "Client sans nom"} — {order.client?.tel || "—"}
                       {order.client?.quartier ? ` — ${order.client.quartier}` : ""}
-                      {order.delivery && <span style={{ marginLeft: 6, fontSize: 10.5, color: "var(--accent2)" }}>🛵 livraison</span>}
+                      <span style={{ marginLeft: 6, fontSize: 10.5, color: order.delivery ? "var(--accent2)" : "var(--text2)" }}>{order.delivery ? "🛵 livraison" : "🏠 retrait en magasin"}</span>
                     </div>
                     <div style={{ color: "var(--text2)" }}>
                       {itemsLabel} · <span style={{ fontWeight: 700, color: "var(--success)" }}>{fmtMoney(order.total || 0)}</span>
@@ -691,12 +691,13 @@ function SalesPage({ data, onSale, onCancel, onConfirmDelivery, onCancelPendingD
           <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "12px 14px 4px" }}>
             <Icon name="truck" size={16} />
             <span style={{ fontWeight: 700, fontSize: 13.5 }}>
-              Livraisons en attente de validation ({pendingGroups.length})
+              Ventes en attente de confirmation ({pendingGroups.length})
             </span>
           </div>
           <div style={{ padding: "4px 14px 12px", display: "flex", flexDirection: "column", gap: 8 }}>
             {pendingGroups.map(group => {
               const s = group[0];
+              const isDelivery = !!s.delivery;
               const total = group.reduce((sum, v) => sum + (v.totalAfterDiscount ?? v.total), 0);
               const prodLabel = group.length > 1
                 ? `${group.length} produits`
@@ -709,6 +710,7 @@ function SalesPage({ data, onSale, onCancel, onConfirmDelivery, onCancelPendingD
                   <div style={{ fontSize: 12.5, lineHeight: 1.5 }}>
                     <div style={{ fontWeight: 600 }}>
                       {s.client || "Client sans nom"} {s.quartier ? `— ${s.quartier}` : ""}
+                      <span style={{ marginLeft: 6, fontSize: 10.5, color: "var(--text2)" }}>{isDelivery ? "🛵 livraison" : "🏠 retrait en magasin"}</span>
                     </div>
                     <div style={{ color: "var(--text2)" }}>
                       {prodLabel} · <span style={{ fontWeight: 700, color: "var(--success)" }}>{fmtMoney(total)}</span> · {fmtDate(s.date)}
@@ -724,22 +726,22 @@ function SalesPage({ data, onSale, onCancel, onConfirmDelivery, onCancelPendingD
                     </button>
                     <button
                       className="btn btn-outline btn-sm"
-                      title="Modifier les produits de cette livraison"
+                      title="Modifier les produits de cette vente"
                       onClick={() => openEditDelivery(group)}
                     >
                       ✏️ Modifier
                     </button>
                     <button
                       className="btn btn-primary btn-sm"
-                      onClick={() => { onConfirmDelivery?.(group); toast?.("✅ Livraison confirmée — vente enregistrée.", "success"); }}
+                      onClick={() => { onConfirmDelivery?.(group); toast?.(isDelivery ? "✅ Livraison confirmée — vente enregistrée." : "✅ Retrait confirmé — vente enregistrée.", "success"); }}
                     >
-                      ✅ Livré
+                      {isDelivery ? "✅ Livré" : "✅ Récupéré & payé"}
                     </button>
                     <button
                       className="btn btn-danger btn-sm"
                       onClick={() => setPendingRejectTarget(group)}
                     >
-                      ❌ Non reçu
+                      {isDelivery ? "❌ Non reçu" : "❌ Non venu"}
                     </button>
                   </div>
                 </div>
@@ -1055,10 +1057,10 @@ function SalesPage({ data, onSale, onCancel, onConfirmDelivery, onCancelPendingD
         </Modal>
       )}
 
-      {/* ── Modale rejet de livraison en attente ── */}
+      {/* ── Modale rejet de vente en attente (livraison ou retrait) ── */}
       {pendingRejectTarget && (
         <Modal
-          title="❌ Livraison non reçue ?"
+          title={pendingRejectTarget[0].delivery ? "❌ Livraison non reçue ?" : "❌ Client non venu ?"}
           onClose={() => setPendingRejectTarget(null)}
           footer={<>
             <button className="btn btn-outline" onClick={() => setPendingRejectTarget(null)}>Annuler</button>
@@ -1066,7 +1068,7 @@ function SalesPage({ data, onSale, onCancel, onConfirmDelivery, onCancelPendingD
               className="btn btn-danger"
               onClick={() => {
                 onCancelPendingDelivery?.(pendingRejectTarget);
-                toast?.("↩️ Livraison rejetée — stock remis à jour.", "info");
+                toast?.(pendingRejectTarget[0].delivery ? "↩️ Livraison rejetée — stock remis à jour." : "↩️ Retrait rejeté — stock remis à jour.", "info");
                 setPendingRejectTarget(null);
               }}
             >
@@ -1076,7 +1078,9 @@ function SalesPage({ data, onSale, onCancel, onConfirmDelivery, onCancelPendingD
         >
           <div style={{ fontSize: 13, color: "var(--text)", lineHeight: 1.7 }}>
             <p style={{ marginBottom: 12 }}>
-              Le client n'a pas reçu (ou a refusé) la commande du <strong>{fmtDate(pendingRejectTarget[0].date)}</strong>
+              {pendingRejectTarget[0].delivery
+                ? <>Le client n'a pas reçu (ou a refusé) la commande du <strong>{fmtDate(pendingRejectTarget[0].date)}</strong></>
+                : <>Le client n'est pas venu récupérer (ou n'a pas payé) la commande du <strong>{fmtDate(pendingRejectTarget[0].date)}</strong></>}
               {pendingRejectTarget[0].client ? <> pour <strong>{pendingRejectTarget[0].client}</strong></> : ""}.
             </p>
             <div style={{ background: "var(--bg3)", borderRadius: 8, padding: "10px 14px", marginBottom: 12 }}>

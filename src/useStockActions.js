@@ -56,17 +56,20 @@ export function useStockActions({ data, persist, confirm }) {
 
   // ── Ventes ────────────────────────────────────────────────────────────────
   //
-  // Cas particulier : livraison à domicile.
-  // Le stock part avec le livreur immédiatement (on le déduit tout de suite,
-  // comme avant), mais la vente n'est PAS comptée dans `data.sales` tant que
-  // la livraison n'est pas confirmée — elle attend dans `data.pendingSales`.
-  // → Plus besoin d'annuler après coup si le client refuse à la livraison :
-  //   il suffit de rejeter la livraison en attente (le stock revient).
+  // Cas particulier : livraison à domicile, OU vente pas encore payée
+  // (commande site à retirer en magasin — l'argent n'est encaissé qu'à la
+  // remise en main propre, pas à l'acceptation de la commande).
+  // Le stock part immédiatement (on le déduit tout de suite), mais la vente
+  // n'est PAS comptée dans `data.sales` tant qu'elle n'est pas confirmée —
+  // elle attend dans `data.pendingSales`.
+  // → Plus besoin d'annuler après coup si le client ne se présente pas ou
+  //   refuse à la livraison : il suffit de rejeter l'attente (le stock revient).
   // → Le CA / l'historique / les rapports ne voient la vente qu'une fois
   //   confirmée, donc aucun autre écran n'a besoin de filtrer un statut.
   const addSale = useCallback((sales) => {
     const list = Array.isArray(sales) ? sales : [sales];
     const isDelivery = !!list[0]?.delivery;
+    const isPending = isDelivery || !!list[0]?.pendingPayment;
 
     let products = [...data.products];
     const newMovements = [];
@@ -79,14 +82,15 @@ export function useStockActions({ data, persist, confirm }) {
         productId: sale.productId,
         type: "out",
         qty: sale.qty,
-        reason: isDelivery ? "Vente (livraison en attente)" : "Vente",
+        reason: isDelivery ? "Vente (livraison en attente)" : isPending ? "Vente (retrait en attente de paiement)" : "Vente",
         date: sale.date,
         note: sale.client || "",
       });
     }
 
-    if (isDelivery) {
-      // En attente de confirmation du livreur — pas encore une vente "réelle".
+    if (isPending) {
+      // En attente de confirmation (livraison ou retrait/paiement) — pas
+      // encore une vente "réelle".
       const pendingSales = [...(data.pendingSales || []), ...list];
       persist({
         ...data,
@@ -211,7 +215,9 @@ export function useStockActions({ data, persist, confirm }) {
         discountType: "none", discountPercent: 0, discountAmount: 0,
         totalAfterDiscount: total, discountReason: "",
         client: oldGroup[0]?.client || "", phone: oldGroup[0]?.phone || "",
-        quartier: oldGroup[0]?.quartier || "", delivery: true,
+        quartier: oldGroup[0]?.quartier || "",
+        delivery: !!oldGroup[0]?.delivery,
+        pendingPayment: !!oldGroup[0]?.pendingPayment,
         remarque: oldGroup[0]?.remarque || "",
       };
     });
