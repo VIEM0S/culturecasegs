@@ -7,7 +7,56 @@ import { getDB } from "./firebase.js";
 import { uid, today } from "./utils.js";
 
 const ARCHIVE_AFTER_DAYS = 30;
+const REMIND_DAY_1 = 5;
+const REMIND_DAY_2 = 10;
+const AUTO_REJECT_DAY = 15;
 const CLEANUP_THROTTLE_KEY = "cc_admin_last_web_order_cleanup";
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+function notifyAdmin(title, body) {
+  if (typeof Notification !== "undefined" && Notification.permission === "granted") {
+    try { new Notification(title, { body }); } catch (e) { /* ignore */ }
+  }
+}
+
+// ── Commandes "pending" oubliées : relance à 5j, relance à 10j, rejet
+// automatique à 15j ─────────────────────────────────────────────────────────
+// Une commande jamais traitée par l'admin (spam, oubli) resterait sinon en
+// attente indéfiniment, avec les coordonnées complètes du client. On
+// prévient deux fois puis on tranche : rejet auto (motif explicite, visible
+// par le client sur son suivi), qui rejoint ensuite le nettoyage 30j normal.
+async function checkStalePendingOrders(db, toast) {
+  const q = query(collection(db, "webOrders"), where("status", "==", "pending"));
+  const snap = await getDocs(q);
+  const now = Date.now();
+
+  for (const d of snap.docs) {
+    const order = d.data();
+    const createdAt = order.createdAt?.toDate?.();
+    if (!createdAt) continue;
+    const ageDays = (now - createdAt.getTime()) / DAY_MS;
+    const nom = order.client?.nom || "Client sans nom";
+
+    if (ageDays >= AUTO_REJECT_DAY) {
+      await updateDoc(d.ref, {
+        status: "rejected",
+        rejectReason: "Non traitée sous 15 jours — rejet automatique.",
+        rejectedAt: serverTimestamp(),
+        rejectedBy: "auto",
+      });
+      toast?.(`⏱️ Commande de ${nom} rejetée automatiquement (non traitée depuis 15 jours).`, "info");
+      notifyAdmin("Commande auto-rejetée", `${nom} — non traitée depuis 15 jours.`);
+    } else if (ageDays >= REMIND_DAY_2 && !order.notifiedDay10) {
+      await updateDoc(d.ref, { notifiedDay10: true });
+      toast?.(`⚠️ Commande de ${nom} en attente depuis 10 jours — rejet auto dans 5 jours si rien n'est fait.`, "info");
+      notifyAdmin("Commande site en attente (10j)", `${nom} — rejet auto dans 5 jours si non traitée.`);
+    } else if (ageDays >= REMIND_DAY_1 && !order.notifiedDay5) {
+      await updateDoc(d.ref, { notifiedDay5: true });
+      toast?.(`⏰ Commande de ${nom} en attente depuis 5 jours — pense à la traiter.`, "info");
+      notifyAdmin("Commande site en attente (5j)", `${nom} — en attente depuis 5 jours.`);
+    }
+  }
+}
 
 // ── Nettoyage auto des commandes site traitées (accepted/rejected/
 // cancelled) depuis 30j+ ────────────────────────────────────────────────────
@@ -16,10 +65,39 @@ const CLEANUP_THROTTLE_KEY = "cc_admin_last_web_order_cleanup";
 // suivi devenu sans intérêt. Avant suppression, un résumé léger (sans le
 // nom) part dans webOrdersArchive — utile pour repérer les zones fortes/
 // faibles avant une campagne pub, sans garder l'identité complète.
+async function archiveResolvedOrders(db) {
+  const q = query(
+    collection(db, "webOrders"),
+    where("status", "in", ["accepted", "rejected", "cancelled"]),
+  );
+  const snap = await getDocs(q);
+  const cutoff = Date.now() - ARCHIVE_AFTER_DAYS * DAY_MS;
+
+  for (const d of snap.docs) {
+    const order = d.data();
+    const resolvedAt = (order.cancelledAt || order.rejectedAt || order.acceptedAt)?.toDate?.();
+    if (!resolvedAt || resolvedAt.getTime() > cutoff) continue;
+
+    await addDoc(collection(db, "webOrdersArchive"), {
+      date: order.createdAt || null,
+      quartier: order.client?.quartier || "",
+      tel: order.client?.tel || "",
+      delivery: !!order.delivery,
+      items: (order.items || []).map((it) => ({
+        designName: it.designName || "", model: it.model || "", qty: it.qty || 0,
+      })),
+      total: order.total || 0,
+      status: order.status,
+      archivedAt: serverTimestamp(),
+    });
+    await deleteDoc(d.ref);
+  }
+}
+
 // Se déclenche une seule fois par jour et par appareil admin (throttle
 // localStorage) à l'ouverture du backoffice — pas de Cloud Function, pas
 // de config Firebase externe, donc gratuit.
-async function runWebOrdersCleanup() {
+async function runWebOrdersCleanup(toast) {
   try {
     const lastRun = localStorage.getItem(CLEANUP_THROTTLE_KEY);
     const todayStr = new Date().toISOString().slice(0, 10);
@@ -27,32 +105,8 @@ async function runWebOrdersCleanup() {
     localStorage.setItem(CLEANUP_THROTTLE_KEY, todayStr);
 
     const db = getDB();
-    const q = query(
-      collection(db, "webOrders"),
-      where("status", "in", ["accepted", "rejected", "cancelled"]),
-    );
-    const snap = await getDocs(q);
-    const cutoff = Date.now() - ARCHIVE_AFTER_DAYS * 24 * 60 * 60 * 1000;
-
-    for (const d of snap.docs) {
-      const order = d.data();
-      const resolvedAt = (order.cancelledAt || order.rejectedAt || order.acceptedAt)?.toDate?.();
-      if (!resolvedAt || resolvedAt.getTime() > cutoff) continue;
-
-      await addDoc(collection(db, "webOrdersArchive"), {
-        date: order.createdAt || null,
-        quartier: order.client?.quartier || "",
-        tel: order.client?.tel || "",
-        delivery: !!order.delivery,
-        items: (order.items || []).map((it) => ({
-          designName: it.designName || "", model: it.model || "", qty: it.qty || 0,
-        })),
-        total: order.total || 0,
-        status: order.status,
-        archivedAt: serverTimestamp(),
-      });
-      await deleteDoc(d.ref);
-    }
+    await checkStalePendingOrders(db, toast);
+    await archiveResolvedOrders(db);
   } catch (e) {
     console.error("[CultureCase] Erreur nettoyage webOrders:", e);
   }
@@ -131,8 +185,8 @@ export function useWebOrders({ data, addSale, toast }) {
   }, []);
 
   useEffect(() => {
-    runWebOrdersCleanup();
-  }, []);
+    runWebOrdersCleanup(toast);
+  }, [toast]);
 
   const playBeep = useCallback(() => {
     try {
