@@ -36,7 +36,13 @@ function HistoryPage({ data }) {
         key = `anon::${s.groupId || s.id}`;
       }
 
-      if (!groups[key]) groups[key] = { name, phone, quartier: s.quartier || "", salesRaw: [] };
+      // `key` porté sur le groupe lui-même (pas juste comme clé d'objet JS,
+      // perdue par Object.values ci-dessous) — sert d'identifiant React
+      // stable au rendu. Avant : la liste réutilisait g.name comme clé,
+      // donc deux clients homonymes (fréquent — plusieurs "Oumou"/"Mariam"
+      // dans les données réelles) entraient en collision et React mélangeait
+      // leurs lignes lors d'un changement de filtre.
+      if (!groups[key]) groups[key] = { key, name, phone, quartier: s.quartier || "", salesRaw: [] };
       if (name && !groups[key].name) groups[key].name = name;
       if (phone && !groups[key].phone) groups[key].phone = phone;
       if (s.quartier && !groups[key].quartier) groups[key].quartier = s.quartier;
@@ -167,8 +173,8 @@ function HistoryPage({ data }) {
       {filtered.length === 0 && <div className="empty">Aucun client trouvé</div>}
 
       <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-        {filtered.map((g, gi) => {
-          const key = g.name || `__anon_${gi}`;
+        {filtered.map((g) => {
+          const key = g.key;
           const isOpen = expanded[key];
           const isAnon = !g.name;
           return (
