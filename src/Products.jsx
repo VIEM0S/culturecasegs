@@ -136,6 +136,7 @@ function Products({ data, onSale, onDelete, isViewer = false }) {
   const { designs, models, priceSettings } = settings;
   const [search, setSearch] = useState("");
   const [filterModel, setFilterModel] = useState("");
+  const [filterStock, setFilterStock] = useState(""); // "" | "dispo" | "rupture"
   const [viewMode, setViewMode] = useState("grid");
   const [quickSaleProduct, setQuickSaleProduct] = useState(null); // produit sélectionné pour le modal
 
@@ -154,8 +155,9 @@ function Products({ data, onSale, onDelete, isViewer = false }) {
   const filtered = useMemo(() => products.filter(p => {
     const q = search.toLowerCase();
     return (!q || p.model.toLowerCase().includes(q) || p.design.toLowerCase().includes(q))
-      && (!filterModel || p.model === filterModel);
-  }), [products, search, filterModel]);
+      && (!filterModel || p.model === filterModel)
+      && (!filterStock || (filterStock === "dispo" ? p.stock > 0 : p.stock === 0));
+  }), [products, search, filterModel, filterStock]);
 
   // Modèles qui ont au moins un produit (pour le filtre)
   const modelsWithProducts = useMemo(() =>
@@ -226,6 +228,13 @@ function Products({ data, onSale, onDelete, isViewer = false }) {
           <select className="input" style={{ flex: 1 }} value={filterModel} onChange={e => setFilterModel(e.target.value)}>
             <option value="">Tous les modèles</option>
             {modelsWithProducts.map(m => <option key={m}>{m}</option>)}
+          </select>
+        )}
+        {viewMode !== "stock" && (
+          <select className="input" style={{ flex: 1 }} value={filterStock} onChange={e => setFilterStock(e.target.value)}>
+            <option value="">Dispo. + rupture</option>
+            <option value="dispo">✅ Disponibles seulement</option>
+            <option value="rupture">❌ Rupture seulement</option>
           </select>
         )}
       </div>

@@ -97,6 +97,7 @@ function HistoryPage({ data }) {
     { key: "vip",      label: "⭐ VIP",    color: "#854F0B",         bg: "#FAEEDA" },
     { key: "fidele",   label: "💚 Fidèle", color: "#3B6D11",         bg: "#EAF3DE" },
     { key: "nouveau",  label: "🆕 Nouveau",color: "#185FA5",         bg: "#E6F1FB" },
+    { key: "regulier", label: "🔁 Régulier",color: "#475569",        bg: "#EEF1F4" },
     { key: "inactif",  label: "😴 Inactif",color: "#A32D2D",         bg: "#FCEBEB" },
   ];
 
@@ -190,6 +191,7 @@ function HistoryPage({ data }) {
                     {g.segment === "vip"     && <span style={{ fontSize: 11, padding: "2px 8px", borderRadius: 20, background: "#FAEEDA", color: "#854F0B", fontWeight: 700 }}>⭐ VIP</span>}
                     {g.segment === "fidele"  && <span style={{ fontSize: 11, padding: "2px 8px", borderRadius: 20, background: "#EAF3DE", color: "#3B6D11", fontWeight: 700 }}>💚 Fidèle</span>}
                     {g.segment === "nouveau" && <span style={{ fontSize: 11, padding: "2px 8px", borderRadius: 20, background: "#E6F1FB", color: "#185FA5", fontWeight: 700 }}>🆕 Nouveau</span>}
+                    {g.segment === "regulier" && <span style={{ fontSize: 11, padding: "2px 8px", borderRadius: 20, background: "#EEF1F4", color: "#475569", fontWeight: 700 }}>🔁 Régulier</span>}
                     {g.segment === "inactif" && <span style={{ fontSize: 11, padding: "2px 8px", borderRadius: 20, background: "#FCEBEB", color: "#A32D2D", fontWeight: 700 }}>😴 Inactif</span>}
                   </div>
                   <div style={{ display: "flex", gap: 12, marginTop: 4, flexWrap: "wrap" }}>
