@@ -279,6 +279,48 @@ export function useStockActions({ data, persist, confirm }) {
     sheetSyncHistory(allSales, products);
   }, [data, persist]);
 
+  // ── Échange (vente déjà livrée, produit remplacé par un autre) ───────────
+  // Différent d'une annulation : le client a déjà payé et repart avec un
+  // autre produit, donc le CA ne doit PAS bouger — seul le stock (ancien
+  // produit repris, nouveau déduit) et la ligne de vente elle-même
+  // changent, prix/remise d'origine conservés (échange gratuit, politique
+  // affichée sur le site : "échange sans frais sous 48h").
+  const exchangeSale = useCallback((sale, newProductId) => {
+    const newProd = data.products.find(p => p.id === newProductId);
+    if (!newProd) return { error: "Produit introuvable." };
+    if (newProd.id === sale.productId) return { error: "C'est déjà ce produit." };
+    if (newProd.stock < sale.qty) {
+      return { error: `Stock insuffisant pour ${newProd.model} — ${newProd.design} (${newProd.stock} dispo, ${sale.qty} demandé).` };
+    }
+    const oldProd = data.products.find(p => p.id === sale.productId);
+
+    const products = data.products.map(p => {
+      if (p.id === sale.productId) return { ...p, stock: p.stock + sale.qty };
+      if (p.id === newProductId)   return { ...p, stock: p.stock - sale.qty };
+      return p;
+    });
+    const newMovements = [
+      {
+        id: uid(), productId: sale.productId, type: "in", qty: sale.qty,
+        reason: "Échange — reprise", date: new Date().toISOString(),
+        note: sale.client ? `Échange ${sale.client}` : "Échange",
+      },
+      {
+        id: uid(), productId: newProductId, type: "out", qty: sale.qty,
+        reason: "Échange — remplacement", date: new Date().toISOString(),
+        note: sale.client ? `Échange ${sale.client}` : "Échange",
+      },
+    ];
+    const sales = data.sales.map(s => s.id === sale.id
+      ? { ...s, productId: newProductId, exchangedFrom: oldProd?.id || sale.productId, exchangedAt: new Date().toISOString() }
+      : s
+    );
+    persist({ ...data, products, sales, movements: [...data.movements, ...newMovements] });
+    sheetSyncProducts(products);
+    sheetSyncHistory(sales, products);
+    return { error: null };
+  }, [data, persist]);
+
   // ── Paramètres ────────────────────────────────────────────────────────────
   const saveSettings = useCallback(async (newSettings) => {
     const oldSettings = data.settings;
@@ -369,7 +411,7 @@ export function useStockActions({ data, persist, confirm }) {
 
   return {
     saveProduct, deleteProduct, addMovement,
-    addSale, cancelSale,
+    addSale, cancelSale, exchangeSale,
     confirmDelivery, cancelPendingDelivery, editPendingDelivery,
     saveSettings, addPayment,
   };

@@ -445,7 +445,7 @@ function Row({ label, value, bold, small, success, warn, accent, large, italic }
 }
 
 // ─── SALES PAGE ─────────────────────────────────────────────────────────────
-function SalesPage({ data, onSale, onCancel, onConfirmDelivery, onCancelPendingDelivery, onEditPendingDelivery, toast, webOrders, webOrderProcessing, onValidateWebOrder, onRejectWebOrder, onCancelWebOrderStatus, onAddPayment }) {
+function SalesPage({ data, onSale, onCancel, onConfirmDelivery, onCancelPendingDelivery, onEditPendingDelivery, toast, webOrders, webOrderProcessing, onValidateWebOrder, onRejectWebOrder, onCancelWebOrderStatus, onAddPayment, onExchangeSale }) {
   const { products, sales, settings } = data;
   const pendingSales = data.pendingSales || [];
   const creances = useMemo(() => computeCreances(sales, data.payments), [sales, data.payments]);
@@ -478,6 +478,12 @@ function SalesPage({ data, onSale, onCancel, onConfirmDelivery, onCancelPendingD
   const [filterAmountMin, setFilterAmountMin] = useState("");
   const [filterAmountMax, setFilterAmountMax] = useState("");
   const [cancelTarget, setCancelTarget] = useState(null); // group[] à annuler
+  const [exchangeGroup, setExchangeGroup] = useState(null); // group[] en cours d'échange
+  const [exchangeLine, setExchangeLine] = useState(null); // ligne (sale) choisie dans le groupe
+  const [exchangeModel, setExchangeModel] = useState("");
+  const [exchangeNewProductId, setExchangeNewProductId] = useState("");
+  const [exchangeError, setExchangeError] = useState("");
+  const closeExchange = () => { setExchangeGroup(null); setExchangeLine(null); setExchangeModel(""); setExchangeNewProductId(""); setExchangeError(""); };
   const [pendingRejectTarget, setPendingRejectTarget] = useState(null); // group[] livraison à rejeter
   const [webOrderRejectTarget, setWebOrderRejectTarget] = useState(null); // commande site à rejeter
   const [rejectReason, setRejectReason] = useState("rupture");
@@ -994,6 +1000,17 @@ function SalesPage({ data, onSale, onCancel, onConfirmDelivery, onCancelPendingD
                           🧾
                         </button>
                         <button
+                          className="btn btn-outline btn-sm btn-icon"
+                          title="Échanger un produit de cette vente"
+                          onClick={() => {
+                            setExchangeGroup(group);
+                            setExchangeLine(group.length === 1 ? group[0] : null);
+                            setExchangeNewProductId("");
+                          }}
+                        >
+                          🔄
+                        </button>
+                        <button
                           className="btn btn-danger btn-sm btn-icon"
                           title="Annuler cette vente"
                           onClick={() => setCancelTarget(group)}
@@ -1221,6 +1238,89 @@ function SalesPage({ data, onSale, onCancel, onConfirmDelivery, onCancelPendingD
               ⚠️ Le stock sera remis à jour automatiquement. Cette action est irréversible.
             </p>
           </div>
+        </Modal>
+      )}
+
+      {/* ── Modale échange (vente déjà livrée, produit remplacé) ── */}
+      {exchangeGroup && (
+        <Modal
+          title="🔄 Échanger un produit"
+          onClose={closeExchange}
+          footer={exchangeLine ? <>
+            <button
+              className="btn btn-outline"
+              onClick={() => {
+                if (exchangeGroup.length > 1) { setExchangeLine(null); setExchangeModel(""); setExchangeNewProductId(""); setExchangeError(""); }
+                else closeExchange();
+              }}
+            >
+              {exchangeGroup.length > 1 ? "← Retour" : "Annuler"}
+            </button>
+            <button
+              className="btn btn-primary"
+              disabled={!exchangeNewProductId}
+              onClick={() => {
+                const { error } = onExchangeSale?.(exchangeLine, exchangeNewProductId) || {};
+                if (error) { setExchangeError(error); return; }
+                toast?.("🔄 Produit échangé — stock mis à jour.", "success");
+                closeExchange();
+              }}
+            >
+              Confirmer l'échange
+            </button>
+          </> : <button className="btn btn-outline" onClick={closeExchange}>Fermer</button>}
+        >
+          {!exchangeLine ? (
+            // Vente multi-produits : choisir laquelle des lignes échanger
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              <p style={{ fontSize: 12.5, color: "var(--text2)", marginBottom: 4 }}>Quel produit veux-tu échanger ?</p>
+              {exchangeGroup.map(s => {
+                const p = productMap[s.productId];
+                return (
+                  <button
+                    key={s.id}
+                    className="btn btn-outline btn-sm"
+                    style={{ justifyContent: "space-between", display: "flex" }}
+                    onClick={() => setExchangeLine(s)}
+                  >
+                    <span>{p ? `${p.model} — ${p.design}` : "—"} × {s.qty}</span>
+                    <span>{fmtMoney(s.totalAfterDiscount ?? s.total)}</span>
+                  </button>
+                );
+              })}
+            </div>
+          ) : (
+            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+              <p style={{ fontSize: 13 }}>
+                Remplace <strong>{(() => { const p = productMap[exchangeLine.productId]; return p ? `${p.model} — ${p.design}` : "—"; })()}</strong> par :
+              </p>
+              <div className="form-group">
+                <label className="form-label">Nouveau modèle</label>
+                <select className="input" value={exchangeModel} onChange={e => { setExchangeModel(e.target.value); setExchangeNewProductId(""); }}>
+                  <option value="">Choisir un modèle</option>
+                  {[...new Set(products.map(p => p.model))].map(m => <option key={m} value={m}>{m}</option>)}
+                </select>
+              </div>
+              <div className="form-group">
+                <label className="form-label">Nouveau design</label>
+                <select
+                  className="input"
+                  value={exchangeNewProductId}
+                  onChange={e => { setExchangeNewProductId(e.target.value); setExchangeError(""); }}
+                  disabled={!exchangeModel}
+                >
+                  <option value="">Choisir un design</option>
+                  {products.filter(p => p.model === exchangeModel && (p.stock > 0 || p.id === exchangeLine.productId)).map(p => (
+                    <option key={p.id} value={p.id}>{p.design} — {p.stock} dispo</option>
+                  ))}
+                </select>
+              </div>
+              <FieldError msg={exchangeError} />
+              <p style={{ fontSize: 11.5, color: "var(--text2)" }}>
+                Échange gratuit — le montant déjà payé ({fmtMoney(exchangeLine.totalAfterDiscount ?? exchangeLine.total)}) ne change pas, seul le stock est ajusté (ancien produit repris, nouveau déduit).
+              </p>
+            </div>
+          )}
         </Modal>
       )}
 
