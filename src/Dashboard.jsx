@@ -249,6 +249,11 @@ const Dashboard = memo(function Dashboard({ data, isViewer = false }) {
                 <span className="badge badge-danger">Rupture</span>
               </div>
             ))}
+          {stats.outOfStock > 3 && (
+            <p style={{ fontSize: 11.5, color: "var(--text2)", marginBottom: 6 }}>
+              + {stats.outOfStock - 3} autre{stats.outOfStock - 3 > 1 ? "s" : ""} en rupture — voir Produits
+            </p>
+          )}
           {products
             .filter((p) => p.stock > 0 && p.stock <= LOW_STOCK)
             .slice(0, 3)
@@ -268,6 +273,11 @@ const Dashboard = memo(function Dashboard({ data, isViewer = false }) {
                 <span className="badge badge-warn">{p.stock} restant(s)</span>
               </div>
             ))}
+          {stats.lowStock > 3 && (
+            <p style={{ fontSize: 11.5, color: "var(--text2)" }}>
+              + {stats.lowStock - 3} autre{stats.lowStock - 3 > 1 ? "s" : ""} en stock faible — voir Produits
+            </p>
+          )}
         </div>
       </div>
 

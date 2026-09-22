@@ -201,7 +201,7 @@ function Products({ data, onSale, onDelete, isViewer = false }) {
       )}
 
       <div className="section-header">
-        <span className="section-title">Produits ({viewMode === "stock" ? products.length : filtered.length})</span>
+        <span className="section-title">Produits ({filtered.length})</span>
         <div style={{ display: "flex", gap: 8 }}>
           {/* Sélecteur de vue : grille / liste / stock */}
           <div style={{ display: "flex", border: "1px solid var(--border2)", borderRadius: 8, overflow: "hidden" }}>
@@ -247,6 +247,8 @@ function Products({ data, onSale, onDelete, isViewer = false }) {
           search={search}
           handleQuickSale={handleQuickSale}
           isViewer={isViewer}
+          onDelete={onDelete}
+          isOrphan={isOrphan}
         />
       )}
 

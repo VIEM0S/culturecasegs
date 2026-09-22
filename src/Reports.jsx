@@ -99,7 +99,6 @@ const Reports = memo(function Reports({ data }) {
       .map(([month, revenue]) => ({
         month: month.slice(5) + "/" + month.slice(2, 4), // ex: "01/25"
         revenue,
-        revenueK: Math.round(revenue / 1000),
       }));
   }, [sales]);
 
@@ -172,8 +171,11 @@ const Reports = memo(function Reports({ data }) {
         const itemsLabel = (o.items || [])
           .map((it) => `${it.designName} ${it.model} ×${it.qty}`)
           .join(", ");
+        // Repli si un ancien document archivé avant le correctif garde
+        // encore un Timestamp Firestore brut au lieu d'une chaîne de date.
+        const dateLabel = typeof o.date === "string" ? o.date : (o.date?.toDate?.().toISOString().slice(0, 10) || "");
         rows.push([
-          o.date || "",
+          dateLabel,
           o.quartier || "",
           o.tel || "",
           o.delivery ? "Livraison" : "Retrait",

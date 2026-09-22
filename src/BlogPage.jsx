@@ -311,7 +311,11 @@ function PostEditor({ post, onSave, onCancel }) {
         excerpt: form.excerpt.trim(),
         content: form.content.trim(),
         cover:   form.cover.trim(),
-        images:  form.images.map(u => u.trim()).filter(Boolean),
+        // Ne PAS retirer les emplacements vides ici : ça décalerait les
+        // index de toutes les images suivantes, cassant les {img:N} déjà
+        // insérés dans le texte (parseMarkdown gère déjà un slot vide
+        // proprement — cf. "[Image N introuvable]").
+        images:  form.images.map(u => u.trim()),
         tags:    form.tags.split(",").map(t => t.trim()).filter(Boolean),
       });
     } finally {
@@ -328,7 +332,19 @@ function PostEditor({ post, onSave, onCancel }) {
   });
 
   const addImage = () => setForm(f => ({ ...f, images: [...f.images, ""] }));
-  const removeImage = (i) => setForm(f => ({ ...f, images: f.images.filter((_, idx) => idx !== i) }));
+  const removeImage = (i) => {
+    // Retirer une image du milieu décale tous les index suivants — un
+    // {img:N} déjà inséré dans le texte pour une image après celle-ci
+    // pointerait alors sur la mauvaise image sans avertissement.
+    if (i < form.images.length - 1) {
+      if (!window.confirm(
+        `Retirer l'image ${i + 1} décale la numérotation des images suivantes ` +
+        `— si tu as déjà inséré {img:${i + 2}} ou plus dans le texte, ` +
+        `pense à les corriger après. Continuer ?`
+      )) return;
+    }
+    setForm(f => ({ ...f, images: f.images.filter((_, idx) => idx !== i) }));
+  };
   const updateImage = (i, value) => setForm(f => ({
     ...f,
     images: f.images.map((u, idx) => idx === i ? value : u),

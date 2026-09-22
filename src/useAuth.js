@@ -79,8 +79,13 @@ export function useAuth({ toast, setSyncStatus, setData, setLoading }) {
   }, [toast, isViewer, setSyncStatus, setData, setLoading]);
 
   // ── Mode viewer : charger les données sans auth email ────────────────────
+  // loginAsViewer() met isViewer à true avant que l'auth anonyme (async)
+  // n'aboutisse, donc cet effet peut se déclencher juste avant celui
+  // d'auth ci-dessus — sans ce nettoyage défensif, le 1er abonnement fuit
+  // (jamais désabonné) au lieu d'être juste redondant.
   useEffect(() => {
     if (!isViewer) return;
+    if (unsubData.current) { unsubData.current(); unsubData.current = null; }
     let mounted = true;
     isFirstLoad.current = true;
     const unsub = subscribeToData((freshData) => {
