@@ -233,6 +233,7 @@ export function importData(file, setData, persist, onMsg) {
         sales:       parsed.sales        || [],
         pendingSales: parsed.pendingSales || [],
         movements:   parsed.movements    || [],
+        payments:    parsed.payments     || [],
         settings:    parsed.settings     || {},
         _chunkCount: parsed._chunkCount ?? 0,
       };

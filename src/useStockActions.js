@@ -359,10 +359,18 @@ export function useStockActions({ data, persist, confirm }) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [data?.sales?.length, !!data]);
 
+  // ── Créances : règlement (total ou partiel) d'une vente à crédit ─────────
+  // Un événement par règlement réel, jamais réécrit ni fusionné — voir
+  // computeCreances (utils.js) pour pourquoi ça vit à part de data.sales.
+  const addPayment = useCallback((groupId, amount) => {
+    const payment = { id: uid(), groupId, amount, date: new Date().toISOString() };
+    persist({ ...data, payments: [...(data.payments || []), payment] });
+  }, [data, persist]);
+
   return {
     saveProduct, deleteProduct, addMovement,
     addSale, cancelSale,
     confirmDelivery, cancelPendingDelivery, editPendingDelivery,
-    saveSettings,
+    saveSettings, addPayment,
   };
 }

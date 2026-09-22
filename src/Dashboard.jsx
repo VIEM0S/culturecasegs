@@ -1,7 +1,7 @@
 import { memo, Suspense, useMemo } from "react";
 import { StatCard } from "./components.jsx";
 import { LOW_STOCK } from "./constants.js";
-import { fmtDate, fmtMoney, toDateStr, today, lazyWithRetry } from "./utils.js";
+import { fmtDate, fmtMoney, toDateStr, today, lazyWithRetry, computeCreances } from "./utils.js";
 
 const RevenueChart = lazyWithRetry(() => import("./RevenueChart.jsx"));
 
@@ -9,6 +9,15 @@ const Dashboard = memo(function Dashboard({ data, isViewer = false }) {
   const { products, sales, movements } = data;
   const todayStr = toDateStr(today());
   const monthStr = todayStr.slice(0, 7);
+
+  // Somme du "CA" ci-dessous inclut les ventes à crédit en entier — c'est
+  // le volume d'affaires total, pas la trésorerie réellement en main.
+  // Créances en cours = ce qui reste dû, retiré nulle part ailleurs, donc
+  // affiché à part pour ne pas confondre "vendu" et "encaissé".
+  const creancesTotal = useMemo(
+    () => computeCreances(sales, data.payments).reduce((s, c) => s + c.remaining, 0),
+    [sales, data.payments],
+  );
 
   // ── Stats principales ────────────────────────────────────────────────────
   const stats = useMemo(() => {
@@ -177,6 +186,14 @@ const Dashboard = memo(function Dashboard({ data, isViewer = false }) {
             value={fmtMoney(stats.revenueToday)}
             sub={`${stats.salesToday.length} vente(s)`}
             color="var(--success)"
+          />
+        )}
+        {!isViewer && creancesTotal > 0 && (
+          <StatCard
+            label="Créances en cours"
+            value={fmtMoney(creancesTotal)}
+            sub="pas encore encaissé"
+            color="#C03A08"
           />
         )}
       </div>

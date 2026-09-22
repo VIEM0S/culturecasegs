@@ -129,5 +129,43 @@ export function fmtDateTime(d) {
   return datePart;
 }
 
+// ── Créances (ventes à crédit) ───────────────────────────────────────────────
+// Une vente à crédit porte `paid: false` sur chacune de ses lignes (répliqué
+// comme client/phone/quartier — décidé une seule fois à la caisse). Les
+// règlements ne sont PAS stockés sur les lignes de vente (un tableau dupliqué
+// par ligne se ferait compter plusieurs fois) : ils vivent à part dans
+// data.payments, comme data.movements, un événement par règlement réel.
+//
+// Regroupe les ventes à crédit par groupId (un "achat" = plusieurs lignes),
+// additionne ce qui est dû et ce qui a été réglé, et ne retourne que les
+// créances encore ouvertes (reste > 0).
+export function computeCreances(sales, payments = []) {
+  const groups = {};
+  (sales || []).forEach((s) => {
+    if (s.paid !== false) return; // vente normale, réglée à la caisse
+    const gid = s.groupId || s.id;
+    if (!groups[gid]) {
+      groups[gid] = {
+        groupId: gid, client: s.client || "", phone: s.phone || "",
+        quartier: s.quartier || "", date: s.date, total: 0,
+      };
+    }
+    groups[gid].total += s.totalAfterDiscount ?? s.total;
+  });
+
+  const paidByGroup = {};
+  (payments || []).forEach((p) => {
+    paidByGroup[p.groupId] = (paidByGroup[p.groupId] || 0) + p.amount;
+  });
+
+  return Object.values(groups)
+    .map((g) => {
+      const paidAmount = paidByGroup[g.groupId] || 0;
+      return { ...g, paidAmount, remaining: g.total - paidAmount };
+    })
+    .filter((g) => g.remaining > 0)
+    .sort((a, b) => new Date(a.date) - new Date(b.date)); // plus anciennes dettes d'abord
+}
+
 // ── exportBackup est défini dans data.js — ne pas dupliquer ici ──────────────
 // Importer depuis data.js : import { exportData } from "./data.js";

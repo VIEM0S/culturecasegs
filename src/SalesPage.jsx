@@ -1,7 +1,7 @@
 import { useState, useMemo, useCallback, memo } from "react";
 import Icon from "./Icon.jsx";
 import { Modal, StatCard, FieldError, DesignThumb } from "./components.jsx";
-import { uid, sanitize, getProductImageUrl, today, toDateStr, fmtMoney, fmtDate, fmtDateTime } from "./utils.js";
+import { uid, sanitize, getProductImageUrl, today, toDateStr, fmtMoney, fmtDate, fmtDateTime, computeCreances } from "./utils.js";
 import { LOW_STOCK } from "./constants.js";
 
 // ─── WhatsApp — lien "wa.me" pré-rempli (gratuit, l'admin clique Envoyer
@@ -445,15 +445,18 @@ function Row({ label, value, bold, small, success, warn, accent, large, italic }
 }
 
 // ─── SALES PAGE ─────────────────────────────────────────────────────────────
-function SalesPage({ data, onSale, onCancel, onConfirmDelivery, onCancelPendingDelivery, onEditPendingDelivery, toast, webOrders, webOrderProcessing, onValidateWebOrder, onRejectWebOrder, onCancelWebOrderStatus }) {
+function SalesPage({ data, onSale, onCancel, onConfirmDelivery, onCancelPendingDelivery, onEditPendingDelivery, toast, webOrders, webOrderProcessing, onValidateWebOrder, onRejectWebOrder, onCancelWebOrderStatus, onAddPayment }) {
   const { products, sales, settings } = data;
   const pendingSales = data.pendingSales || [];
+  const creances = useMemo(() => computeCreances(sales, data.payments), [sales, data.payments]);
+  const [paymentTarget, setPaymentTarget] = useState(null); // créance en cours de règlement
+  const [paymentAmount, setPaymentAmount] = useState("");
   const { priceSettings } = settings;
   const designs = settings?.designs || [];
 
   const [modal, setModal]         = useState(false);
   const [ticket, setTicket]       = useState(null); // sales[] à afficher dans le ticket
-  const [client, setClient]       = useState({ name: "", phone: "", quartier: "", delivery: false, remarque: "" });
+  const [client, setClient]       = useState({ name: "", phone: "", quartier: "", delivery: false, remarque: "", paidNow: true });
 
   // ── Normalise le numéro de téléphone : ajoute +223 si aucun indicatif
   const normalizePhone = (raw) => {
@@ -593,6 +596,7 @@ function SalesPage({ data, onSale, onCancel, onConfirmDelivery, onCancelPendingD
         client: sanitize(client.name, 100), phone: sanitize(normalizePhone(client.phone), 20),
         quartier: sanitize(client.quartier, 100), delivery: client.delivery,
         remarque: sanitize(client.remarque, 300),
+        paid: client.paidNow,
       };
     });
 
@@ -607,7 +611,7 @@ function SalesPage({ data, onSale, onCancel, onConfirmDelivery, onCancelPendingD
     // ── Ouvre le ticket après la vente ──────────────────────────────────
     setTicket(newSales);
 
-    setClient({ name: "", phone: "", quartier: "", delivery: false, remarque: "" });
+    setClient({ name: "", phone: "", quartier: "", delivery: false, remarque: "", paidNow: true });
     setCartLines([{ id: uid(), productId: "", qty: "1", discountType: "none", discountPercent: "0", discountReason: "", _model: "" }]);
     setErrors({});
     setTimeout(() => setSubmitting(false), 600);
@@ -660,7 +664,7 @@ function SalesPage({ data, onSale, onCancel, onConfirmDelivery, onCancelPendingD
   const openModal  = () => { setModal(true); setErrors({}); };
   const closeModal = () => {
     setModal(false); setErrors({});
-    setClient({ name: "", phone: "", quartier: "", delivery: false, remarque: "" });
+    setClient({ name: "", phone: "", quartier: "", delivery: false, remarque: "", paidNow: true });
     setCartLines([{ id: uid(), productId: "", qty: "1", discountType: "none", discountPercent: "0", discountReason: "", _model: "" }]);
   };
 
@@ -803,6 +807,86 @@ function SalesPage({ data, onSale, onCancel, onConfirmDelivery, onCancelPendingD
             })}
           </div>
         </div>
+      )}
+
+      {creances.length > 0 && (
+        <div className="card" style={{ marginBottom: 16, border: "1px solid #C03A08", background: "rgba(192,58,8,0.06)" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "12px 14px 4px" }}>
+            <Icon name="wallet" size={16} />
+            <span style={{ fontWeight: 700, fontSize: 13.5 }}>
+              Créances en cours ({creances.length}) — {fmtMoney(creances.reduce((s, c) => s + c.remaining, 0))} dus au total
+            </span>
+          </div>
+          <div style={{ padding: "4px 14px 12px", display: "flex", flexDirection: "column", gap: 8 }}>
+            {creances.map(c => (
+              <div
+                key={c.groupId}
+                style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, flexWrap: "wrap", background: "var(--bg3)", borderRadius: 8, padding: "8px 12px" }}
+              >
+                <div style={{ fontSize: 12.5, lineHeight: 1.5 }}>
+                  <div style={{ fontWeight: 600 }}>
+                    {c.client || "Client sans nom"} {c.quartier ? `— ${c.quartier}` : ""}
+                    {c.phone && <span style={{ marginLeft: 6, fontSize: 10.5, color: "var(--text2)" }}>{c.phone}</span>}
+                  </div>
+                  <div style={{ color: "var(--text2)" }}>
+                    {fmtDate(c.date)} · Total {fmtMoney(c.total)}
+                    {c.paidAmount > 0 && <> · déjà réglé {fmtMoney(c.paidAmount)}</>}
+                    {" · "}<span style={{ fontWeight: 700, color: "#C03A08" }}>reste {fmtMoney(c.remaining)}</span>
+                  </div>
+                </div>
+                <button
+                  className="btn btn-primary btn-sm"
+                  onClick={() => { setPaymentTarget(c); setPaymentAmount(String(c.remaining)); }}
+                >
+                  💳 Enregistrer un paiement
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {paymentTarget && (
+        <Modal
+          title="Enregistrer un paiement"
+          onClose={() => { setPaymentTarget(null); setPaymentAmount(""); }}
+          footer={<>
+            <button className="btn btn-outline" onClick={() => { setPaymentTarget(null); setPaymentAmount(""); }}>Annuler</button>
+            <button
+              className="btn btn-primary"
+              disabled={!paymentAmount || parseInt(paymentAmount) <= 0 || parseInt(paymentAmount) > paymentTarget.remaining}
+              onClick={() => {
+                onAddPayment?.(paymentTarget.groupId, parseInt(paymentAmount));
+                toast?.(`💳 Paiement de ${fmtMoney(parseInt(paymentAmount))} enregistré.`, "success");
+                setPaymentTarget(null);
+                setPaymentAmount("");
+              }}
+            >
+              Enregistrer
+            </button>
+          </>}
+        >
+          <p style={{ fontSize: 13, marginBottom: 12 }}>
+            {paymentTarget.client || "Client sans nom"} doit encore <strong>{fmtMoney(paymentTarget.remaining)}</strong> (sur {fmtMoney(paymentTarget.total)} au total).
+          </p>
+          <div className="form-group">
+            <label className="form-label">Montant reçu (FCFA)</label>
+            <input
+              className="input" type="number" min="1" max={paymentTarget.remaining}
+              value={paymentAmount}
+              onChange={e => setPaymentAmount(e.target.value)}
+              autoFocus
+            />
+            {parseInt(paymentAmount) > paymentTarget.remaining && (
+              <FieldError msg={`Ne peut pas dépasser le reste dû (${fmtMoney(paymentTarget.remaining)})`} />
+            )}
+          </div>
+          {parseInt(paymentAmount) > 0 && parseInt(paymentAmount) < paymentTarget.remaining && (
+            <p style={{ fontSize: 11.5, color: "var(--text2)" }}>
+              Paiement partiel — il restera {fmtMoney(paymentTarget.remaining - parseInt(paymentAmount))} dus après ce règlement.
+            </p>
+          )}
+        </Modal>
       )}
 
       <div className="filter-row">
@@ -1054,6 +1138,15 @@ function SalesPage({ data, onSale, onCancel, onConfirmDelivery, onCancelPendingD
             <input type="checkbox" checked={client.delivery} onChange={e => setClient(c => ({ ...c, delivery: e.target.checked }))} />
             <Icon name="truck" size={14} /> Livraison à domicile
           </label>
+          <label className="checkbox-row">
+            <input type="checkbox" checked={client.paidNow} onChange={e => setClient(c => ({ ...c, paidNow: e.target.checked }))} />
+            <Icon name="wallet" size={14} /> Payé à la vente
+          </label>
+          {!client.paidNow && (
+            <p style={{ fontSize: 11.5, color: "var(--warn)", marginTop: -6 }}>
+              ⚠️ Vente à crédit — apparaîtra dans "Créances en cours" jusqu'au règlement.
+            </p>
+          )}
         </Modal>
       )}
 
