@@ -11,12 +11,6 @@ import {
   onAuthStateChanged,
   signInAnonymously,
 } from "firebase/auth";
-import {
-  getRemoteConfig,
-  fetchAndActivate,
-  getValue,
-} from "firebase/remote-config";
-
 const FIREBASE_CONFIG = {
   apiKey:            import.meta.env.VITE_FIREBASE_API_KEY,
   authDomain:        import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
@@ -43,11 +37,6 @@ const _db = initializeFirestore(app, {
   localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() }),
 });
 
-const _rc = getRemoteConfig(app);
-_rc.settings.minimumFetchIntervalMillis =
-  import.meta.env.DEV ? 0 : 3_600_000;
-_rc.defaultConfig = { viewer_code: "" };
-
 export function getDB()          { return _db; }
 export function getCurrentUser() { return auth.currentUser; }
 
@@ -67,13 +56,22 @@ export function onAuthChange(callback, onError) {
   return onAuthStateChanged(auth, callback, onError);
 }
 
+// ── Code d'accès partenaire (mode "viewer") ─────────────────────────────────
+// Lu directement depuis Firestore (data/main → settings.viewerCode), lisible
+// publiquement sans authentification (voir firestore.rules, match /data/*).
+// Avant : lu depuis Firebase Remote Config, une source totalement séparée du
+// champ éditable dans Paramètres → changer le code depuis l'UI n'avait
+// aucun effet réel, l'ancien code restait valide indéfiniment.
 export async function getViewerCode() {
   try {
-    await fetchAndActivate(_rc);
-    const val = getValue(_rc, "viewer_code").asString();
-    return val || null;
+    const snap = await getDoc(doc(_db, "data", "main"));
+    if (!snap.exists()) return null;
+    // Repli sur le code historique si jamais explicitement enregistré dans
+    // Paramètres (même valeur que le placeholder déjà affiché côté UI) —
+    // évite de casser l'accès existant tant que l'admin n'a pas resauvegardé.
+    return snap.data()?.settings?.viewerCode || "Bkocase0223";
   } catch (err) {
-    console.error("Remote Config fetch error:", err);
+    console.error("Erreur lecture du code d'accès partenaire:", err);
     return null;
   }
 }

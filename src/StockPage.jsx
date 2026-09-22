@@ -37,6 +37,19 @@ function StockPage({ data, onMove, isViewer = false }) {
     const errs = {};
     const movs = [];
 
+    // Cumul par produit sur TOUTES les lignes — deux lignes qui référencent
+    // le même modèle et cochent le même design doivent être comparées
+    // ensemble au stock réel, sinon chaque ligne passe la validation
+    // individuellement et le mouvement de sortie dépasse le stock existant.
+    const qtyByProduct = {};
+    lines.forEach(line => {
+      const checked = line._checkedDesigns || [];
+      checked.forEach(productId => {
+        const qty = parseInt((line._designQtys || {})[productId] || "1") || 0;
+        qtyByProduct[productId] = (qtyByProduct[productId] || 0) + qty;
+      });
+    });
+
     lines.forEach((line, i) => {
       if (!line._model) { errs[`product_${i}`] = "Sélectionnez un modèle"; return; }
       const checked = line._checkedDesigns || [];
@@ -45,8 +58,8 @@ function StockPage({ data, onMove, isViewer = false }) {
         const qty = parseInt((line._designQtys || {})[productId] || "1");
         const prod = productMap[productId];
         if (!qty || qty < 1) { errs[`product_${i}`] = "Quantité invalide"; return; }
-        if (form.type === "out" && prod && qty > prod.stock) {
-          errs[`product_${i}`] = `Stock insuffisant pour "${prod.design}" (${prod.stock} dispo)`;
+        if (form.type === "out" && prod && qtyByProduct[productId] > prod.stock) {
+          errs[`product_${i}`] = `Stock insuffisant pour "${prod.design}" (${prod.stock} dispo, ${qtyByProduct[productId]} demandés au total)`;
           return;
         }
         movs.push({ id: uid(), productId, type: form.type, qty, reason: form.reason, note: sanitize(form.note, 300), date: today() });
@@ -129,6 +142,7 @@ function StockPage({ data, onMove, isViewer = false }) {
           </div>
 
           <p className="section-label">Produits *</p>
+          {errors.general && <FieldError msg={errors.general} />}
           {lines.map((line, i) => {
             const lineModel = line._model || "";
             const designsForModel = lineModel ? products.filter(p => p.model === lineModel) : [];

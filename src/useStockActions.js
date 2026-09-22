@@ -31,7 +31,9 @@ export function useStockActions({ data, persist, confirm }) {
   const deleteProduct = useCallback(async (id) => {
     const ok = await confirm("Supprimer ce produit ?");
     if (!ok) return;
-    persist({ ...data, products: data.products.filter((p) => p.id !== id) });
+    const products = data.products.filter((p) => p.id !== id);
+    persist({ ...data, products });
+    sheetSyncProducts(products); // Sync Google Sheets
   }, [data, persist, confirm]);
 
   // ── Mouvements ────────────────────────────────────────────────────────────
@@ -205,9 +207,17 @@ export function useStockActions({ data, persist, confirm }) {
     }
 
     const groupId = oldGroup[0]?.groupId || oldGroup[0]?.id;
+    // Préserve la remise d'origine (le % réellement appliqué avant la
+    // modif, quel que soit son type de départ "volume"/"custom") plutôt que
+    // de la remettre à 0 en silence — sinon corriger un simple design avant
+    // livraison efface une remise négociée avec le client.
+    const origPct = oldGroup[0]?.discountPercent || 0;
+    const origType = oldGroup[0]?.discountType || "none";
+    const origReason = oldGroup[0]?.discountReason || "";
     const newGroupItems = newLines.map(line => {
       const prod = products.find(p => p.id === line.productId);
       const total = prod.price * line.qty;
+      const discountAmount = Math.round(total * origPct / 100);
       return {
         id: uid(), groupId, date: oldGroup[0]?.date,
         webOrderId: oldGroup[0]?.webOrderId, // préserve le lien vers la commande
@@ -216,8 +226,8 @@ export function useStockActions({ data, persist, confirm }) {
         // l'annulation sur le suivi client.
         productId: line.productId, qty: line.qty,
         price: prod.price, total,
-        discountType: "none", discountPercent: 0, discountAmount: 0,
-        totalAfterDiscount: total, discountReason: "",
+        discountType: origType, discountPercent: origPct, discountAmount,
+        totalAfterDiscount: total - discountAmount, discountReason: origReason,
         client: oldGroup[0]?.client || "", phone: oldGroup[0]?.phone || "",
         quartier: oldGroup[0]?.quartier || "",
         delivery: !!oldGroup[0]?.delivery,

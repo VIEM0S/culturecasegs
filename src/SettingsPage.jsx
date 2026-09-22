@@ -1,11 +1,9 @@
 import { useState, useEffect, useMemo, useCallback, memo, useRef } from "react";
 import Icon from "./Icon.jsx";
 import ImagePicker from "./ImagePicker.jsx";
-import { Modal, StatCard, FieldError, DesignThumb } from "./components.jsx";
-import { useDialog, useToast } from "./hooks.jsx";
-import { uid, sanitize, validateImageUrl, validateProductForm, validateSaleForm, validateMovementForm, getProductImageUrl } from "./utils.js";
-import { DEFAULT_MODELS, DEFAULT_DESIGNS, DEFAULT_PRICE_SETTINGS, LOW_STOCK } from "./constants.js";
-import { exportData, importData } from "./data.js";
+import { Modal, DesignThumb } from "./components.jsx";
+import { uid, sanitize } from "./utils.js";
+import { exportData } from "./data.js";
 import { getLocalSnapshot } from "./googleSheets.js";
 
 
@@ -106,6 +104,11 @@ function SettingsPage({ data, onSave, onPersist, onSaveProduct, confirm }) {
     const name = sanitize(newModel, 60);
     if (!name || localSettings.models.includes(name)) return;
     setLocalSettings(s => ({ ...s, models: [...s.models, name].sort() }));
+    // Les produits créés juste en dessous sont persistés immédiatement
+    // (onSaveProduct) — sans ça, le modèle lui-même ne serait sauvé qu'au
+    // clic "Enregistrer", laissant des produits fantômes référençant un
+    // modèle qui redisparaît si l'onglet est fermé avant.
+    setSaveDesignsNow(true);
     setNewModel("");
 
     // Créer automatiquement un produit pour chaque design existant
@@ -141,17 +144,43 @@ function SettingsPage({ data, onSave, onPersist, onSaveProduct, confirm }) {
     if (!trimmed || (trimmed !== original && localSettings.models.includes(trimmed))) {
       setEditingModel(null); return;
     }
-    setLocalSettings(s => ({
-      ...s,
-      models: s.models.map(m => m === original ? trimmed : m).sort(),
-      priceSettings: {
-        ...s.priceSettings,
-        modelPrices: Object.fromEntries(
-          Object.entries(s.priceSettings.modelPrices).map(([k, v]) => [k === original ? trimmed : k, v])
-        ),
-      },
-    }));
+    const renamed = trimmed !== original;
+
+    // Même mécanisme que confirmEditDesign ci-dessus : une commande passée
+    // depuis le site avant le renommage référence encore l'ancien nom de
+    // modèle — sans cet historique, sa résolution échoue (useWebOrders.js).
+    // Les modèles sont de simples chaînes (pas des objets comme les
+    // designs), donc l'historique vit à part dans settings.modelAliases.
+    setLocalSettings(s => {
+      const modelAliases = { ...(s.modelAliases || {}) };
+      if (renamed) {
+        const merged = Array.from(new Set([...(modelAliases[original] || []), ...(modelAliases[trimmed] || []), original])).slice(-5);
+        delete modelAliases[original];
+        modelAliases[trimmed] = merged;
+      }
+      return {
+        ...s,
+        models: s.models.map(m => m === original ? trimmed : m).sort(),
+        modelAliases,
+        priceSettings: {
+          ...s.priceSettings,
+          modelPrices: Object.fromEntries(
+            Object.entries(s.priceSettings.modelPrices).map(([k, v]) => [k === original ? trimmed : k, v])
+          ),
+        },
+      };
+    });
+
+    if (renamed) {
+      // Propager aux produits existants — product.model est une copie du
+      // nom (pas une référence live), sans ça les produits déjà créés
+      // garderaient l'ancien nom affiché indéfiniment.
+      const affected = data.products.filter(p => p.model === original);
+      if (affected.length) onSaveProduct(affected.map(p => ({ ...p, model: trimmed })));
+    }
+
     setEditingModel(null);
+    setSaveDesignsNow(true);
   };
 
   // ── Designs ──

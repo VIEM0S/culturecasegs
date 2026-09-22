@@ -80,6 +80,10 @@ function TicketModal({ sales, productMap, onClose }) {
   // ── Impression ──────────────────────────────────────────────────────────
   const printTicket = () => {
     const printWin = window.open("", "_blank", "width=400,height=600");
+    if (!printWin) {
+      alert("Impossible d'ouvrir la fenêtre d'impression — autorise les pop-ups pour ce site puis réessaie.");
+      return;
+    }
     printWin.document.write(`
 <!DOCTYPE html>
 <html lang="fr">
@@ -540,12 +544,21 @@ function SalesPage({ data, onSale, onCancel, onConfirmDelivery, onCancelPendingD
   const handleSale = () => {
     if (submitting) return;
     const errs = {};
+    // Cumul par produit — deux lignes du même panier choisissant le même
+    // design/modèle doivent être comparées ensemble au stock réel, sinon
+    // chaque ligne passe la validation individuellement (2 ≤ 3 dispo) et
+    // la vente enregistre plus d'unités que ce qui existe réellement.
+    const qtyByProduct = {};
+    cartLines.forEach(line => {
+      if (!line.productId) return;
+      qtyByProduct[line.productId] = (qtyByProduct[line.productId] || 0) + (parseInt(line.qty) || 0);
+    });
     cartLines.forEach((line, i) => {
       const calc = lineCalcs[i];
       if (!line.productId) errs[`${line.id}_productId`] = "Sélectionnez un produit";
       else {
         if (!line.qty || isNaN(parseInt(line.qty)) || parseInt(line.qty) < 1) errs[`${line.id}_qty`] = "Quantité ≥ 1";
-        else if (calc.prod && parseInt(line.qty) > calc.prod.stock) errs[`${line.id}_qty`] = `Stock insuffisant (${calc.prod.stock} dispo)`;
+        else if (calc.prod && qtyByProduct[line.productId] > calc.prod.stock) errs[`${line.id}_qty`] = `Stock insuffisant (${calc.prod.stock} dispo au total sur ce produit)`;
       }
       if (line.discountType === "custom") {
         const pct = parseInt(line.discountPercent);
@@ -558,9 +571,8 @@ function SalesPage({ data, onSale, onCancel, onConfirmDelivery, onCancelPendingD
     for (let i = 0; i < cartLines.length; i++) {
       const line = cartLines[i];
       const calc = lineCalcs[i];
-      const qty  = parseInt(line.qty) || 0;
-      if (calc.prod && qty > calc.prod.stock) {
-        (toast || window.alert)(`❌ Stock insuffisant pour "${calc.prod.model} — ${calc.prod.design}" (${calc.prod.stock} dispo).`);
+      if (calc.prod && qtyByProduct[line.productId] > calc.prod.stock) {
+        (toast || window.alert)(`❌ Stock insuffisant pour "${calc.prod.model} — ${calc.prod.design}" (${calc.prod.stock} dispo, ${qtyByProduct[line.productId]} demandés au total).`);
         return;
       }
     }
@@ -1215,6 +1227,9 @@ function SalesPage({ data, onSale, onCancel, onConfirmDelivery, onCancelPendingD
           </button>
           <p style={{ fontSize: 11.5, color: "var(--text2)", marginTop: 12 }}>
             Le stock des anciens articles est remis, puis déduit à nouveau pour les nouveaux — vérifie la disponibilité avant d'enregistrer.
+            {editDeliveryTarget?.[0]?.discountPercent > 0 && (
+              <> La remise d'origine (-{editDeliveryTarget[0].discountPercent}%) est conservée sur les nouvelles lignes.</>
+            )}
           </p>
         </Modal>
       )}
@@ -1290,7 +1305,7 @@ function SalesPage({ data, onSale, onCancel, onConfirmDelivery, onCancelPendingD
               )}
 
               <p style={{ color: "var(--text2)", fontSize: 12 }}>
-                Aucun stock n'a été touché — cette commande n'était pas encore une vente. Elle sera simplement supprimée.
+                Aucun stock n'a été touché — cette commande n'était pas encore une vente. Elle sera marquée "rejetée" (le client peut toujours consulter le motif sur son lien de suivi).
               </p>
             </div>
           </Modal>

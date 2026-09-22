@@ -79,7 +79,10 @@ async function archiveResolvedOrders(db) {
     if (!resolvedAt || resolvedAt.getTime() > cutoff) continue;
 
     await addDoc(collection(db, "webOrdersArchive"), {
-      date: order.createdAt || null,
+      // order.createdAt est un Timestamp Firestore, pas une chaîne — le
+      // stocker tel quel rend la colonne Date illisible à l'export CSV
+      // (toString() d'un Timestamp au lieu d'une date).
+      date: order.createdAt?.toDate?.().toISOString().slice(0, 10) || "",
       quartier: order.client?.quartier || "",
       tel: order.client?.tel || "",
       delivery: !!order.delivery,
@@ -131,7 +134,11 @@ export const normalize = (s) =>
 // renommé côté catalogue après que la commande a été passée sur le site.
 // Chaque design peut porter un historique `previousNames` (voir
 // SettingsPage.jsx confirmEditDesign) permettant de retrouver son nom actuel.
-export function resolveOrderItems(order, products, designs = []) {
+//
+// `modelAliases` (optionnel) : settings.modelAliases, { nomActuel: [anciens
+// noms] } — même repli que previousNames mais pour les modèles, qui sont de
+// simples chaînes (voir SettingsPage.jsx confirmEditModel).
+export function resolveOrderItems(order, products, designs = [], modelAliases = {}) {
   const resolved = [];
   for (const item of order.items || []) {
     let prod = products.find((p) =>
@@ -145,6 +152,17 @@ export function resolveOrderItems(order, products, designs = []) {
       if (renamedDesign) {
         prod = products.find((p) =>
           normalize(p.design) === normalize(renamedDesign.name) && p.model === item.model
+        );
+      }
+    }
+
+    if (!prod) {
+      const currentModel = Object.keys(modelAliases).find((current) =>
+        (modelAliases[current] || []).some((n) => normalize(n) === normalize(item.model))
+      );
+      if (currentModel) {
+        prod = products.find((p) =>
+          normalize(p.design) === normalize(item.designName) && p.model === currentModel
         );
       }
     }
@@ -283,7 +301,7 @@ export function useWebOrders({ data, addSale, toast }) {
   // vers un produit réel du catalogue. Retourne null si un item ne matche
   // pas ou si le stock est insuffisant (la commande reste en attente —
   // rien n'est modifié).
-  const resolveOrder = useCallback((order) => resolveOrderItems(order, data?.products || [], data?.settings?.designs || []), [data]);
+  const resolveOrder = useCallback((order) => resolveOrderItems(order, data?.products || [], data?.settings?.designs || [], data?.settings?.modelAliases || {}), [data]);
 
   const validateWebOrder = useCallback(async (order) => {
     const { items, error } = resolveOrder(order);
