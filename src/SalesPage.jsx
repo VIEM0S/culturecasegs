@@ -569,6 +569,14 @@ function SalesPage({ data, onSale, onCancel, onConfirmDelivery, onCancelPendingD
       }
     });
     if (client.phone && !/^[\d\s\+\-\(\)\.]{6,20}$/.test(normalizePhone(client.phone).trim())) errs.phone = "Numéro invalide";
+    // Une livraison sans nom/téléphone/quartier est undeliverable — rien
+    // n'empêchait jusqu'ici de valider une vente "livraison à domicile"
+    // pour un client totalement anonyme.
+    if (client.delivery) {
+      if (!client.name.trim())     errs.name     = "Nom requis pour une livraison";
+      if (!client.phone.trim())    errs.phone     = errs.phone || "Téléphone requis pour une livraison";
+      if (!client.quartier.trim()) errs.quartier = "Quartier requis pour une livraison";
+    }
     if (Object.keys(errs).length > 0) { setErrors(errs); return; }
 
     for (let i = 0; i < cartLines.length; i++) {
@@ -1101,11 +1109,17 @@ function SalesPage({ data, onSale, onCancel, onConfirmDelivery, onCancelPendingD
           </div>
 
           <div className="divider" />
-          <p className="section-label">Client (optionnel)</p>
+          <p className="section-label">Client {client.delivery ? "(requis pour la livraison)" : "(optionnel)"}</p>
           <div className="form-grid">
             <div className="form-group">
               <label className="form-label">Nom client</label>
-              <input className="input" value={client.name} onChange={e => setClient(c => ({ ...c, name: e.target.value }))} placeholder="Moussa Diallo" />
+              <input
+                className={`input${errors.name ? " input-error" : ""}`}
+                value={client.name}
+                onChange={e => { setClient(c => ({ ...c, name: e.target.value })); setErrors(er => ({ ...er, name: undefined })); }}
+                placeholder="Moussa Diallo"
+              />
+              <FieldError msg={errors.name} />
             </div>
             <div className="form-group">
               <label className="form-label">Téléphone</label>
@@ -1128,7 +1142,13 @@ function SalesPage({ data, onSale, onCancel, onConfirmDelivery, onCancelPendingD
           </div>
           <div className="form-group">
             <label className="form-label">Quartier</label>
-            <input className="input" value={client.quartier} onChange={e => setClient(c => ({ ...c, quartier: e.target.value }))} placeholder="Plateau, Médina..." />
+            <input
+              className={`input${errors.quartier ? " input-error" : ""}`}
+              value={client.quartier}
+              onChange={e => { setClient(c => ({ ...c, quartier: e.target.value })); setErrors(er => ({ ...er, quartier: undefined })); }}
+              placeholder="Plateau, Médina..."
+            />
+            <FieldError msg={errors.quartier} />
           </div>
           <div className="form-group">
             <label className="form-label">Remarque</label>
