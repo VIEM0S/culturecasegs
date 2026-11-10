@@ -1,7 +1,7 @@
 import { initializeApp, getApps } from "firebase/app";
 import {
   initializeFirestore, persistentLocalCache, persistentMultipleTabManager,
-  doc, getDoc, setDoc, onSnapshot, writeBatch,
+  doc, getDoc, getDocFromServer, setDoc, onSnapshot, writeBatch,
   addDoc, collection,
 } from "firebase/firestore";
 import {
@@ -76,4 +76,4 @@ export async function getViewerCode() {
   }
 }
 
-export { doc, getDoc, setDoc, onSnapshot, writeBatch, addDoc, collection };
+export { doc, getDoc, getDocFromServer, setDoc, onSnapshot, writeBatch, addDoc, collection };

@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { onAuthChange, signOut, signInAsViewer } from "./firebase.js";
-import { subscribeToData } from "./data.js";
+import { subscribeToData, migrateLegacyIfNeeded } from "./data.js";
 
 // ── Hook : gestion de l'authentification + mode viewer ──────────────────────
 export function useAuth({ toast, setSyncStatus, setData, setLoading }) {
@@ -11,20 +11,30 @@ export function useAuth({ toast, setSyncStatus, setData, setLoading }) {
   const unsubData      = useRef(null);
   const isFirstLoad    = useRef(true);
   const _localUpdate   = useRef(false);
+  const migrationTried = useRef(false);
 
   // ── Listener Firebase Auth + PWA events ──────────────────────────────────
   useEffect(() => {
     let mounted = true;
 
     const unsubAuth = onAuthChange(
-      (user) => {
+      (rawUser) => {
         if (!mounted) return;
+        // La boutique publique et le backoffice partagent la même origine
+        // (viem0s.github.io) donc la même session Firebase : un visiteur de
+        // la boutique a une session ANONYME qui, sans ce filtre, le ferait
+        // entrer dans le backoffice sans passer par l'écran de connexion.
+        // Une session anonyme n'est valide que pour le mode partenaire.
+        const user = rawUser && rawUser.isAnonymous && !isViewer ? null : rawUser;
         setAuthUser(user);
         setAuthError(null);
 
         if (user) {
           if (unsubData.current) { unsubData.current(); unsubData.current = null; }
           isFirstLoad.current = true;
+          // Compte email = admin (reçoit aussi le doc privé avec les ventes
+          // complètes). Compte anonyme (partenaire) = données anonymisées.
+          const isAdminUser = !user.isAnonymous;
           const unsub = subscribeToData((freshData) => {
             if (!mounted) return;
             if (isFirstLoad.current) {
@@ -32,12 +42,21 @@ export function useAuth({ toast, setSyncStatus, setData, setLoading }) {
               setLoading(false);
               setData(freshData);
               setSyncStatus("ok");
+              // Une seule fois par session : bascule l'ancien format (ventes
+              // complètes dans data/main, lisible par tous) vers
+              // data/main anonymisé + private/main.
+              if (isAdminUser && !migrationTried.current) {
+                migrationTried.current = true;
+                migrateLegacyIfNeeded()
+                  .then((done) => { if (done && mounted) toast("🔒 Données clients mises à l'abri (accès réservé à l'admin).", "success"); })
+                  .catch((e) => console.error("[CultureCase] Migration données privées:", e));
+              }
               return;
             }
             if (_localUpdate.current) return;
             setData(freshData);
             setSyncStatus("ok");
-          });
+          }, { admin: isAdminUser });
           unsubData.current = unsub;
         } else {
           if (unsubData.current) { unsubData.current(); unsubData.current = null; }

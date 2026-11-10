@@ -155,3 +155,30 @@ describe("resolveOrderItems", () => {
     expect(result.error).toBeUndefined();
   });
 });
+
+// ── Quantités invalides (le client peut modifier sa commande en attente) ─────
+describe("resolveOrderItems — quantité invalide", () => {
+  const products = [makeProduct({ stock: 10 })];
+  const withQty = (qty) => makeOrder([{ designName: "Afro Queen", model: "iPhone 12", qty }]);
+
+  it.each([[-3], [0], [1.5], ["2"], [null], [undefined], [NaN]])(
+    "refuse qty = %s (ne doit jamais passer au stock)",
+    (qty) => {
+      const result = resolveOrderItems(withQty(qty), products);
+      expect(result.items).toBeUndefined();
+      expect(result.error).toMatch(/Quantité invalide/);
+    },
+  );
+
+  it("refuse toute la commande si UN seul item est invalide", () => {
+    const order = makeOrder([
+      { designName: "Afro Queen", model: "iPhone 12", qty: 1 },
+      { designName: "Afro Queen", model: "iPhone 12", qty: -2 },
+    ]);
+    expect(resolveOrderItems(order, products).error).toMatch(/Quantité invalide/);
+  });
+
+  it("accepte toujours une quantité entière valide", () => {
+    expect(resolveOrderItems(withQty(4), products).items).toHaveLength(1);
+  });
+});

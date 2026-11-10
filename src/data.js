@@ -1,6 +1,7 @@
-import { getDB, doc, onSnapshot, writeBatch as fbWriteBatch } from "./firebase.js";
+import { getDB, doc, getDocFromServer, onSnapshot, writeBatch as fbWriteBatch } from "./firebase.js";
 import { CHUNK_SIZE } from "./constants.js";
 import { saveLocalSnapshot } from "./googleSheets.js";
+import { toPublicData, toPrivateDoc, mergeAdminData, newStamp } from "./privateSplit.js";
 
 // ── Logique images ────────────────────────────────────────────────────────────
 // "https://res.cloudinary.com/..." → URL Cloudinary → visible partout ✅
@@ -40,6 +41,7 @@ export async function saveData(data) {
 
   const slim = await stripImages(data);
   delete slim.auth;
+  delete slim._privSavedAt; // tampon de la lecture précédente, remplacé ci-dessous
   const db = getDB();
 
   const chunks = [];
@@ -52,7 +54,14 @@ export async function saveData(data) {
   // deux commits Firestore séparés — une coupure réseau entre les deux pouvait
   // laisser des chunks "products_N" obsolètes en orphelins.
   const batch = fbWriteBatch(db);
-  batch.set(doc(db, "data", "main"), { ...slim, products: [], _chunkCount: chunks.length });
+  // data/main est lisible sans connexion : on n'y met que la version
+  // anonymisée. Les ventes complètes (nom, téléphone, quartier…) vont dans
+  // private/main (admin uniquement), dans le même batch avec le même tampon.
+  const stamp = newStamp();
+  batch.set(doc(db, "data", "main"), {
+    ...toPublicData(slim), products: [], _chunkCount: chunks.length, _privSavedAt: stamp,
+  });
+  batch.set(doc(db, "private", "main"), toPrivateDoc(slim, stamp));
   chunks.forEach((chunk, i) => {
     batch.set(doc(db, "data", `products_${i}`), { items: chunk });
   });
@@ -75,23 +84,42 @@ export async function saveData(data) {
 //         → Quand le nombre de chunks change (ajout/suppression produit), on repose
 //           les listeners automatiquement.
 //
-export function subscribeToData(onUpdate) {
+//
+// `admin: true` ajoute un listener sur private/main (ventes complètes). Sans
+// ça (mode partenaire "viewer"), on ne reçoit et n'affiche que la version
+// anonymisée — et on ré-anonymise côté client par précaution, au cas où
+// data/main contiendrait encore l'ancien format complet.
+export function subscribeToData(onUpdate, { admin = false } = {}) {
   const db = getDB();
 
   // Cache local des chunks déjà reçus
   const chunkCache = new Map(); // index → items[]
   let mainCache = null;
+  let privCache; // undefined = pas encore reçu · null = document absent
   let chunkUnsubs = [];
   let currentChunkCount = 0;
 
   // Recomposer et émettre la donnée complète dès qu'un chunk ou main change
   function emit() {
     if (!mainCache) return;
+    // Ne jamais émettre avec des produits incomplets (un snapshot du doc
+    // privé peut arriver avant les chunks produits).
+    if (chunkCache.size < currentChunkCount) return;
     const allProducts = Array.from(
       { length: currentChunkCount },
       (_, i) => chunkCache.get(i) ?? []
     ).flat();
-    rehydrateImages({ ...mainCache, products: allProducts }).then(onUpdate);
+
+    let base;
+    if (admin) {
+      if (privCache === undefined) return; // on attend le 1er snapshot du privé
+      const merged = mergeAdminData(mainCache, privCache);
+      if (merged.status === "wait") return;
+      base = merged.data;
+    } else {
+      base = toPublicData(mainCache);
+    }
+    rehydrateImages({ ...base, products: allProducts }).then(onUpdate);
   }
 
   // (Re)poser les listeners sur les chunks quand chunkCount change
@@ -138,11 +166,54 @@ export function subscribeToData(onUpdate) {
     console.error("Erreur listener main :", err);
   });
 
+  // Listener sur le document privé (admin uniquement)
+  const unsubPriv = admin
+    ? onSnapshot(doc(db, "private", "main"), snap => {
+        privCache = snap.exists() ? snap.data() : null;
+        emit();
+      }, err => {
+        console.error("Erreur listener private :", err);
+        privCache = null; // → traité comme "ancien format", jamais bloquant
+        emit();
+      })
+    : null;
+
   // Retourner une fonction de nettoyage complète
   return () => {
     unsubMain();
+    unsubPriv?.();
     chunkUnsubs.forEach(u => u());
   };
+}
+
+// ── Migration unique : ancien format → data/main anonymisé + private/main ───
+// Tant que l'admin n'a pas ouvert l'appli après la mise à jour, data/main
+// contient encore les ventes complètes. Cette fonction relit les documents
+// DEPUIS LE SERVEUR (pas le cache local, qui pourrait être périmé), et si
+// data/main est encore en ancien format, réécrit tout via saveData (qui
+// sépare public / privé). Renvoie true si une migration a eu lieu.
+export async function migrateLegacyIfNeeded() {
+  const db = getDB();
+  const [mainSnap, privSnap] = await Promise.all([
+    getDocFromServer(doc(db, "data", "main")),
+    getDocFromServer(doc(db, "private", "main")).catch(() => null),
+  ]);
+  if (!mainSnap.exists()) return false;
+
+  const main = mainSnap.data();
+  const priv = privSnap && privSnap.exists() ? privSnap.data() : null;
+  const merged = mergeAdminData(main, priv);
+  if (merged.status !== "legacy") return false;
+
+  const count = main._chunkCount ?? 0;
+  const chunks = await Promise.all(
+    Array.from({ length: count }, (_, i) => getDocFromServer(doc(db, "data", `products_${i}`)))
+  );
+  const products = chunks.flatMap(c => (c.exists() ? c.data().items : []));
+  if (products.length === 0 && count > 0) return false; // lecture incomplète → on n'écrit rien
+
+  await saveData({ ...merged.data, products });
+  return true;
 }
 
 // ── Export JSON ───────────────────────────────────────────────────────────────

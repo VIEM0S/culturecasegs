@@ -18,9 +18,19 @@ service cloud.firestore {
     }
 
     // ── Données produits / stock — lues par le site public sans authentification ──
+    // ⚠️ Lisible par TOUT LE MONDE : n'y mettre aucune donnée client. Les
+    // ventes y sont stockées sans identité (voir src/privateSplit.js) ; la
+    // version complète vit dans private/main ci-dessous.
     match /data/{docId} {
       allow read: if true;
       allow write: if isAdmin() && isValidDocId(docId);
+    }
+
+    // ── Données privées (ventes complètes : nom, téléphone, quartier…) ──────
+    // Admin uniquement. Le compte "partenaire" est anonyme (comme les
+    // visiteurs de la boutique) donc exclu par isAdmin().
+    match /private/{docId} {
+      allow read, write: if isAdmin() && docId == "main";
     }
 
     // ── Paramètres globaux du site ───────────────────────────────────────────
@@ -53,7 +63,7 @@ service cloud.firestore {
       allow update, delete: if false;
     }
 
-    // ── Logs d'erreurs — préparé pour un futur usage, pas encore branché côté client ──
+    // ── Logs d'erreurs — écrits par l'appli (tout utilisateur connecté), lus par l'admin ──
     match /error_logs/{docId} {
       allow read, write: if isAdmin();
       allow create: if request.auth != null

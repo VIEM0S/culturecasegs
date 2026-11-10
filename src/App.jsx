@@ -79,7 +79,7 @@ function App() {
   const {
     webOrders, processing: webOrderProcessing,
     validateWebOrder, rejectWebOrder, cancelWebOrderStatus,
-  } = useWebOrders({ data, addSale, toast });
+  } = useWebOrders({ data, addSale, toast, enabled: !!authUser && !isViewer });
 
   // ── PWA : install prompt ─────────────────────────────────────────────────
   useEffect(() => {

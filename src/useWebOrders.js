@@ -141,6 +141,13 @@ export const normalize = (s) =>
 export function resolveOrderItems(order, products, designs = [], modelAliases = {}) {
   const resolved = [];
   for (const item of order.items || []) {
+    // Quantité : entier ≥ 1. Le client peut modifier sa commande tant qu'elle
+    // est en attente (règle Firestore webOrders), et rien côté règles ne
+    // contrôle les quantités : sans cette garde, une quantité négative passe
+    // le test de stock (stock < qty) et AJOUTE du stock à la validation.
+    if (!Number.isInteger(item.qty) || item.qty < 1) {
+      return { error: `Quantité invalide pour "${item.designName} — ${item.model}" (${item.qty}). Rejette cette commande ou contacte le client.` };
+    }
     let prod = products.find((p) =>
       normalize(p.design) === normalize(item.designName) && p.model === item.model
     );
@@ -190,7 +197,13 @@ export function resolveOrderItems(order, products, designs = [], modelAliases = 
 // saisie à la main (onSale/addSale) — donc si la commande demandait une
 // livraison, elle atterrit ensuite normalement dans "Livraisons en attente
 // de validation" comme n'importe quelle autre vente avec livraison.
-export function useWebOrders({ data, addSale, toast }) {
+//
+// `enabled` : false tant que l'admin n'est pas connecté. Sans ça, le hook
+// (monté dès l'ouverture de l'appli) s'abonne AVANT la connexion → Firestore
+// refuse, le listener meurt et ne revient jamais après le login (les
+// nouvelles commandes n'apparaissent qu'après un rechargement), et le
+// nettoyage quotidien consomme son créneau du jour pour rien.
+export function useWebOrders({ data, addSale, toast, enabled = true }) {
   const [webOrders, setWebOrders] = useState([]);
   const [processing, setProcessing] = useState({}); // { [orderId]: true }
   const firstSnapshot = useRef(true);
@@ -203,8 +216,9 @@ export function useWebOrders({ data, addSale, toast }) {
   }, []);
 
   useEffect(() => {
+    if (!enabled) return;
     runWebOrdersCleanup(toast);
-  }, [toast]);
+  }, [toast, enabled]);
 
   const playBeep = useCallback(() => {
     try {
@@ -240,6 +254,11 @@ export function useWebOrders({ data, addSale, toast }) {
   }, []);
 
   useEffect(() => {
+    if (!enabled) return;
+    // Repart de zéro à chaque (ré)activation : pas de bip pour des commandes
+    // déjà existantes quand on se reconnecte.
+    firstSnapshot.current = true;
+    knownIds.current = new Set();
     const db = getDB();
     const q = query(
       collection(db, "webOrders"),
@@ -274,7 +293,7 @@ export function useWebOrders({ data, addSale, toast }) {
       console.error("[CultureCase] Erreur webOrders:", err);
     });
     return unsub;
-  }, [playBeep, toast]);
+  }, [playBeep, toast, enabled]);
 
   // Le document n'est plus supprimé (delete) mais conservé avec son statut
   // changé — nécessaire pour que la page de suivi client continue de
