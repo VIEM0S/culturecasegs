@@ -11,6 +11,7 @@ import { todayDisplay, lazyWithRetry } from "./utils.js";
 
 const Dashboard    = lazyWithRetry(() => import("./Dashboard.jsx"));
 const Products     = lazyWithRetry(() => import("./Products.jsx"));
+const ShareCatalog = lazyWithRetry(() => import("./ShareCatalog.jsx"));
 const StockPage    = lazyWithRetry(() => import("./StockPage.jsx"));
 const SalesPage    = lazyWithRetry(() => import("./SalesPage.jsx"));
 const HistoryPage  = lazyWithRetry(() => import("./HistoryPage.jsx"));
@@ -221,6 +222,7 @@ function App() {
     { id: "dashboard", label: "Tableau de bord",    icon: "dashboard" },
     { id: "products",  label: "Produits",           icon: "products"  },
     { id: "stock",     label: "Mouvements stock",   icon: "stock"     },
+    { id: "share",     label: "Envoyer photos",     icon: "share"     },
     { id: "sales",     label: "Ventes",             icon: "sales"     },
     { id: "history",   label: "Historique clients", icon: "phone"     },
     { id: "reports",   label: "Rapports",           icon: "reports"   },
@@ -234,6 +236,7 @@ function App() {
     dashboard: "Tableau de bord",
     products:  "Produits",
     stock:     "Mouvements de stock",
+    share:     "Envoyer photos",
     sales:     "Ventes",
     history:   "Historique clients",
     reports:   "Rapports",
@@ -440,6 +443,7 @@ function App() {
               {(!isViewer || VIEWER_PAGES.includes(page)) && page === "dashboard" && <Dashboard data={data} isViewer={isViewer} />}
               {(!isViewer || VIEWER_PAGES.includes(page)) && page === "products"  && <Products data={data} onSale={addSale} onDelete={deleteProduct} isViewer={isViewer} />}
               {!isViewer && page === "stock"     && <StockPage data={data} onMove={addMovement} isViewer={isViewer} />}
+              {!isViewer && page === "share"     && <ShareCatalog data={data} toast={toast} />}
               {!isViewer && page === "sales"     && <SalesPage data={data} onSale={addSale} onCancel={cancelSale} onConfirmDelivery={confirmDelivery} onCancelPendingDelivery={cancelPendingDelivery} onEditPendingDelivery={editPendingDelivery} toast={toast} webOrders={webOrders} webOrderProcessing={webOrderProcessing} onValidateWebOrder={validateWebOrder} onRejectWebOrder={rejectWebOrder} onCancelWebOrderStatus={cancelWebOrderStatus} onAddPayment={addPayment} onExchangeSale={exchangeSale} />}
               {!isViewer && page === "history"   && <HistoryPage data={data} />}
               {!isViewer && page === "reports"   && <Reports data={data} />}
