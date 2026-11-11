@@ -17,7 +17,7 @@ const fileNameFor = (design, blob) => {
   return `${base}.${ext}`;
 };
 
-export default function ShareCatalog({ data, toast }) {
+export default function ShareCatalog({ data, toast, onBack }) {
   const { products = [], settings = {} } = data;
 
   const [model, setModel] = useState("");
@@ -104,6 +104,7 @@ export default function ShareCatalog({ data, toast }) {
     <div>
       <div className="section-header">
         <span className="section-title">Envoyer des photos au client</span>
+        {onBack && <button className="btn btn-ghost btn-sm" onClick={onBack}>← Produits</button>}
       </div>
 
       <div className="filter-row">

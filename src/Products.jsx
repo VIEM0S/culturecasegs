@@ -2,6 +2,7 @@ import { useState, useMemo, useRef, useEffect } from "react";
 import Icon from "./Icon.jsx";
 import { StockView, stockBadge } from "./StockView.jsx";
 import { DesignThumb } from "./components.jsx";
+import ShareCatalog from "./ShareCatalog.jsx";
 import { uid, getProductImageUrl, today, fmtMoney } from "./utils.js";
 
 // ─── MINI-MODAL VENTE RAPIDE ────────────────────────────────────────────────
@@ -130,9 +131,10 @@ function QuickSaleModal({ product, onConfirm, onClose }) {
 }
 
 // ─── PRODUCTS ───────────────────────────────────────────────────────────────
-function Products({ data, onSale, onDelete, isViewer = false }) {
+function Products({ data, onSale, onDelete, isViewer = false, toast }) {
   const { products, settings } = data;
   const { designs, models } = settings;
+  const [showShare, setShowShare] = useState(false); // outil « Envoyer des photos au client »
   const [search, setSearch] = useState("");
   const [filterModel, setFilterModel] = useState("");
   const [filterStock, setFilterStock] = useState(""); // "" | "dispo" | "rupture"
@@ -188,6 +190,10 @@ function Products({ data, onSale, onDelete, isViewer = false }) {
   };
 
 
+  // Outil d'envoi de photos (Snap/WhatsApp) — vit dans Produits, pas dans le menu.
+  // Après tous les hooks : un return anticipé avant eux casserait l'ordre des hooks.
+  if (showShare) return <ShareCatalog data={data} toast={toast} onBack={() => setShowShare(false)} />;
+
   return (
     <div>
       {/* Mini-modal vente rapide */}
@@ -202,6 +208,11 @@ function Products({ data, onSale, onDelete, isViewer = false }) {
       <div className="section-header">
         <span className="section-title">Produits ({filtered.length})</span>
         <div style={{ display: "flex", gap: 8 }}>
+          {!isViewer && (
+            <button className="btn btn-outline btn-sm" onClick={() => setShowShare(true)} title="Envoyer les photos des designs dispo à un client">
+              <Icon name="share" size={14} /> Envoyer photos
+            </button>
+          )}
           {/* Sélecteur de vue : grille / liste / stock */}
           <div style={{ display: "flex", border: "1px solid var(--border2)", borderRadius: 8, overflow: "hidden" }}>
             {[
