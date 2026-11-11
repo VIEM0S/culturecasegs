@@ -232,6 +232,10 @@ export function useStockActions({ data, persist, confirm }) {
         quartier: oldGroup[0]?.quartier || "",
         delivery: !!oldGroup[0]?.delivery,
         pendingPayment: !!oldGroup[0]?.pendingPayment,
+        // Vente à crédit (paid:false) : sans ça, modifier la livraison
+        // effaçait le flag et la dette disparaissait des créances à la
+        // confirmation (computeCreances ne compte que paid === false).
+        ...(oldGroup[0]?.paid === false ? { paid: false } : {}),
         remarque: oldGroup[0]?.remarque || "",
       };
     });
