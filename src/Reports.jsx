@@ -42,7 +42,6 @@ function CustomTooltip({ active, payload, label, formatter }) {
 
 const Reports = memo(function Reports({ data }) {
   const { products, sales } = data;
-  const [activeTab, setActiveTab] = useState("stats");
 
   const productMap = useMemo(() => {
     const m = {};

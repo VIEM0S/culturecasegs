@@ -1,6 +1,6 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useMemo } from "react";
 import Icon from "./Icon.jsx";
-import { toDateStr, fmtMoney, fmtDate, fmtDateTime } from "./utils.js";
+import { toDateStr, fmtMoney, fmtDate } from "./utils.js";
 
 function HistoryPage({ data }) {
   const { sales, products } = data;
@@ -17,7 +17,6 @@ function HistoryPage({ data }) {
   // Group sales by client, then sub-group by groupId (multi-produits = 1 achat)
   const clientGroups = useMemo(() => {
     const groups = {};
-    let anonCount = 0;
     sales.forEach(s => {
       const phone    = (s.phone || "").trim();
       const name     = (s.client || "").trim();
@@ -110,7 +109,7 @@ function HistoryPage({ data }) {
   const filtered = useMemo(() => {
     const q = search.toLowerCase();
     return clientGroups.filter(g => {
-      const normalize = v => v.replace(/[\s\-\.\(\)\+]/g, "");
+      const normalize = v => v.replace(/[\s\-.()+]/g, "");
       const nq = normalize(q);
       const nameMatch = !q
         || g.name.toLowerCase().includes(q)
@@ -124,14 +123,6 @@ function HistoryPage({ data }) {
       return nameMatch && ((!dateFrom && !dateTo) || dateMatch) && segmentMatch;
     });
   }, [clientGroups, search, dateFrom, dateTo, segmentFilter]);
-
-  // ── Pagination des clients ─────────────────────────────────────────────────
-  const PAGE_SIZE = 20;
-  const [clientPage, setClientPage] = useState(1);
-  const totalClientPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
-  const paginatedClients = filtered.slice((clientPage - 1) * PAGE_SIZE, clientPage * PAGE_SIZE);
-  // Reset page quand les filtres changent
-  useEffect(() => { setClientPage(1); }, [search, dateFrom, dateTo, segmentFilter]);
 
   return (
     <div>

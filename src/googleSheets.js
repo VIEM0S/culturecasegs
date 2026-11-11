@@ -206,8 +206,6 @@ export async function sheetSyncProducts(products) {
 
 // ── Historique clients ────────────────────────────────────────────────────────
 export async function sheetSyncHistory(sales, products) {
-  const prodMap = Object.fromEntries((products || []).map(p => [p.id, p]));
-
   const groups = {};
   (sales || []).forEach(s => {
     const phone    = (s.phone  || "").trim();

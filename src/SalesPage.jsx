@@ -1,8 +1,7 @@
-import { useState, useMemo, useCallback, memo } from "react";
+import { useState, useMemo } from "react";
 import Icon from "./Icon.jsx";
-import { Modal, StatCard, FieldError, DesignThumb } from "./components.jsx";
-import { uid, sanitize, getProductImageUrl, today, toDateStr, fmtMoney, fmtDate, fmtDateTime, computeCreances } from "./utils.js";
-import { LOW_STOCK } from "./constants.js";
+import { Modal, FieldError } from "./components.jsx";
+import { uid, sanitize, getProductImageUrl, today, toDateStr, fmtMoney, fmtDate, computeCreances } from "./utils.js";
 
 // ─── WhatsApp — lien "wa.me" pré-rempli (gratuit, l'admin clique Envoyer
 // lui-même) ───────────────────────────────────────────────────────────────
@@ -41,41 +40,6 @@ function TicketModal({ sales, productMap, onClose }) {
 
   const grandTotal = sales.reduce((s, v) => s + (v.totalAfterDiscount ?? v.total), 0);
   const totalDiscount = sales.reduce((s, v) => s + (v.discountAmount || 0), 0);
-  const totalBrut = sales.reduce((s, v) => s + v.total, 0);
-
-  // ── Texte WhatsApp ──────────────────────────────────────────────────────
-  const whatsappText = () => {
-    const lines = [
-      `🧾 *CULTURECASE — Ticket de caisse*`,
-      `📅 Date : ${fmtDate(date)}`,
-      ``,
-      `*Produit(s) :*`,
-      ...sales.map(s => {
-        const p = productMap[s.productId];
-        const nom = p ? `${p.model} — ${p.design}` : "—";
-        const remise = s.discountPercent > 0 ? ` _(remise ${s.discountPercent}%)_` : "";
-        const motif  = s.discountPercent > 0 && s.discountReason ? ` — _Motif : ${s.discountReason}_` : "";
-        return `• ${nom} × ${s.qty} → *${fmtMoney(s.totalAfterDiscount ?? s.total)}*${remise}${motif}`;
-      }),
-      ``,
-      totalDiscount > 0 ? `💸 Remise totale : -${fmtMoney(totalDiscount)}` : null,
-      `✅ *Total payé : ${fmtMoney(grandTotal)}*`,
-      ``,
-      client   ? `👤 Client : ${client}`                  : null,
-      phone    ? `📞 Tél : ${phone}`                      : null,
-      quartier ? `📍 Quartier : ${quartier}`              : null,
-      delivery ? `🚚 *Livraison à domicile*`              : null,
-      remarque ? `📝 Remarque : ${remarque}`              : null,
-      ``,
-      `_Merci pour votre achat ! 🙏_`,
-    ].filter(l => l !== null).join("\n");
-
-    const encoded = encodeURIComponent(lines);
-    const url = phone
-      ? `https://wa.me/${phone.replace(/[\s\-\(\)\.]/g, "").replace(/^\+/, "")}?text=${encoded}`
-      : `https://wa.me/?text=${encoded}`;
-    window.open(url, "_blank");
-  };
 
   // ── Impression ──────────────────────────────────────────────────────────
   const printTicket = () => {
@@ -574,7 +538,7 @@ function SalesPage({ data, onSale, onCancel, onConfirmDelivery, onCancelPendingD
         if (isNaN(pct) || pct < 1 || pct > 100) errs[`${line.id}_discountPercent`] = "Entre 1 et 100%";
       }
     });
-    if (client.phone && !/^[\d\s\+\-\(\)\.]{6,20}$/.test(normalizePhone(client.phone).trim())) errs.phone = "Numéro invalide";
+    if (client.phone && !/^[\d\s+\-().]{6,20}$/.test(normalizePhone(client.phone).trim())) errs.phone = "Numéro invalide";
     // Une livraison sans nom/téléphone/quartier est undeliverable — rien
     // n'empêchait jusqu'ici de valider une vente "livraison à domicile"
     // pour un client totalement anonyme.
@@ -636,7 +600,7 @@ function SalesPage({ data, onSale, onCancel, onConfirmDelivery, onCancelPendingD
       const prod = productMap[s.productId];
       const q    = search.toLowerCase();
       const sDate = toDateStr(s.date);
-      const normalize = v => v.replace(/[\s\-\.\(\)\+]/g, "");
+      const normalize = v => v.replace(/[\s\-.()+]/g, "");
       const matchText = !q
         || (prod && (`${prod.model} ${prod.design}`).toLowerCase().includes(q))
         || (s.client || "").toLowerCase().includes(q)

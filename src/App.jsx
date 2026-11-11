@@ -101,11 +101,6 @@ function App() {
     return () => window.removeEventListener("sw-update-available", handler);
   }, []);
 
-  // ── Splash done ──────────────────────────────────────────────────────────
-  useEffect(() => {
-    console.log("%c[CultureCase GS] build: livraisons-en-attente v1 (27 juin 2026)", "color:#22c55e;font-weight:bold");
-  }, []);
-
   // ── Backup hebdomadaire automatique (chaque lundi, admin uniquement) ──────
   // maybeWeeklyBackup gère lui-même le "déjà fait aujourd'hui ?" en interne,
   // donc pas de souci à l'appeler à chaque changement de data.

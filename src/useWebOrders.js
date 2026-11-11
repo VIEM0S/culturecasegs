@@ -15,7 +15,7 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 
 function notifyAdmin(title, body) {
   if (typeof Notification !== "undefined" && Notification.permission === "granted") {
-    try { new Notification(title, { body }); } catch (e) { /* ignore */ }
+    try { new Notification(title, { body }); } catch { /* ignore */ }
   }
 }
 
@@ -250,7 +250,7 @@ export function useWebOrders({ data, addSale, toast, enabled = true }) {
         osc2.start();
         osc2.stop(ctx.currentTime + 0.45);
       }, 160);
-    } catch (e) { /* silencieux si audio indisponible */ }
+    } catch { /* silencieux si audio indisponible */ }
   }, []);
 
   useEffect(() => {
@@ -281,7 +281,7 @@ export function useWebOrders({ data, addSale, toast, enabled = true }) {
                   body: `${o.client?.nom || "Client"} — ${o.items?.length || 0} article(s)`,
                   tag: "cc-weborder-" + o.id,
                 });
-              } catch (e) { /* ignore */ }
+              } catch { /* ignore */ }
             }
           });
         }

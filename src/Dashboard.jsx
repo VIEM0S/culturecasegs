@@ -136,7 +136,6 @@ const Dashboard = memo(function Dashboard({ data, isViewer = false }) {
 
   // ── Tendance : comparer cette semaine vs semaine dernière ────────────────
   const trend = useMemo(() => {
-    const now = new Date();
     const weekAgo = new Date();
     weekAgo.setDate(weekAgo.getDate() - 7);
     const twoWeeksAgo = new Date();

@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback, memo, useRef } from "react";
+import { useState, useEffect, useRef } from "react";
 import Icon from "./Icon.jsx";
 import ImagePicker from "./ImagePicker.jsx";
 import { Modal, DesignThumb } from "./components.jsx";
@@ -48,7 +48,7 @@ function SettingsPage({ data, onSave, onPersist, onSaveProduct, confirm }) {
   const [tab, setTab] = useState("prices");
   const [backupLoading, setBackupLoading] = useState(false);
   const [backupDone, setBackupDone]       = useState(false);
-  const [snapshot, setSnapshot]           = useState(() => getLocalSnapshot());
+  const [snapshot]                    = useState(() => getLocalSnapshot());
   const [restoring, setRestoring]         = useState(false);
 
   const handleRestoreSnapshot = async () => {

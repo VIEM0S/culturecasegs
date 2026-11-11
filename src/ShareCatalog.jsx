@@ -19,7 +19,6 @@ const fileNameFor = (design, blob) => {
 
 export default function ShareCatalog({ data, toast }) {
   const { products = [], settings = {} } = data;
-  const designs = settings.designs || [];
 
   const [model, setModel] = useState("");
   const [selected, setSelected] = useState({}); // { [productId]: true }
@@ -35,9 +34,9 @@ export default function ShareCatalog({ data, toast }) {
 
   const available = useMemo(() => products
     .filter(p => p.model === model && p.stock > 0)
-    .map(p => ({ ...p, image: getProductImageUrl(p, designs) }))
+    .map(p => ({ ...p, image: getProductImageUrl(p, settings.designs) }))
     .sort((a, b) => a.design.localeCompare(b.design)),
-  [products, model, designs]);
+  [products, model, settings.designs]);
 
   // Changer de modèle repart d'une sélection vide.
   useEffect(() => { setSelected({}); }, [model]);

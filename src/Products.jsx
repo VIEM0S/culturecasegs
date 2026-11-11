@@ -1,9 +1,8 @@
 import { useState, useMemo, useRef, useEffect } from "react";
 import Icon from "./Icon.jsx";
 import { StockView, stockBadge } from "./StockView.jsx";
-import { StatCard, DesignThumb } from "./components.jsx";
+import { DesignThumb } from "./components.jsx";
 import { uid, getProductImageUrl, today, fmtMoney } from "./utils.js";
-import { LOW_STOCK } from "./constants.js";
 
 // ─── MINI-MODAL VENTE RAPIDE ────────────────────────────────────────────────
 function QuickSaleModal({ product, onConfirm, onClose }) {
@@ -133,7 +132,7 @@ function QuickSaleModal({ product, onConfirm, onClose }) {
 // ─── PRODUCTS ───────────────────────────────────────────────────────────────
 function Products({ data, onSale, onDelete, isViewer = false }) {
   const { products, settings } = data;
-  const { designs, models, priceSettings } = settings;
+  const { designs, models } = settings;
   const [search, setSearch] = useState("");
   const [filterModel, setFilterModel] = useState("");
   const [filterStock, setFilterStock] = useState(""); // "" | "dispo" | "rupture"

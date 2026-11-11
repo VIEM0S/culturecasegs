@@ -1,10 +1,7 @@
-import { useState, useEffect, useMemo, useCallback, memo, useRef } from "react";
+import { useState, useMemo } from "react";
 import Icon from "./Icon.jsx";
-import { Modal, StatCard, FieldError, DesignThumb } from "./components.jsx";
-import { useDialog, useToast } from "./hooks.jsx";
-import { uid, sanitize, validateImageUrl, validateProductForm, validateSaleForm, validateMovementForm, getProductImageUrl, today, fmtDate } from "./utils.js";
-import { DEFAULT_MODELS, DEFAULT_DESIGNS, DEFAULT_PRICE_SETTINGS, LOW_STOCK } from "./constants.js";
-import { exportData, importData } from "./data.js";
+import { Modal, FieldError } from "./components.jsx";
+import { uid, sanitize, getProductImageUrl, today, fmtDate } from "./utils.js";
 
 function StockPage({ data, onMove, isViewer = false }) {
   const { products, movements, settings } = data;
